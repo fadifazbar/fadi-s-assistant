@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 import asyncio
 import logging
-from keep_alive import keep_alive
 import os
 from config import Config
 from utils.logging_config import setup_logging
