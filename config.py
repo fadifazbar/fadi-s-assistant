@@ -4,7 +4,7 @@ class Config:
     """Configuration class for the bot"""
     
     # Bot token - prioritize environment variable, fallback to provided token
-    BOT_TOKEN = os.getenv("DISCORD_TOKEN", "MTQwNjY0MTM3NTY0MTk5MzMxNw.GYu7RH.OMohbI8X87eFriP4PpMVUKxOz_SufkOTftIv2U")
+    BOT_TOKEN = os.getenv("DISCORD_TOKEN")
     
     # Command prefix
     PREFIX = "$"
