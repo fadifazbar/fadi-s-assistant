@@ -33,7 +33,7 @@ async def role_autocomplete(interaction: discord.Interaction, current: str) -> L
 
 class Moderation(commands.Cog):
     """Moderation commands for the bot"""
-            CUSTOM_COLORS= {
+            CUSTOM_COLORS = {
             "red": "#ff0000",
             "blue": "#0044ff",
             "green": "#0dff00",
