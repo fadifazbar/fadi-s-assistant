@@ -53,7 +53,7 @@ class ServerInfo(commands.Cog):
         static_emojis_list = [str(e) for e in guild.emojis if not e.animated]
         animated_emojis_list = [str(e) for e in guild.emojis if e.animated]
 
-        def truncate_list(items, limit=1300):
+        def truncate_list(items, limit=1000):
             joined = " ".join(items)
             if len(joined) > limit:
                 cut_length = limit - 15
