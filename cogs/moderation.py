@@ -260,9 +260,12 @@ class Moderation(commands.Cog):
     # Prefix command: change role color
     # -----------------------
     @commands.command(name="rolecolor")
-@app_commands.checks.has_permissions(manage_roles=True)
+@commands.has_permissions(manage_roles=True)  # <- Correct for prefix command
 async def rolecolor_prefix(self, ctx, role: discord.Role, *, color: str):
     if role >= ctx.author.top_role:
+        await ctx.send("❌ You cannot change a role higher than or equal to your top role.")
+        return
+    # ... rest of your code
         await ctx.send("❌ You cannot change a role higher than or equal to your top role.")
         return
     if role >= ctx.guild.me.top_role:
