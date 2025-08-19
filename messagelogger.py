@@ -143,6 +143,35 @@ class MessageLogger(commands.Cog):
 
             await self.log_say(interaction.user, message, interaction.channel, bot_message)
 
+    # place it here ⬇️
+    @app_commands.command(name="exportlogs", description="Export the current log channels config")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def export_logs(self, interaction: discord.Interaction):
+        try:
+            with open(LOG_FILE, "r") as f:
+                data = f.read()
+
+            file = discord.File(fp=LOG_FILE, filename="log_channels.json")
+
+            try:
+                await interaction.user.send(
+                    content="📤 Here’s the exported log_channels.json file:",
+                    file=file
+                )
+                await interaction.response.send_message(
+                    "✅ Config sent to your DMs!", ephemeral=True
+                )
+            except discord.Forbidden:
+                await interaction.response.send_message(
+                    "⚠️ I couldn’t DM you (your DMs are closed).",
+                    ephemeral=True
+                )
+
+        except FileNotFoundError:
+            await interaction.response.send_message(
+                "⚠️ No log_channels.json file found yet.", ephemeral=True
+            )
+
 
 async def setup(bot):
     await bot.add_cog(MessageLogger(bot))
