@@ -6,7 +6,7 @@ import sqlite3
 import os
 
 # Use Railway's persistent volume (make sure you mounted /data in Railway)
-DB_FILE = "/data/log_channels.db"
+DB_FILE = "/data/log_channels.sqlite3"
 
 class MessageLogger(commands.Cog):
     def __init__(self, bot):
