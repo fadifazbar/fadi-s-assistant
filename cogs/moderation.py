@@ -287,13 +287,13 @@ if hex_code is None:
 new_color = discord.Color(int(hex_code.lstrip("#"), 16))
 
 try:
-            await role.edit(color=new_color, reason=f"Role color changed by {ctx.author}")
-            await ctx.send(f"✅ Role `{role.name}` color changed to `{color.title()}`")
-        except discord.Forbidden:
-            await ctx.send("❌ I don't have permission to change this role.")
-        except Exception as e:
-            await ctx.send(f"❌ Error: {e}")
-
+    await role.edit(color=new_color, reason=f"Role color changed by {ctx.author}")
+    await ctx.send(f"✅ Role `{role.name}` color changed to `{color.title()}`")
+except discord.Forbidden:
+    await ctx.send("❌ I don't have permission to change this role.")
+except Exception as e:
+    await ctx.send(f"❌ Error: {e}")
+    
     # -----------------------
     # Prefix command: list all colors
     # -----------------------
