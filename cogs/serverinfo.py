@@ -36,14 +36,13 @@ class ServerInfo(commands.Cog):
         total_roles = len(guild.roles)
 
         # Verification level mapping
-        verification_levels = {
-            discord.VerificationLevel.none: "None 🔓",
-            discord.VerificationLevel.low: "Low 🔒",
-            discord.VerificationLevel.medium: "Medium 🛡️",
-            discord.VerificationLevel.high: "High 🔐",
-            discord.VerificationLevel.extreme: "Highest 🏰"
-        }
-        verif = verification_levels.get(guild.verification_level, "Unknown ❔")
+verification_levels = {
+    discord.VerificationLevel.none: "None 🔓",
+    discord.VerificationLevel.low: "Low 🔒",
+    discord.VerificationLevel.medium: "Medium 🛡️",
+    discord.VerificationLevel.high: "High 🔐"
+}
+verif = verification_levels.get(guild.verification_level, "Unknown ❔")
 
         # Server boosts
         boost_level = guild.premium_tier
