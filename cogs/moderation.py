@@ -235,6 +235,95 @@ class Moderation(commands.Cog):
         except Exception as e:
             logger.error(f"Error banning user: {e}")
             await self._send_response(ctx_or_interaction, "❌ An error occurred while banning the member!")
+
+       # ------------------------
+    # Prefix Command: $rolecolor
+    # ------------------------
+    @commands.command(name="rolecolor")
+    @commands.has_permissions(manage_roles=True)
+    async def rolecolor_prefix(self, ctx, role: discord.Role, *, color: str):
+        """
+        Change the color of a role.
+        Usage: $rolecolor @RoleName Red OR $rolecolor @RoleName #FF0000
+        """
+        # Permission & hierarchy check
+        if role >= ctx.author.top_role:
+            await ctx.send("❌ You cannot change a role higher than or equal to your top role.")
+            return
+        if role >= ctx.guild.me.top_role:
+            await ctx.send("❌ I cannot change a role higher than my top role.")
+            return
+
+        new_color = self.parse_color(color)
+        if new_color is None:
+            await ctx.send("❌ Invalid color! Use a color name or hex like #FF0000")
+            return
+
+        try:
+            await role.edit(color=new_color, reason=f"Role color changed by {ctx.author}")
+            await ctx.send(f"✅ Role `{role.name}` color changed to {color}")
+        except discord.Forbidden:
+            await ctx.send("❌ I don't have permission to change this role.")
+        except Exception as e:
+            await ctx.send(f"❌ Error: {e}")
+
+    # ------------------------
+    # Slash Command: /rolecolor
+    # ------------------------
+    @commands.slash_command(name="rolecolor", description="Change a role's color")
+    @commands.has_permissions(manage_roles=True)
+    async def rolecolor_slash(
+        self, ctx: discord.ApplicationContext, role: discord.Role, color: str
+    ):
+        # Permission & hierarchy check
+        if role >= ctx.author.top_role:
+            await ctx.respond("❌ You cannot change a role higher than or equal to your top role.", ephemeral=True)
+            return
+        if role >= ctx.guild.me.top_role:
+            await ctx.respond("❌ I cannot change a role higher than my top role.", ephemeral=True)
+            return
+
+        new_color = self.parse_color(color)
+        if new_color is None:
+            await ctx.respond("❌ Invalid color! Use a color name or hex like #FF0000", ephemeral=True)
+            return
+
+        try:
+            await role.edit(color=new_color, reason=f"Role color changed by {ctx.author}")
+            await ctx.respond(f"✅ Role `{role.name}` color changed to {color}")
+        except discord.Forbidden:
+            await ctx.respond("❌ I don't have permission to change this role.", ephemeral=True)
+        except Exception as e:
+            await ctx.respond(f"❌ Error: {e}", ephemeral=True)
+
+    # ------------------------
+    # Helper: Parse color text or hex
+    # ------------------------
+    def parse_color(self, color: str):
+        color = color.lower().replace(" ", "")
+        # Try hex code
+        if color.startswith("#"):
+            color = color[1:]
+        try:
+            return discord.Color(int(color, 16))
+        except ValueError:
+            # Try common color names
+            colors = {
+                "red": discord.Color.red(),
+                "blue": discord.Color.blue(),
+                "green": discord.Color.green(),
+                "yellow": discord.Color.yellow(),
+                "purple": discord.Color.purple(),
+                "orange": discord.Color.orange(),
+                "teal": discord.Color.teal(),
+                "magenta": discord.Color.magenta(),
+                "gold": discord.Color.gold(),
+                "darkred": discord.Color.dark_red(),
+                "darkblue": discord.Color.dark_blue(),
+                "darkgreen": discord.Color.dark_green(),
+                "darkorange": discord.Color.dark_orange(),
+            }
+            return colors.get(color, None)
     
     # Clear messages command (Prefix)
     @commands.command(name="purge", aliases=["clear"])
