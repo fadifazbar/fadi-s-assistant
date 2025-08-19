@@ -256,10 +256,7 @@ class Moderation(commands.Cog):
             logger.error(f"Error banning user: {e}")
             await self._send_response(ctx_or_interaction, "❌ An error occurred while banning the member!")
     
-    # -----------------------
-    # Prefix command: change role color
-    # -----------------------
-    # Prefix command
+
     # Prefix command
     @commands.command(name="rolecolor")
     @commands.has_permissions(manage_roles=True)
@@ -300,8 +297,12 @@ class Moderation(commands.Cog):
     # -----------------------
     @commands.command(name="rolecolors")
     async def list_colors_prefix(self, ctx):
-        color_names = ", ".join(self.CUSTOM_COLORS.keys())
-        await ctx.send(f"🎨 Available colors: {color_names}")
+        embed = discord.Embed(
+            title="🎨 Available Role Colors",
+            description="\n".join([f"• **{name}**" for name in self.CUSTOM_COLORS.keys()]),
+            color=discord.Color.blurple()
+        )
+        await ctx.send(embed=embed)
 
     # -----------------------
     # Slash command: change role color
@@ -338,8 +339,12 @@ class Moderation(commands.Cog):
     # -----------------------
     @app_commands.command(name="rolecolors", description="List all available role colors")
     async def list_colors_slash(self, interaction: discord.Interaction):
-        color_names = ", ".join(self.CUSTOM_COLORS.keys())
-        await interaction.response.send_message(f"🎨 Available colors: {color_names}", ephemeral=True)
+        embed = discord.Embed(
+            title="🎨 Available Role Colors",
+            description="\n".join([f"• **{name}**" for name in self.CUSTOM_COLORS.keys()]),
+            color=discord.Color.blurple()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
     
     # Clear messages command (Prefix)
     @commands.command(name="purge", aliases=["clear"])
