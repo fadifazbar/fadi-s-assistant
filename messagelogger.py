@@ -49,7 +49,7 @@ class MessageLogger(commands.Cog):
         )
 
     # OPTIONAL: Check which log channel is currently set
-    @app_commands.command(name="checklogs", description="Check which channel is set for say command logs")
+    @app_commands.command(name="saychecklogs", description="Check which channel is set for say command logs")
     @app_commands.checks.has_permissions(administrator=True)
     async def check_logs(self, interaction: discord.Interaction):
         log_channel_id = self.get_log_channel(str(interaction.guild.id))
