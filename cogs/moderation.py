@@ -33,10 +33,26 @@ async def role_autocomplete(interaction: discord.Interaction, current: str) -> L
 
 class Moderation(commands.Cog):
     """Moderation commands for the bot"""
+            CUSTOM_COLORS= {
+            "red": "#ff0000",
+            "blue": "#0044ff",
+            "green": "#0dff00",
+            "yellow": "#ffee00",
+            "purple": "#8800ff",
+            "orange": "#ff8800",
+            "teal": "008080",
+            "magenta": "#FF00FF",
+            "gold": "#ffc800",
+            "darkred": "#8c0000",
+            "darkblue": "#001e8c",
+            "darkgreen": "#008c05",
+            "darkorange": "#cc6600"
+            }
     
     def __init__(self, bot):
         self.bot = bot
         self.muted_users = {}  # Simple in-memory storage for muted users
+
     
     def parse_time_duration(self, duration_str: str) -> Optional[int]:
         """
@@ -236,17 +252,14 @@ class Moderation(commands.Cog):
             logger.error(f"Error banning user: {e}")
             await self._send_response(ctx_or_interaction, "❌ An error occurred while banning the member!")
 
-       # ------------------------
-    # Prefix Command: $rolecolor
-    # ------------------------
+
+
+    # -----------------------
+    # Prefix command: change role color
+    # -----------------------
     @commands.command(name="rolecolor")
     @commands.has_permissions(manage_roles=True)
     async def rolecolor_prefix(self, ctx, role: discord.Role, *, color: str):
-        """
-        Change the color of a role.
-        Usage: $rolecolor @RoleName Red OR $rolecolor @RoleName #FF0000
-        """
-        # Permission & hierarchy check
         if role >= ctx.author.top_role:
             await ctx.send("❌ You cannot change a role higher than or equal to your top role.")
             return
@@ -254,31 +267,37 @@ class Moderation(commands.Cog):
             await ctx.send("❌ I cannot change a role higher than my top role.")
             return
 
-        new_color = self.parse_color(color)
+        new_color = self.CUSTOM_COLORS.get(color.title())
         if new_color is None:
-            await ctx.send("❌ Invalid color! Use a color name or hex like #FF0000")
+            await ctx.send("❌ Invalid color! Use one of: " + ", ".join(self.CUSTOM_COLORS.keys()))
             return
+
+        new_color = discord.Color(int(new_color.lstrip("#"), 16))
 
         try:
             await role.edit(color=new_color, reason=f"Role color changed by {ctx.author}")
-            await ctx.send(f"✅ Role `{role.name}` color changed to {color}")
+            await ctx.send(f"✅ Role `{role.name}` color changed to `{color.title()}`")
         except discord.Forbidden:
             await ctx.send("❌ I don't have permission to change this role.")
         except Exception as e:
             await ctx.send(f"❌ Error: {e}")
 
-        # Prefix command (unchanged)
-    @commands.command(name="rolecolor")
-    @commands.has_permissions(manage_roles=True)
-    async def rolecolor_prefix(self, ctx, role: discord.Role, *, color: str):
-        # ... your existing logic here ...
-        pass
+    # -----------------------
+    # Prefix command: list all colors
+    # -----------------------
+    @commands.command(name="rolecolors")
+    async def list_colors_prefix(self, ctx):
+        color_names = ", ".join(self.CUSTOM_COLORS.keys())
+        await ctx.send(f"🎨 Available colors: {color_names}")
 
-    # Slash command
-    @app_commands.command(name="rolecolor", description="Change a role's color")
+    # -----------------------
+    # Slash command: change role color
+    # -----------------------
+    @app_commands.command(name="rolecolor", description="Change a role's color using a dropdown")
+    @app_commands.describe(role="Select a role to change", color="Pick a color")
+    @app_commands.choices(color=[app_commands.Choice(name=name, value=name) for name in CUSTOM_COLORS])
     @app_commands.checks.has_permissions(manage_roles=True)
-    async def rolecolor_slash(self, interaction: discord.Interaction, role: discord.Role, color: str):
-        # Hierarchy checks
+    async def rolecolor_slash(self, interaction: discord.Interaction, role: discord.Role, color: app_commands.Choice[str]):
         if role >= interaction.user.top_role:
             await interaction.response.send_message(
                 "❌ You cannot change a role higher than or equal to your top role.", ephemeral=True
@@ -290,47 +309,24 @@ class Moderation(commands.Cog):
             )
             return
 
-        new_color = self.parse_color(color)
-        if new_color is None:
-            await interaction.response.send_message(
-                "❌ Invalid color! Use a color name or hex like #FF0000", ephemeral=True
-            )
-            return
+        hex_code = self.CUSTOM_COLORS.get(color.value)
+        new_color = discord.Color(int(hex_code.lstrip("#"), 16))
 
         try:
             await role.edit(color=new_color, reason=f"Role color changed by {interaction.user}")
-            await interaction.response.send_message(
-                f"✅ Role `{role.name}` color changed to {color}"
-            )
+            await interaction.response.send_message(f"✅ Role `{role.name}` color changed to `{color.value}`")
         except discord.Forbidden:
             await interaction.response.send_message("❌ I don't have permission to change this role.", ephemeral=True)
         except Exception as e:
             await interaction.response.send_message(f"❌ Error: {e}", ephemeral=True)
 
-    # Color parser
-    def parse_color(self, color: str):
-        color = color.lower().replace(" ", "")
-        if color.startswith("#"):
-            color = color[1:]
-        try:
-            return discord.Color(int(color, 16))
-        except ValueError:
-            colors = {
-                "red": discord.Color.red(),
-                "blue": discord.Color.blue(),
-                "green": discord.Color.green(),
-                "yellow": discord.Color.yellow(),
-                "purple": discord.Color.purple(),
-                "orange": discord.Color.orange(),
-                "teal": discord.Color.teal(),
-                "magenta": discord.Color.magenta(),
-                "gold": discord.Color.gold(),
-                "darkred": discord.Color.dark_red(),
-                "darkblue": discord.Color.dark_blue(),
-                "darkgreen": discord.Color.dark_green(),
-                "darkorange": discord.Color.dark_orange(),
-            }
-            return colors.get(color, None)
+    # -----------------------
+    # Slash command: list all colors
+    # -----------------------
+    @app_commands.command(name="rolecolors", description="List all available role colors")
+    async def list_colors_slash(self, interaction: discord.Interaction):
+        color_names = ", ".join(self.CUSTOM_COLORS.keys())
+        await interaction.response.send_message(f"🎨 Available colors: {color_names}", ephemeral=True)
     
     # Clear messages command (Prefix)
     @commands.command(name="purge", aliases=["clear"])
