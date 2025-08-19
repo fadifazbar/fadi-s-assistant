@@ -34,7 +34,7 @@ class MessageLogger(commands.Cog):
         )
 
     # Internal helper to log messages
-    async def log_say(self, author: discord.Member, message: str, channel: discord.TextChannel):
+    async def log_say(self, author: discord.Member, message: str, channel: discord.TextChannel, bot_message: discord.Message = None):
         guild_id = str(channel.guild.id)
         if guild_id not in self.log_channels:
             return  # no log channel set for this guild
@@ -51,6 +51,11 @@ class MessageLogger(commands.Cog):
         embed.add_field(name="👤 User", value=author.mention, inline=True)
         embed.add_field(name="📅 Date", value=datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"), inline=True)
         embed.add_field(name="💬 Message", value=message, inline=False)
+        embed.add_field(name="📍 Channel", value=channel.mention, inline=True)
+
+        if bot_message:
+            embed.add_field(name="🔗 Message Link", value=f"[Jump to Message]({bot_message.jump_url})", inline=False)
+
         embed.set_thumbnail(url=author.display_avatar.url)
 
         await log_channel.send(embed=embed)
@@ -59,14 +64,40 @@ class MessageLogger(commands.Cog):
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: commands.Context):
         if ctx.command and ctx.command.name == "say":
-            await self.log_say(ctx.author, ctx.message.content[len(ctx.prefix + ctx.command.name):].strip(), ctx.channel)
+            # get the message the bot just sent (last message in channel by bot)
+            bot_message = None
+            try:
+                async for msg in ctx.channel.history(limit=5):
+                    if msg.author == self.bot.user:
+                        bot_message = msg
+                        break
+            except:
+                pass
+
+            await self.log_say(
+                ctx.author,
+                ctx.message.content[len(ctx.prefix + ctx.command.name):].strip(),
+                ctx.channel,
+                bot_message
+            )
 
     # Hook into slash say command
     @commands.Cog.listener()
     async def on_app_command_completion(self, interaction: discord.Interaction, command: app_commands.Command):
         if command.name == "say":
             message = interaction.namespace.message
-            await self.log_say(interaction.user, message, interaction.channel)
+
+            bot_message = None
+            try:
+                # the bot’s reply is usually the last message in the channel by the bot
+                async for msg in interaction.channel.history(limit=5):
+                    if msg.author == self.bot.user:
+                        bot_message = msg
+                        break
+            except:
+                pass
+
+            await self.log_say(interaction.user, message, interaction.channel, bot_message)
 
 
 async def setup(bot):
