@@ -4,24 +4,28 @@ from discord import app_commands
 import json
 import os
 
-# ---------------- File Path (always in main folder) ----------------
-REACTION_ROLE_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "reaction_roles.json")
+# ---------------- File Path (always in project root, next to bot.py) ----------------
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REACTION_ROLE_FILE = os.path.join(ROOT_DIR, "reaction_roles.json")
 
 
 # ---------------- JSON Helpers ----------------
 def load_reaction_roles():
+    """Load reaction roles from JSON, or create the file if missing/broken."""
     if not os.path.exists(REACTION_ROLE_FILE):
         with open(REACTION_ROLE_FILE, "w") as f:
             json.dump({}, f, indent=4)
         return {}
+
     try:
         with open(REACTION_ROLE_FILE, "r") as f:
             return json.load(f)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, FileNotFoundError):
         return {}
 
 
-def save_reaction_roles(data):
+def save_reaction_roles(data: dict):
+    """Save reaction roles safely to JSON."""
     with open(REACTION_ROLE_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
@@ -31,7 +35,7 @@ reaction_roles = load_reaction_roles()
 
 # ---------------- Cog ----------------
 class ReactionRole(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     # Helper: convert emoji to string (handles custom + unicode)
@@ -42,6 +46,7 @@ class ReactionRole(commands.Cog):
     @commands.command(name="reactionrole")
     @commands.has_permissions(manage_roles=True)
     async def reactionrole_prefix(self, ctx, message_id: int, emoji: str, role: discord.Role):
+        """Create a reaction role using a prefix command."""
         # Check hierarchy against user
         if role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
             return await ctx.send("❌ You cannot create a reaction role with a role higher or equal to your top role.")
@@ -64,9 +69,9 @@ class ReactionRole(commands.Cog):
         except discord.HTTPException:
             return await ctx.send("❌ Invalid emoji.")
 
+        # Save to JSON
         guild_id = str(ctx.guild.id)
         emoji_str = str(emoji)
-
         reaction_roles.setdefault(guild_id, {}).setdefault(str(message_id), {})
         reaction_roles[guild_id][str(message_id)][emoji_str] = role.id
         save_reaction_roles(reaction_roles)
@@ -77,6 +82,7 @@ class ReactionRole(commands.Cog):
     @app_commands.command(name="reactionrole", description="Set a reaction role on a message")
     @app_commands.checks.has_permissions(manage_roles=True)
     async def reactionrole_slash(self, interaction: discord.Interaction, message_id: str, emoji: str, role: discord.Role):
+        """Create a reaction role using a slash command."""
         # Check hierarchy against user
         if role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
             return await interaction.response.send_message(
@@ -105,9 +111,9 @@ class ReactionRole(commands.Cog):
         except discord.HTTPException:
             return await interaction.response.send_message("❌ Invalid emoji.", ephemeral=True)
 
+        # Save to JSON
         guild_id = str(interaction.guild.id)
         emoji_str = str(emoji)
-
         reaction_roles.setdefault(guild_id, {}).setdefault(str(message_id), {})
         reaction_roles[guild_id][str(message_id)][emoji_str] = role.id
         save_reaction_roles(reaction_roles)
@@ -120,6 +126,7 @@ class ReactionRole(commands.Cog):
     @commands.command(name="reactionrolelist")
     @commands.has_permissions(manage_roles=True)
     async def reactionrole_list(self, ctx):
+        """List all reaction roles set in the server."""
         guild_data = reaction_roles.get(str(ctx.guild.id), {})
         if not guild_data:
             return await ctx.send("ℹ️ No reaction roles set in this server.")
@@ -135,7 +142,7 @@ class ReactionRole(commands.Cog):
 
     # ---------------- Event: Add Role ----------------
     @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         if payload.guild_id is None or payload.user_id == self.bot.user.id:
             return
 
@@ -145,7 +152,7 @@ class ReactionRole(commands.Cog):
 
         guild_data = reaction_roles.get(str(guild.id), {})
         msg_roles = guild_data.get(str(payload.message_id), {})
-        emoji_str = str(payload.emoji)  # ✅ Convert emoji properly
+        emoji_str = str(payload.emoji)
         role_id = msg_roles.get(emoji_str)
         if not role_id:
             return
@@ -160,7 +167,7 @@ class ReactionRole(commands.Cog):
 
     # ---------------- Event: Remove Role ----------------
     @commands.Cog.listener()
-    async def on_raw_reaction_remove(self, payload):
+    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
         if payload.guild_id is None or payload.user_id == self.bot.user.id:
             return
 
@@ -170,7 +177,7 @@ class ReactionRole(commands.Cog):
 
         guild_data = reaction_roles.get(str(guild.id), {})
         msg_roles = guild_data.get(str(payload.message_id), {})
-        emoji_str = str(payload.emoji)  # ✅ Convert emoji properly
+        emoji_str = str(payload.emoji)
         role_id = msg_roles.get(emoji_str)
         if not role_id:
             return
@@ -184,5 +191,6 @@ class ReactionRole(commands.Cog):
                 print(f"[WARN] Missing permissions to remove {role} in {guild.name}")
 
 
-async def setup(bot):
+# ---------------- Cog Setup ----------------
+async def setup(bot: commands.Bot):
     await bot.add_cog(ReactionRole(bot))
