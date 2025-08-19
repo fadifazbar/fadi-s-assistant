@@ -269,12 +269,22 @@ class Moderation(commands.Cog):
             await ctx.send("❌ I cannot change a role higher than my top role.")
             return
 
-        new_color = self.CUSTOM_COLORS.get(color.title())
-        if new_color is None:
-            await ctx.send("❌ Invalid color! Use one of: " + ", ".join(self.CUSTOM_COLORS.keys()))
-            return
+        # Clean up user input
+color_input = color.strip().lower()
 
-        new_color = discord.Color(int(new_color.lstrip("#"), 16))
+# Look up named color in dictionary
+hex_code = self.CUSTOM_COLORS.get(color_input)
+
+# Try parsing hex if not found in dictionary
+if hex_code is None:
+    if color_input.startswith("#") and len(color_input) == 7:
+        hex_code = color_input
+    else:
+        await ctx.send("❌ Invalid color! Use one of: " + ", ".join(self.CUSTOM_COLORS.keys()))
+        return
+
+# Convert to discord.Color
+new_color = discord.Color(int(hex_code.lstrip("#"), 16))
 
         try:
             await role.edit(color=new_color, reason=f"Role color changed by {ctx.author}")
