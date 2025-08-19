@@ -2,43 +2,41 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from datetime import datetime
-import sqlite3
+import json
 import os
 
 # Use Railway's persistent volume (make sure you mounted /data in Railway)
-DB_FILE = "/data/log_channels.sqlite3"
+CONFIG_FILE = "/data/log_channels.json"
 
 class MessageLogger(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # allow multiple threads (discord.py runs async)
-        self.conn = sqlite3.connect(DB_FILE, check_same_thread=False)
-        self.cursor = self.conn.cursor()
-        self.create_table()
+        self.log_channels = self.load_config()
 
-    def create_table(self):
-        """Create the table if it doesn't exist"""
-        self.cursor.execute(
-            """CREATE TABLE IF NOT EXISTS log_channels (
-                guild_id TEXT PRIMARY KEY,
-                channel_id INTEGER
-            )"""
-        )
-        self.conn.commit()
+    def load_config(self):
+        """Load log channel configuration from JSON"""
+        if os.path.exists(CONFIG_FILE):
+            try:
+                with open(CONFIG_FILE, "r") as f:
+                    return json.load(f)
+            except json.JSONDecodeError:
+                return {}
+        return {}
+
+    def save_config(self):
+        """Save log channel configuration to JSON"""
+        os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(self.log_channels, f, indent=4)
 
     def set_log_channel(self, guild_id: str, channel_id: int):
         """Insert or update a guild's log channel"""
-        self.cursor.execute(
-            "INSERT OR REPLACE INTO log_channels (guild_id, channel_id) VALUES (?, ?)",
-            (guild_id, channel_id)
-        )
-        self.conn.commit()
+        self.log_channels[guild_id] = channel_id
+        self.save_config()
 
     def get_log_channel(self, guild_id: str):
         """Fetch the log channel for a guild"""
-        self.cursor.execute("SELECT channel_id FROM log_channels WHERE guild_id = ?", (guild_id,))
-        result = self.cursor.fetchone()
-        return result[0] if result else None
+        return self.log_channels.get(guild_id)
 
     # Admin command to set the log channel
     @app_commands.command(name="saylogs", description="Select a channel to log all say command usage")
