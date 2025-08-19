@@ -217,8 +217,7 @@ class General(commands.Cog):
             else:
                 await ctx_or_interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
-    
-@commands.command(name="serverinfo")
+     @commands.command(name="serverinfo")
     async def serverinfo_prefix(self, ctx):
         await self.send_server_info(ctx.guild, ctx, is_interaction=False)
 
@@ -227,7 +226,6 @@ class General(commands.Cog):
         await self.send_server_info(interaction.guild, interaction, is_interaction=True)
 
     async def send_server_info(self, guild: discord.Guild, source, is_interaction=False):
-        # Verification emojis mapping inside the function
         VERIF_EMOJIS = {
             discord.VerificationLevel.none: "❌ None",
             discord.VerificationLevel.low: "🔹 Low",
@@ -236,46 +234,41 @@ class General(commands.Cog):
             discord.VerificationLevel.extreme: "🚨 Highest"
         }
 
-        # Random embed color
         color = discord.Color.random()
 
-        # Members
         humans = len([m for m in guild.members if not m.bot])
         bots = len([m for m in guild.members if m.bot])
         total_members = humans + bots
 
-        # Channels & Roles
         total_channels = len(guild.channels)
         total_roles = len(guild.roles)
 
-        # Verification level
         verif = VERIF_EMOJIS.get(guild.verification_level, "❔ Unknown")
-
-        # Boost info
         boost_count = guild.premium_subscription_count
         boost_level = guild.premium_tier
 
-        # Emojis
         static_emojis = len([e for e in guild.emojis if not e.animated])
         animated_emojis = len([e for e in guild.emojis if e.animated])
 
-        # Stickers count
         static_stickers_count = len([s for s in guild.stickers if s.format != discord.StickerFormatType.LOTTIE])
         animated_stickers_count = len([s for s in guild.stickers if s.format == discord.StickerFormatType.LOTTIE])
 
-        embed = discord.Embed(
-            title=guild.name,
-            color=color
-        )
+        embed = discord.Embed(title=guild.name, color=color)
 
-        # Server icon small top-right
         if guild.icon:
             embed.set_author(name=guild.name, icon_url=guild.icon.url)
 
-        # Fields
         embed.add_field(name="👑 Owner", value=guild.owner.mention, inline=True)
-        embed.add_field(name="🧑 Members", value=f"Humans: {humans}\nBots: {bots}\nTotal: {total_members}", inline=True)
-        embed.add_field(name="🛠 Channels & Roles", value=f"Channels: {total_channels}\nRoles: {total_roles}", inline=True)
+        embed.add_field(
+            name="🧑 Members",
+            value=f"Humans: {humans}\nBots: {bots}\nTotal: {total_members}",
+            inline=True
+        )
+        embed.add_field(
+            name="🛠 Channels & Roles",
+            value=f"Channels: {total_channels}\nRoles: {total_roles}",
+            inline=True
+        )
         embed.add_field(name="🔒 Verification", value=verif, inline=True)
         embed.add_field(name="🚀 Boosts", value=f"Level: {boost_level}\nBoosters: {boost_count}", inline=True)
         embed.add_field(name="😊 Emojis", value=f"Static: {static_emojis}\nAnimated: {animated_emojis}", inline=True)
@@ -285,10 +278,8 @@ class General(commands.Cog):
             inline=True
         )
 
-        # Creation date
         embed.set_footer(text=f"Created on {guild.created_at.strftime('%d %b %Y')}")
 
-        # Send embed
         if is_interaction:
             await source.response.send_message(embed=embed)
         else:
