@@ -217,81 +217,76 @@ class General(commands.Cog):
             else:
                 await ctx_or_interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
-        # -----------------------------
-    # Prefix command: $serverinfo
-    # -----------------------------
-    @commands.command(name="serverinfo")
+    
+@commands.command(name="serverinfo")
     async def serverinfo_prefix(self, ctx):
-        guild = ctx.guild
-        await self.send_server_info(ctx, guild, is_interaction=False)
+        await self.send_server_info(ctx.guild, ctx, is_interaction=False)
 
-    # -----------------------------
-    # Slash command: /serverinfo
-    # -----------------------------
-    @app_commands.command(name="serverinfo", description="Displays server information")
+    @app_commands.command(name="serverinfo", description="Show server info")
     async def serverinfo_slash(self, interaction: discord.Interaction):
-        guild = interaction.guild
-        await self.send_server_info(interaction, guild, is_interaction=True)
+        await self.send_server_info(interaction.guild, interaction, is_interaction=True)
 
-    # -----------------------------
-    # Helper function
-    # -----------------------------
-    async def send_server_info(self, source, guild, is_interaction=False):
-        # Member counts
+    async def send_server_info(self, guild: discord.Guild, source, is_interaction=False):
+        # Verification emojis mapping inside the function
+        VERIF_EMOJIS = {
+            discord.VerificationLevel.none: "❌ None",
+            discord.VerificationLevel.low: "🔹 Low",
+            discord.VerificationLevel.medium: "🟡 Medium",
+            discord.VerificationLevel.high: "🔒 High",
+            discord.VerificationLevel.extreme: "🚨 Highest"
+        }
+
+        # Random embed color
+        color = discord.Color.random()
+
+        # Members
         humans = len([m for m in guild.members if not m.bot])
         bots = len([m for m in guild.members if m.bot])
-        total_members = len(guild.members)
+        total_members = humans + bots
 
-        # Channels & roles
+        # Channels & Roles
         total_channels = len(guild.channels)
         total_roles = len(guild.roles)
 
         # Verification level
-        verif = str(guild.verification_level).title().replace("_", " ")
+        verif = VERIF_EMOJIS.get(guild.verification_level, "❔ Unknown")
 
-        # Boosts
-        boost_level = guild.premium_tier
+        # Boost info
         boost_count = guild.premium_subscription_count
+        boost_level = guild.premium_tier
 
         # Emojis
-        static_emojis = [str(e) for e in guild.emojis if not e.animated]
-        animated_emojis = [str(e) for e in guild.emojis if e.animated]
-        static_emojis_display = " ".join(static_emojis)[:1024] if static_emojis else "None"
-        animated_emojis_display = " ".join(animated_emojis)[:1024] if animated_emojis else "None"
+        static_emojis = len([e for e in guild.emojis if not e.animated])
+        animated_emojis = len([e for e in guild.emojis if e.animated])
 
-        # Stickers
-        static_stickers = [s.name for s in guild.stickers if s.format != discord.StickerFormatType.ANIMATED]
-        animated_stickers = [s.name for s in guild.stickers if s.format == discord.StickerFormatType.ANIMATED]
-        static_stickers_display = ", ".join(static_stickers) if static_stickers else "None"
-        animated_stickers_display = ", ".join(animated_stickers) if animated_stickers else "None"
+        # Stickers count
+        static_stickers_count = len([s for s in guild.stickers if s.format != discord.StickerFormatType.LOTTIE])
+        animated_stickers_count = len([s for s in guild.stickers if s.format == discord.StickerFormatType.LOTTIE])
 
-        # Embed
         embed = discord.Embed(
             title=guild.name,
-            color=discord.Color.random(),
-            timestamp=datetime.utcnow()
+            color=color
         )
 
-        # Server icon as top-right small icon
+        # Server icon small top-right
         if guild.icon:
             embed.set_author(name=guild.name, icon_url=guild.icon.url)
 
         # Fields
         embed.add_field(name="👑 Owner", value=guild.owner.mention, inline=True)
-        embed.add_field(
-            name="🧑 Members",
-            value=f"Humans: {humans}\nBots: {bots}\nTotal: {total_members}",
-            inline=True
-        )
-        embed.add_field(
-            name="🛠 Channels & Roles",
-            value=f"Channels: {total_channels}\nRoles: {total_roles}",
-            inline=True
-        )
+        embed.add_field(name="🧑 Members", value=f"Humans: {humans}\nBots: {bots}\nTotal: {total_members}", inline=True)
+        embed.add_field(name="🛠 Channels & Roles", value=f"Channels: {total_channels}\nRoles: {total_roles}", inline=True)
         embed.add_field(name="🔒 Verification", value=verif, inline=True)
         embed.add_field(name="🚀 Boosts", value=f"Level: {boost_level}\nBoosters: {boost_count}", inline=True)
-        embed.add_field(name="😊 Emojis", value=f"Static: {static_emojis_display}\nAnimated: {animated_emojis_display}", inline=False)
-        embed.add_field(name="📌 Stickers", value=f"Static: {static_stickers_display}\nAnimated: {animated_stickers_display}", inline=False)
+        embed.add_field(name="😊 Emojis", value=f"Static: {static_emojis}\nAnimated: {animated_emojis}", inline=True)
+        embed.add_field(
+            name="📌 Stickers",
+            value=f"Static: {static_stickers_count}\nAnimated: {animated_stickers_count}",
+            inline=True
+        )
+
+        # Creation date
+        embed.set_footer(text=f"Created on {guild.created_at.strftime('%d %b %Y')}")
 
         # Send embed
         if is_interaction:
@@ -299,7 +294,7 @@ class General(commands.Cog):
         else:
             await source.send(embed=embed)
 
-
+    
     # Ping command (Prefix)
     @commands.command(name="ping")
     async def ping_prefix(self, ctx):
