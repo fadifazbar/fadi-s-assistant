@@ -96,6 +96,7 @@ async def main():
     await bot.load_extension("messagelogger")
     await bot.load_extension("invite")
     await bot.load_extension("xoxo")
+    await bot.load_extension("serverinfo")
 
     # Check if token exists
     if not Config.BOT_TOKEN:
