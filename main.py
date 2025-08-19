@@ -94,19 +94,22 @@ async def main():
     """Main function to run the bot"""
     bot = ModBot()
     await bot.load_extension("messagelogger")
-
     await bot.load_extension("invite")
-
     await bot.load_extension("xoxo")
-    
-      
-  
-try:  
-    await bot.start(Config.BOT_TOKEN)  
-except discord.LoginFailure:  
-    logger.error("Invalid bot token provided!")  
-except Exception as e:  
-    logger.error(f"Error starting bot: {e}")
+
+    # Check if token exists
+    if not Config.BOT_TOKEN:
+        logger.error("DISCORD_TOKEN environment variable is not set!")
+        return
+
+    try:
+        await bot.start(Config.BOT_TOKEN)  # now it's inside async function
+    except discord.LoginFailure:
+        logger.error("Invalid bot token provided!")
+    except Exception as e:
+        logger.error(f"Error starting bot: {e}")
+
+# Entry point
 if __name__ == "__main__":
     try:
         asyncio.run(main())
