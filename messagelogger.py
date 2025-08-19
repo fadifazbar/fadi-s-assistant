@@ -161,7 +161,7 @@ class MessageLogger(commands.Cog):
             await interaction.user.send(
                 content="📤 Here’s the exported log_channels.json file:",
                 file=discord.File(
-                    fp=discord.BytesIO(pretty_json.encode()),
+                    fp=io.BytesIO(pretty_json.encode()),
                     filename="log_channels.json"
                 )
             )
