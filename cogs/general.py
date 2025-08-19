@@ -217,9 +217,10 @@ class General(commands.Cog):
             else:
                 await ctx_or_interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
-     @commands.command(name="serverinfo")
-    async def serverinfo_prefix(self, ctx):
-        await self.send_server_info(ctx.guild, ctx, is_interaction=False)
+    # Prefix
+    @commands.command(name="serverinfo")
+async def serverinfo_prefix(self, ctx):
+    await self.send_server_info(ctx.guild, ctx, is_interaction=False)
 
     @app_commands.command(name="serverinfo", description="Show server info")
     async def serverinfo_slash(self, interaction: discord.Interaction):
