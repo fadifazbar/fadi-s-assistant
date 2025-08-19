@@ -1,56 +1,57 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+import random
 from typing import Union
 
-class General(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+class ServerInfo(commands.Cog):
+    def __init__(self, bot):
         self.bot = bot
 
-    # -------------------
-    # Server Info - Prefix
-    # -------------------
+    # ------------------------
+    # Prefix command
+    # ------------------------
     @commands.command(name="serverinfo")
     async def serverinfo_prefix(self, ctx):
         await self.send_server_info(ctx.guild, ctx, is_interaction=False)
 
-    # -------------------
-    # Server Info - Slash
-    # -------------------
-    @app_commands.command(name="serverinfo", description="Shows info about the server")
+    # ------------------------
+    # Slash command
+    # ------------------------
+    @app_commands.command(name="serverinfo", description="Show information about this server")
     async def serverinfo_slash(self, interaction: discord.Interaction):
         await self.send_server_info(interaction.guild, interaction, is_interaction=True)
 
-    # -------------------
-    # Helper function
-    # -------------------
-    async def send_server_info(self, guild: discord.Guild, target: Union[commands.Context, discord.Interaction], is_interaction: bool):
-        # Count humans and bots
-        humans = len([m for m in guild.members if not m.bot])
-        bots = len([m for m in guild.members if m.bot])
-        total_members = len(guild.members)
+    # ------------------------
+    # Core function
+    # ------------------------
+    async def send_server_info(self, guild: discord.Guild, ctx_or_interaction: Union[commands.Context, discord.Interaction], is_interaction: bool):
+        # Count members
+        humans = sum(1 for m in guild.members if not m.bot)
+        bots = sum(1 for m in guild.members if m.bot)
+        total_members = guild.member_count
 
-        # Channels & roles
+        # Count channels & roles
         total_channels = len(guild.channels)
         total_roles = len(guild.roles)
 
-        # Verification level with emojis
-        verif_levels = {
+        # Verification level mapping
+        verification_levels = {
             discord.VerificationLevel.none: "None 🔓",
             discord.VerificationLevel.low: "Low 🔒",
             discord.VerificationLevel.medium: "Medium 🛡️",
-            discord.VerificationLevel.high: "High ⚔️",
+            discord.VerificationLevel.high: "High 🔐",
             discord.VerificationLevel.extreme: "Highest 🏰"
         }
-        verif = verif_levels.get(guild.verification_level, "Unknown ❓")
+        verif = verification_levels.get(guild.verification_level, "Unknown ❔")
+
+        # Server boosts
+        boost_level = guild.premium_tier
+        boost_count = guild.premium_subscription_count
 
         # Emojis
         static_emojis = len([e for e in guild.emojis if not e.animated])
         animated_emojis = len([e for e in guild.emojis if e.animated])
-
-        # Boost info
-        boost_level = guild.premium_tier
-        boost_count = guild.premium_subscription_count
 
         # Random embed color
         embed_color = discord.Color.random()
@@ -58,10 +59,8 @@ class General(commands.Cog):
         # Create embed
         embed = discord.Embed(
             title=guild.name,
-            color=embed_color,
-            timestamp=discord.utils.utcnow()
+            color=embed_color
         )
-        embed.set_footer(text=f"Server ID: {guild.id}")
         embed.set_author(name=guild.name, icon_url=guild.icon.url if guild.icon else None)
 
         # Fields
@@ -72,14 +71,15 @@ class General(commands.Cog):
         embed.add_field(name="🚀 Boosts", value=f"Level: {boost_level}\nBoosters: {boost_count}", inline=True)
         embed.add_field(name="😊 Emojis", value=f"Static: {static_emojis}\nAnimated: {animated_emojis}", inline=True)
 
-        # Send response
+        # Send the embed
         if is_interaction:
-            await target.response.send_message(embed=embed)
+            await ctx_or_interaction.response.send_message(embed=embed)
         else:
-            await target.send(embed=embed)
+            await ctx_or_interaction.send(embed=embed)
 
-# -------------------
-# Setup function
-# -------------------
-async def setup(bot: commands.Bot):
-    await bot.add_cog(General(bot))
+
+# ------------------------
+# Cog setup
+# ------------------------
+async def setup(bot):
+    await bot.add_cog(ServerInfo(bot))
