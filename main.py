@@ -32,6 +32,7 @@ class ModBot(commands.Bot):
         # Load cogs
         await self.load_extension('cogs.moderation')
         await self.load_extension('cogs.general')
+        await self.load_extension('cogs.serverinfo')
         
         # Sync slash commands
         try:
@@ -96,8 +97,8 @@ async def main():
     await bot.load_extension("messagelogger")
     await bot.load_extension("invite")
     await bot.load_extension("xoxo")
-    await bot.load_extension("serverinfo")
 
+    
     # Check if token exists
     if not Config.BOT_TOKEN:
         logger.error("DISCORD_TOKEN environment variable is not set!")
