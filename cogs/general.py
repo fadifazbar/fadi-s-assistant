@@ -217,7 +217,7 @@ class General(commands.Cog):
             else:
                 await ctx_or_interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
-    # Prefix
+        # Prefix
     @commands.command(name="serverinfo")
 async def serverinfo_prefix(self, ctx):
     await self.send_server_info(ctx.guild, ctx, is_interaction=False)
