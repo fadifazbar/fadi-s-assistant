@@ -259,9 +259,12 @@ class Moderation(commands.Cog):
     # -----------------------
     # Prefix command: change role color
     # -----------------------
-    @commands.command(name="rolecolor")
-@commands.has_permissions(manage_roles=True)  # Only use commands.has_permissions for prefix
+    # Prefix command
+# Prefix command
+@commands.command(name="rolecolor")
+@commands.has_permissions(manage_roles=True)
 async def rolecolor_prefix(self, ctx, role: discord.Role, *, color: str):
+    # Check role hierarchy
     if role >= ctx.author.top_role:
         await ctx.send("❌ You cannot change a role higher than or equal to your top role.")
         return
@@ -269,8 +272,11 @@ async def rolecolor_prefix(self, ctx, role: discord.Role, *, color: str):
         await ctx.send("❌ I cannot change a role higher than my top role.")
         return
 
+    # Normalize color input
     color_input = color.strip().lower()
     hex_code = self.CUSTOM_COLORS.get(color_input)
+
+    # Check if user typed a hex directly
     if hex_code is None:
         if color_input.startswith("#") and len(color_input) == 7:
             hex_code = color_input
@@ -280,6 +286,7 @@ async def rolecolor_prefix(self, ctx, role: discord.Role, *, color: str):
 
     new_color = discord.Color(int(hex_code.lstrip("#"), 16))
 
+    # Apply new color
     try:
         await role.edit(color=new_color, reason=f"Role color changed by {ctx.author}")
         await ctx.send(f"✅ Role `{role.name}` color changed to `{color.title()}`")
