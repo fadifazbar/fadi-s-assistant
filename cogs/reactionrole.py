@@ -6,8 +6,12 @@ import os
 
 REACTION_ROLE_FILE = "reaction_roles.json"
 
+
+# ---------------- JSON Helpers ----------------
 def load_reaction_roles():
     if not os.path.exists(REACTION_ROLE_FILE):
+        with open(REACTION_ROLE_FILE, "w") as f:
+            json.dump({}, f, indent=4)
         return {}
     try:
         with open(REACTION_ROLE_FILE, "r") as f:
@@ -15,15 +19,23 @@ def load_reaction_roles():
     except json.JSONDecodeError:
         return {}
 
+
 def save_reaction_roles(data):
     with open(REACTION_ROLE_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
+
 reaction_roles = load_reaction_roles()
 
+
+# ---------------- Cog ----------------
 class ReactionRole(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    # Helper: convert emoji to string (handles custom + unicode)
+    def emoji_to_str(self, emoji: discord.PartialEmoji | str):
+        return str(emoji)
 
     # ---------------- Prefix Command ----------------
     @commands.command(name="reactionrole")
@@ -37,21 +49,25 @@ class ReactionRole(commands.Cog):
         if role >= ctx.guild.me.top_role:
             return await ctx.send("❌ I cannot manage that role because it is higher than or equal to my top role.")
 
+        # Fetch message
         try:
             message = await ctx.channel.fetch_message(message_id)
         except discord.NotFound:
             return await ctx.send("❌ Message not found.")
+        except discord.Forbidden:
+            return await ctx.send("❌ I don’t have permission to fetch that message.")
 
-        await message.add_reaction(emoji)
+        # Add reaction
+        try:
+            await message.add_reaction(emoji)
+        except discord.HTTPException:
+            return await ctx.send("❌ Invalid emoji.")
 
         guild_id = str(ctx.guild.id)
-        if guild_id not in reaction_roles:
-            reaction_roles[guild_id] = {}
-        if str(message_id) not in reaction_roles[guild_id]:
-            reaction_roles[guild_id][str(message_id)] = {}
+        emoji_str = str(emoji)
 
-        # Allow multiple emojis per message
-        reaction_roles[guild_id][str(message_id)][emoji] = role.id
+        reaction_roles.setdefault(guild_id, {}).setdefault(str(message_id), {})
+        reaction_roles[guild_id][str(message_id)][emoji_str] = role.id
         save_reaction_roles(reaction_roles)
 
         await ctx.send(f"✅ Reaction role set: {emoji} → {role.mention} on [this message]({message.jump_url})")
@@ -62,33 +78,59 @@ class ReactionRole(commands.Cog):
     async def reactionrole_slash(self, interaction: discord.Interaction, message_id: str, emoji: str, role: discord.Role):
         # Check hierarchy against user
         if role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
-            return await interaction.response.send_message("❌ You cannot create a reaction role with a role higher or equal to your top role.", ephemeral=True)
+            return await interaction.response.send_message(
+                "❌ You cannot create a reaction role with a role higher or equal to your top role.",
+                ephemeral=True
+            )
 
         # Check hierarchy against bot
         if role >= interaction.guild.me.top_role:
-            return await interaction.response.send_message("❌ I cannot manage that role because it is higher than or equal to my top role.", ephemeral=True)
+            return await interaction.response.send_message(
+                "❌ I cannot manage that role because it is higher than or equal to my top role.",
+                ephemeral=True
+            )
 
+        # Fetch message
         try:
             message = await interaction.channel.fetch_message(int(message_id))
         except discord.NotFound:
             return await interaction.response.send_message("❌ Message not found.", ephemeral=True)
+        except discord.Forbidden:
+            return await interaction.response.send_message("❌ I don’t have permission to fetch that message.", ephemeral=True)
 
-        await message.add_reaction(emoji)
+        # Add reaction
+        try:
+            await message.add_reaction(emoji)
+        except discord.HTTPException:
+            return await interaction.response.send_message("❌ Invalid emoji.", ephemeral=True)
 
         guild_id = str(interaction.guild.id)
-        if guild_id not in reaction_roles:
-            reaction_roles[guild_id] = {}
-        if str(message_id) not in reaction_roles[guild_id]:
-            reaction_roles[guild_id][str(message_id)] = {}
+        emoji_str = str(emoji)
 
-        # Allow multiple emojis per message
-        reaction_roles[guild_id][str(message_id)][emoji] = role.id
+        reaction_roles.setdefault(guild_id, {}).setdefault(str(message_id), {})
+        reaction_roles[guild_id][str(message_id)][emoji_str] = role.id
         save_reaction_roles(reaction_roles)
 
         await interaction.response.send_message(
-            f"✅ Reaction role set: {emoji} → {role.mention} on [this message]({message.jump_url})",
-            ephemeral=False
+            f"✅ Reaction role set: {emoji} → {role.mention} on [this message]({message.jump_url})"
         )
+
+    # ---------------- Debug Command (List) ----------------
+    @commands.command(name="reactionrolelist")
+    @commands.has_permissions(manage_roles=True)
+    async def reactionrole_list(self, ctx):
+        guild_data = reaction_roles.get(str(ctx.guild.id), {})
+        if not guild_data:
+            return await ctx.send("ℹ️ No reaction roles set in this server.")
+
+        msg = "📌 **Reaction Roles in this server:**\n"
+        for msg_id, emojis in guild_data.items():
+            msg += f"\nMessage `{msg_id}`:\n"
+            for emoji, role_id in emojis.items():
+                role = ctx.guild.get_role(role_id)
+                msg += f"  {emoji} → {role.mention if role else '(deleted role)'}\n"
+
+        await ctx.send(msg)
 
     # ---------------- Event: Add Role ----------------
     @commands.Cog.listener()
@@ -97,7 +139,7 @@ class ReactionRole(commands.Cog):
             return
 
         guild = self.bot.get_guild(payload.guild_id)
-        if guild is None:
+        if not guild:
             return
 
         guild_data = reaction_roles.get(str(guild.id), {})
@@ -112,7 +154,7 @@ class ReactionRole(commands.Cog):
             try:
                 await member.add_roles(role, reason="Reaction role")
             except discord.Forbidden:
-                pass  # Ignore missing permissions
+                print(f"[WARN] Missing permissions to give {role} in {guild.name}")
 
     # ---------------- Event: Remove Role ----------------
     @commands.Cog.listener()
@@ -121,7 +163,7 @@ class ReactionRole(commands.Cog):
             return
 
         guild = self.bot.get_guild(payload.guild_id)
-        if guild is None:
+        if not guild:
             return
 
         guild_data = reaction_roles.get(str(guild.id), {})
@@ -136,7 +178,8 @@ class ReactionRole(commands.Cog):
             try:
                 await member.remove_roles(role, reason="Reaction role removed")
             except discord.Forbidden:
-                pass  # Ignore missing permissions
+                print(f"[WARN] Missing permissions to remove {role} in {guild.name}")
+
 
 async def setup(bot):
     await bot.add_cog(ReactionRole(bot))
