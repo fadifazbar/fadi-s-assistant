@@ -43,7 +43,7 @@ class General(commands.Cog):
         """Internal method to handle say functionality"""
         # Basic content filtering
         if "@everyone" in message.lower() or "@here" in message.lower():
-            await self._send_response(ctx_or_interaction, "❌ Cannot use @everyone or @here mentions!")
+            await self._send_response(ctx_or_interaction, "❌ Cannot use everyone or here mentions!")
             return
 
         # Check message length
