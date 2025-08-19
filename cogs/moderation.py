@@ -260,39 +260,33 @@ class Moderation(commands.Cog):
     # Prefix command: change role color
     # -----------------------
     @commands.command(name="rolecolor")
-    @commands.has_permissions(manage_roles=True)
-    async def rolecolor_prefix(self, ctx, role: discord.Role, *, color: str):
-        if role >= ctx.author.top_role:
-            await ctx.send("❌ You cannot change a role higher than or equal to your top role.")
-            return
-        if role >= ctx.guild.me.top_role:
-            await ctx.send("❌ I cannot change a role higher than my top role.")
-            return
-
-        # Clean up user input
-color_input = color.strip().lower()
-
-# Look up named color in dictionary
-hex_code = self.CUSTOM_COLORS.get(color_input)
-
-# Try parsing hex if not found in dictionary
-if hex_code is None:
-    if color_input.startswith("#") and len(color_input) == 7:
-        hex_code = color_input
-    else:
-        await ctx.send("❌ Invalid color! Use one of: " + ", ".join(self.CUSTOM_COLORS.keys()))
+@commands.has_permissions(manage_roles=True)
+async def rolecolor_prefix(self, ctx, role: discord.Role, *, color: str):
+    if role >= ctx.author.top_role:
+        await ctx.send("❌ You cannot change a role higher than or equal to your top role.")
+        return
+    if role >= ctx.guild.me.top_role:
+        await ctx.send("❌ I cannot change a role higher than my top role.")
         return
 
-# Convert to discord.Color
-new_color = discord.Color(int(hex_code.lstrip("#"), 16))
+    color_input = color.strip().lower()
+    hex_code = self.CUSTOM_COLORS.get(color_input)
+    if hex_code is None:
+        if color_input.startswith("#") and len(color_input) == 7:
+            hex_code = color_input
+        else:
+            await ctx.send("❌ Invalid color! Use one of: " + ", ".join(self.CUSTOM_COLORS.keys()))
+            return
 
-try:
-    await role.edit(color=new_color, reason=f"Role color changed by {ctx.author}")
-    await ctx.send(f"✅ Role `{role.name}` color changed to `{color.title()}`")
-except discord.Forbidden:
-    await ctx.send("❌ I don't have permission to change this role.")
-except Exception as e:
-    await ctx.send(f"❌ Error: {e}")
+    new_color = discord.Color(int(hex_code.lstrip("#"), 16))
+
+    try:
+        await role.edit(color=new_color, reason=f"Role color changed by {ctx.author}")
+        await ctx.send(f"✅ Role `{role.name}` color changed to `{color.title()}`")
+    except discord.Forbidden:
+        await ctx.send("❌ I don't have permission to change this role.")
+    except Exception as e:
+        await ctx.send(f"❌ Error: {e}")
     
     # -----------------------
     # Prefix command: list all colors
