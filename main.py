@@ -99,21 +99,14 @@ async def main():
 
     await bot.load_extension("xoxo")
     
-    try:
-        if not Config.BOT_TOKEN:
-    raise ValueError("DISCORD_TOKEN environment variable is not set!")
-
-try:
-    await bot.start(Config.BOT_TOKEN)
-except discord.LoginFailure:
-    logger.error("Invalid bot token provided!")
-except Exception as e:
+      
+  
+try:  
+    await bot.start(Config.BOT_TOKEN)  
+except discord.LoginFailure:  
+    logger.error("Invalid bot token provided!")  
+except Exception as e:  
     logger.error(f"Error starting bot: {e}")
-    except discord.LoginFailure:
-        logger.error("Invalid bot token provided!")
-    except Exception as e:
-        logger.error(f"Error starting bot: {e}")
-
 if __name__ == "__main__":
     try:
         asyncio.run(main())
