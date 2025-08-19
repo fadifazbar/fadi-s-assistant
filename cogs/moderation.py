@@ -286,7 +286,7 @@ if hex_code is None:
 # Convert to discord.Color
 new_color = discord.Color(int(hex_code.lstrip("#"), 16))
 
-        try:
+try:
             await role.edit(color=new_color, reason=f"Role color changed by {ctx.author}")
             await ctx.send(f"✅ Role `{role.name}` color changed to `{color.title()}`")
         except discord.Forbidden:
