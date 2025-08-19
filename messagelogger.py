@@ -2,32 +2,44 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from datetime import datetime
-import json
+import sqlite3
 import os
 
-CONFIG_FILE = "log_channels.json"
+DB_FILE = "log_channels.db"
 
 class MessageLogger(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.log_channels = self.load_config()
+        self.conn = sqlite3.connect(DB_FILE)
+        self.cursor = self.conn.cursor()
+        self.create_table()
 
-    def load_config(self):
-        if os.path.exists(CONFIG_FILE):
-            with open(CONFIG_FILE, "r") as f:
-                return json.load(f)
-        return {}
+    def create_table(self):
+        self.cursor.execute(
+            """CREATE TABLE IF NOT EXISTS log_channels (
+                guild_id TEXT PRIMARY KEY,
+                channel_id INTEGER
+            )"""
+        )
+        self.conn.commit()
 
-    def save_config(self):
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(self.log_channels, f, indent=4)
+    def set_log_channel(self, guild_id: str, channel_id: int):
+        self.cursor.execute(
+            "INSERT OR REPLACE INTO log_channels (guild_id, channel_id) VALUES (?, ?)",
+            (guild_id, channel_id)
+        )
+        self.conn.commit()
+
+    def get_log_channel(self, guild_id: str):
+        self.cursor.execute("SELECT channel_id FROM log_channels WHERE guild_id = ?", (guild_id,))
+        result = self.cursor.fetchone()
+        return result[0] if result else None
 
     # Command for admins to set the log channel
     @app_commands.command(name="saylogs", description="Select a channel to log all say command usage")
     @app_commands.checks.has_permissions(administrator=True)
     async def viewmessage(self, interaction: discord.Interaction, channel: discord.TextChannel):
-        self.log_channels[str(interaction.guild.id)] = channel.id
-        self.save_config()
+        self.set_log_channel(str(interaction.guild.id), channel.id)
         await interaction.response.send_message(
             f"✅ Say command logs will now be sent to {channel.mention}",
             ephemeral=True
@@ -36,10 +48,11 @@ class MessageLogger(commands.Cog):
     # Internal helper to log messages
     async def log_say(self, author: discord.Member, message: str, channel: discord.TextChannel, bot_message: discord.Message = None):
         guild_id = str(channel.guild.id)
-        if guild_id not in self.log_channels:
-            return  # no log channel set for this guild
+        log_channel_id = self.get_log_channel(guild_id)
+        if not log_channel_id:
+            return
 
-        log_channel = channel.guild.get_channel(self.log_channels[guild_id])
+        log_channel = channel.guild.get_channel(log_channel_id)
         if log_channel is None:
             return
 
@@ -64,7 +77,6 @@ class MessageLogger(commands.Cog):
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: commands.Context):
         if ctx.command and ctx.command.name == "say":
-            # get the message the bot just sent (last message in channel by bot)
             bot_message = None
             try:
                 async for msg in ctx.channel.history(limit=5):
@@ -89,7 +101,6 @@ class MessageLogger(commands.Cog):
 
             bot_message = None
             try:
-                # the bot’s reply is usually the last message in the channel by the bot
                 async for msg in interaction.channel.history(limit=5):
                     if msg.author == self.bot.user:
                         bot_message = msg
