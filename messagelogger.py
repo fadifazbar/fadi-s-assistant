@@ -143,37 +143,6 @@ class MessageLogger(commands.Cog):
 
             await self.log_say(interaction.user, message, interaction.channel, bot_message)
 
-    # export logs
-    @app_commands.command(name="exportlogs", description="Export the log channel settings (allowed users only)")
-    async def export_logs(self, interaction: discord.Interaction):
-        """Export the log_channels.json contents as a file."""
-
-        # ✅ Only allow specific users/admins
-        allowed_ids = {1167531276467708055}  # replace with your user IDs
-        if interaction.user.id not in allowed_ids:
-            return await interaction.response.send_message("❌ You are not allowed to use this command. Only bot owner can", ephemeral=True)
-
-        # Format logs nicely
-        pretty_json = json.dumps(log_channels, indent=4)
-
-        # ✅ Filename with guild name + timestamp
-        guild_name = interaction.guild.name if interaction.guild else "DM"
-        safe_name = guild_name.replace(" ", "_").replace("/", "_")  # avoid invalid filename chars
-        timestamp = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"logs_{safe_name}_{timestamp}.json"
-
-        # Write into memory buffer
-        file = discord.File(
-            fp=io.BytesIO(pretty_json.encode()),
-            filename=filename
-        )
-
-        # Send file in DM
-        await interaction.user.send("📂 Here are the exported log settings:", file=file)
-        await interaction.response.send_message("✅ Logs exported and sent to your DMs.", ephemeral=True)
-
-
-
 async def setup(bot):
     await bot.add_cog(MessageLogger(bot))
 
