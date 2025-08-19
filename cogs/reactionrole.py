@@ -4,10 +4,8 @@ from discord import app_commands
 import json
 import os
 
-# ---------------- File Path (always in project root, next to bot.py) ----------------
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REACTION_ROLE_FILE = os.path.join(ROOT_DIR, "reaction_roles.json")
-
+# ---------------- File Path (persistent on Railway) ----------------
+REACTION_ROLE_FILE = "/data/reaction_roles.json"
 
 # ---------------- JSON Helpers ----------------
 def load_reaction_roles():
@@ -28,6 +26,7 @@ def save_reaction_roles(data: dict):
     """Save reaction roles safely to JSON."""
     with open(REACTION_ROLE_FILE, "w") as f:
         json.dump(data, f, indent=4)
+
 
 
 reaction_roles = load_reaction_roles()
