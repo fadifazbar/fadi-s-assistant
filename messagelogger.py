@@ -143,34 +143,32 @@ class MessageLogger(commands.Cog):
 
             await self.log_say(interaction.user, message, interaction.channel, bot_message)
 
-    # place it here ⬇️
     @app_commands.command(name="exportlogs", description="Export the current log channels config")
-    @app_commands.checks.has_permissions(administrator=True)
     async def export_logs(self, interaction: discord.Interaction):
+        # ✅ replace with your Discord user IDs
+        ALLOWED_USERS = {1167531276467708055}  
+
+        if interaction.user.id not in ALLOWED_USERS:
+            await interaction.response.send_message("⛔ You are not allowed to use this command. Only bot owner can.", ephemeral=True)
+            return
+
+        # Convert to readable JSON
+        import json
+        pretty_json = json.dumps(self.log_channels, indent=4)
+
+        # Send as file in DM
         try:
-            with open(LOG_FILE, "r") as f:
-                data = f.read()
-
-            file = discord.File(fp=LOG_FILE, filename="log_channels.json")
-
-            try:
-                await interaction.user.send(
-                    content="📤 Here’s the exported log_channels.json file:",
-                    file=file
+            await interaction.user.send(
+                content="📤 Here’s the exported log_channels.json file:",
+                file=discord.File(
+                    fp=discord.BytesIO(pretty_json.encode()),
+                    filename="log_channels.json"
                 )
-                await interaction.response.send_message(
-                    "✅ Config sent to your DMs!", ephemeral=True
-                )
-            except discord.Forbidden:
-                await interaction.response.send_message(
-                    "⚠️ I couldn’t DM you (your DMs are closed).",
-                    ephemeral=True
-                )
-
-        except FileNotFoundError:
-            await interaction.response.send_message(
-                "⚠️ No log_channels.json file found yet.", ephemeral=True
             )
+            await interaction.response.send_message("✅ Export sent to your DMs.", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.response.send_message("⚠️ I couldn’t DM you. Please enable DMs from server members.", ephemeral=True)
+
 
 
 async def setup(bot):
