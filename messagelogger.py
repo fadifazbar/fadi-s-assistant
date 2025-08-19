@@ -5,16 +5,19 @@ from datetime import datetime
 import sqlite3
 import os
 
-DB_FILE = "log_channels.db"
+# Use Railway's persistent volume (make sure you mounted /data in Railway)
+DB_FILE = "/data/log_channels.db"
 
 class MessageLogger(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.conn = sqlite3.connect(DB_FILE)
+        # allow multiple threads (discord.py runs async)
+        self.conn = sqlite3.connect(DB_FILE, check_same_thread=False)
         self.cursor = self.conn.cursor()
         self.create_table()
 
     def create_table(self):
+        """Create the table if it doesn't exist"""
         self.cursor.execute(
             """CREATE TABLE IF NOT EXISTS log_channels (
                 guild_id TEXT PRIMARY KEY,
@@ -24,6 +27,7 @@ class MessageLogger(commands.Cog):
         self.conn.commit()
 
     def set_log_channel(self, guild_id: str, channel_id: int):
+        """Insert or update a guild's log channel"""
         self.cursor.execute(
             "INSERT OR REPLACE INTO log_channels (guild_id, channel_id) VALUES (?, ?)",
             (guild_id, channel_id)
@@ -31,11 +35,12 @@ class MessageLogger(commands.Cog):
         self.conn.commit()
 
     def get_log_channel(self, guild_id: str):
+        """Fetch the log channel for a guild"""
         self.cursor.execute("SELECT channel_id FROM log_channels WHERE guild_id = ?", (guild_id,))
         result = self.cursor.fetchone()
         return result[0] if result else None
 
-    # Command for admins to set the log channel
+    # Admin command to set the log channel
     @app_commands.command(name="saylogs", description="Select a channel to log all say command usage")
     @app_commands.checks.has_permissions(administrator=True)
     async def viewmessage(self, interaction: discord.Interaction, channel: discord.TextChannel):
@@ -45,7 +50,21 @@ class MessageLogger(commands.Cog):
             ephemeral=True
         )
 
-    # Internal helper to log messages
+    # OPTIONAL: Check which log channel is currently set
+    @app_commands.command(name="checklogs", description="Check which channel is set for say command logs")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def check_logs(self, interaction: discord.Interaction):
+        log_channel_id = self.get_log_channel(str(interaction.guild.id))
+        if log_channel_id:
+            channel = interaction.guild.get_channel(log_channel_id)
+            await interaction.response.send_message(
+                f"📍 Current log channel: {channel.mention if channel else '⚠️ Not found'}",
+                ephemeral=True
+            )
+        else:
+            await interaction.response.send_message("⚠️ No log channel set.", ephemeral=True)
+
+    # Internal helper
     async def log_say(self, author: discord.Member, message: str, channel: discord.TextChannel, bot_message: discord.Message = None):
         guild_id = str(channel.guild.id)
         log_channel_id = self.get_log_channel(guild_id)
@@ -70,10 +89,9 @@ class MessageLogger(commands.Cog):
             embed.add_field(name="🔗 Message Link", value=f"[Jump to Message]({bot_message.jump_url})", inline=False)
 
         embed.set_thumbnail(url=author.display_avatar.url)
-
         await log_channel.send(embed=embed)
 
-    # Hook into prefix say command
+    # Hook into prefix "say" command
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: commands.Context):
         if ctx.command and ctx.command.name == "say":
@@ -93,12 +111,11 @@ class MessageLogger(commands.Cog):
                 bot_message
             )
 
-    # Hook into slash say command
+    # Hook into slash "say" command
     @commands.Cog.listener()
     async def on_app_command_completion(self, interaction: discord.Interaction, command: app_commands.Command):
         if command.name == "say":
             message = interaction.namespace.message
-
             bot_message = None
             try:
                 async for msg in interaction.channel.history(limit=5):
