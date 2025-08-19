@@ -4,7 +4,8 @@ from discord import app_commands
 import json
 import os
 
-REACTION_ROLE_FILE = "reaction_roles.json"
+# ---------------- File Path (always in main folder) ----------------
+REACTION_ROLE_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "reaction_roles.json")
 
 
 # ---------------- JSON Helpers ----------------
@@ -144,30 +145,6 @@ class ReactionRole(commands.Cog):
 
         guild_data = reaction_roles.get(str(guild.id), {})
         msg_roles = guild_data.get(str(payload.message_id), {})
-        role_id = msg_roles.get(str(payload.emoji))
-        if not role_id:
-            return
-
-        role = guild.get_role(role_id)
-        member = guild.get_member(payload.user_id)
-        if role and member and not member.bot:
-            try:
-                await member.add_roles(role, reason="Reaction role")
-            except discord.Forbidden:
-                print(f"[WARN] Missing permissions to give {role} in {guild.name}")
-
-    # ---------------- Event: Remove Role ----------------
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
-        if payload.guild_id is None or payload.user_id == self.bot.user.id:
-            return
-
-        guild = self.bot.get_guild(payload.guild_id)
-        if not guild:
-            return
-
-        guild_data = reaction_roles.get(str(guild.id), {})
-        msg_roles = guild_data.get(str(payload.message_id), {})
         emoji_str = str(payload.emoji)  # ✅ Convert emoji properly
         role_id = msg_roles.get(emoji_str)
         if not role_id:
@@ -181,7 +158,7 @@ class ReactionRole(commands.Cog):
             except discord.Forbidden:
                 print(f"[WARN] Missing permissions to give {role} in {guild.name}")
 
-
+    # ---------------- Event: Remove Role ----------------
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
         if payload.guild_id is None or payload.user_id == self.bot.user.id:
@@ -205,7 +182,6 @@ class ReactionRole(commands.Cog):
                 await member.remove_roles(role, reason="Reaction role removed")
             except discord.Forbidden:
                 print(f"[WARN] Missing permissions to remove {role} in {guild.name}")
-
 
 
 async def setup(bot):
