@@ -34,11 +34,11 @@ class ServerInfo(commands.Cog):
 
         # Verification level with emojis
         verif_dict = {
-            discord.VerificationLevel.none: "None 🟢",
-            discord.VerificationLevel.low: "Low 🟡",
-            discord.VerificationLevel.medium: "Medium 🟠",
-            discord.VerificationLevel.high: "High 🔴",
-            discord.VerificationLevel.highest: "Highest 🏰",
+            discord.VerificationLevel.none: "🟢 None",
+            discord.VerificationLevel.low: "🟡 Low",
+            discord.VerificationLevel.medium: "🛑 Medium",
+            discord.VerificationLevel.high: "⛔ High",
+            discord.VerificationLevel.highest: "📛 Highest",
         }
         verif = verif_dict.get(guild.verification_level, "Unknown ❔")
 
@@ -53,7 +53,7 @@ class ServerInfo(commands.Cog):
         static_emojis_list = [str(e) for e in guild.emojis if not e.animated]
         animated_emojis_list = [str(e) for e in guild.emojis if e.animated]
 
-        def truncate_list(items, limit=1000):
+        def truncate_list(items, limit=1300):
             joined = " ".join(items)
             if len(joined) > limit:
                 cut_length = limit - 15
@@ -66,8 +66,8 @@ class ServerInfo(commands.Cog):
 
         # Create embed
         embed = discord.Embed(
-            title=f"{guild.name}",
-            description=f"# Server Info",
+            title=f"Server Info",
+            description=f"# {guild.name}",
             color=color
         )
 
@@ -77,11 +77,11 @@ class ServerInfo(commands.Cog):
 
         # Add fields with emojis
         embed.add_field(name="👑 Owner", value=owner, inline=True)
-        embed.add_field(name="🧑 Members", value=f"Humans: {humans}\nBots: {bots}\nTotal: {total_members}", inline=True)
-        embed.add_field(name="🛠 Channels & Roles", value=f"Channels: {total_channels}\nRoles: {total_roles}", inline=True)
+        embed.add_field(name="🧑 Members", value=f"🤩 Humans: {humans}\n🤖 Bots: {bots}\n💗 Total: {total_members}", inline=True)
+        embed.add_field(name="🛠 Channels & Roles", value=f"💬 Channels: {total_channels}\n✨ Roles: {total_roles}", inline=True)
         embed.add_field(name="🔒 Verification", value=verif, inline=True)
-        embed.add_field(name="🚀 Boosts", value=f"Level: {boost_level}\nBoosters: {boost_count}", inline=True)
-        embed.add_field(name="📦 Stickers", value=f"Total: {sticker_count}", inline=True)
+        embed.add_field(name="🚀 Boosts", value=f"🔮 Level: {boost_level}\n🚀 Boosts: {boost_count}", inline=True)
+        embed.add_field(name="📦 Stickers", value=f"🥶 Total: {sticker_count}", inline=True)
         embed.add_field(name="😊 Static Emojis", value=static_emojis, inline=False)
         embed.add_field(name="🎉 Animated Emojis", value=animated_emojis, inline=False)
         embed.add_field(name="🕒 Created At", value=guild.created_at.strftime("%d %b %Y %H:%M"), inline=True)
