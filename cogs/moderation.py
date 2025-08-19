@@ -33,12 +33,7 @@ async def role_autocomplete(interaction: discord.Interaction, current: str) -> L
 
 class Moderation(commands.Cog):
     """Moderation commands for the bot"""
-            
-    
-    def __init__(self, bot):
-        self.bot = bot
-        self.muted_users = {}  # Simple in-memory storage for muted users
-        CUSTOM_COLORS = {
+    CUSTOM_COLORS = {
             "red": "#ff0000",
             "blue": "#0044ff",
             "green": "#0dff00",
@@ -52,7 +47,13 @@ class Moderation(commands.Cog):
             "darkblue": "#001e8c",
             "darkgreen": "#008c05",
             "darkorange": "#cc6600"
-        }
+    }
+            
+    
+    def __init__(self, bot):
+        self.bot = bot
+        self.muted_users = {}  # Simple in-memory storage for muted users
+        
 
     
     def parse_time_duration(self, duration_str: str) -> Optional[int]:
