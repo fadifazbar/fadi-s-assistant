@@ -33,6 +33,7 @@ class ModBot(commands.Bot):
         await self.load_extension('cogs.moderation')
         await self.load_extension('cogs.general')
         await self.load_extension('cogs.serverinfo')
+        await self.load_extension('cogs.reactionrole')
         
         # Sync slash commands
         try:
@@ -51,7 +52,7 @@ class ModBot(commands.Bot):
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
-                name=f"{Config.PREFIX}help | Moderation And Fun Bot"
+                name=f"{Config.PREFIX}help | Moderation And Fun Bot :p"
             ),
             status=discord.Status.online
         )
