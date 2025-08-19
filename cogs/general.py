@@ -140,7 +140,9 @@ class General(commands.Cog):
             "avatar": ("🖼️ Avatar", f"`{Config.PREFIX}avatar <member>` or `/avatar`\nShow a user's avatar"),
             "8ball": ("🎱 8Ball", f"`{Config.PREFIX}8ball <question>` or `/8ball`\nPlay a game of 8ball"),
             "rolerename": ("📝 RoleRename", f"`{Config.PREFIX}rolerename <role> <new name>` or `/rolerename`\nRename a role in the server"),
-            "tictactoe": ("📝 TicTacToe (XOXO)", f"`{Config.PREFIX}xoxo <member>` or `/tictactoe`\nPlay a game of TicTacToe (XOXO) with another user")
+            "tictactoe": ("📝 TicTacToe (XOXO)", f"`{Config.PREFIX}xoxo <member>` or `/tictactoe`\nPlay a game of TicTacToe (XOXO) with another user"),
+            "rolecolor": ("🖍️ RoleColor", f"`{Config.PREFIX}rolecolor <role> <colorname/hex code>` or `/rolecolor`\nRecolor any role you want with hex code or color name"),
+            "rolecolors": ("🌈 RoleColors", f"`{Config.PREFIX}rolecolors` or `/rolecolors`\nShows a list of the available colors")
         }
 
         # --- Show specific command help ---
@@ -169,7 +171,9 @@ class General(commands.Cog):
                       f"`{Config.PREFIX}renamechannel` - Rename a channel\n"
                       f"`{Config.PREFIX}listroles` - List all roles\n"
                       f"`{Config.PREFIX}saylogs` - Logs for say command\n"
-                f"`{Config.PREFIX}rolerename` - Rename a role in the server",
+                f"`{Config.PREFIX}rolerename` - Rename a role in the server\n"
+                f"`{Config.PREFIX}rolecolor` - Change a color of a role with hex or color name\n"
+                f"`{Config.PREFIX}rolecolors` - Shows you a list of all the available colors.",
                 inline=True
             )
 
@@ -187,7 +191,8 @@ class General(commands.Cog):
                       f"`{Config.PREFIX}randomnumber` - Generate a random number\n"
                       f"`{Config.PREFIX}invite` - Get the bot invite link\n"
                       f"`{Config.PREFIX}kiss` - Kiss a member\n"
-                f"`{Config.PREFIX}tictactoe` - Challenge another user to TicTacToe (XO)",
+                f"`{Config.PREFIX}tictactoe` - Challenge another user to TicTacToe (XO)\n"
+                f"`{Config.PREFIX}serverinfo` - View the whole server info. like members/bots/boosts/ect.",
                 inline=True
             )
 
@@ -211,6 +216,88 @@ class General(commands.Cog):
                 await ctx_or_interaction.response.send_message(embed=embed, ephemeral=ephemeral)
             else:
                 await ctx_or_interaction.followup.send(embed=embed, ephemeral=ephemeral)
+
+        # -----------------------------
+    # Prefix command: $serverinfo
+    # -----------------------------
+    @commands.command(name="serverinfo")
+    async def serverinfo_prefix(self, ctx):
+        guild = ctx.guild
+        await self.send_server_info(ctx, guild, is_interaction=False)
+
+    # -----------------------------
+    # Slash command: /serverinfo
+    # -----------------------------
+    @app_commands.command(name="serverinfo", description="Displays server information")
+    async def serverinfo_slash(self, interaction: discord.Interaction):
+        guild = interaction.guild
+        await self.send_server_info(interaction, guild, is_interaction=True)
+
+    # -----------------------------
+    # Helper function
+    # -----------------------------
+    async def send_server_info(self, source, guild, is_interaction=False):
+        # Member counts
+        humans = len([m for m in guild.members if not m.bot])
+        bots = len([m for m in guild.members if m.bot])
+        total_members = len(guild.members)
+
+        # Channels & roles
+        total_channels = len(guild.channels)
+        total_roles = len(guild.roles)
+
+        # Verification level
+        verif = str(guild.verification_level).title().replace("_", " ")
+
+        # Boosts
+        boost_level = guild.premium_tier
+        boost_count = guild.premium_subscription_count
+
+        # Emojis
+        static_emojis = [str(e) for e in guild.emojis if not e.animated]
+        animated_emojis = [str(e) for e in guild.emojis if e.animated]
+        static_emojis_display = " ".join(static_emojis)[:1024] if static_emojis else "None"
+        animated_emojis_display = " ".join(animated_emojis)[:1024] if animated_emojis else "None"
+
+        # Stickers
+        static_stickers = [s.name for s in guild.stickers if s.format != discord.StickerFormatType.ANIMATED]
+        animated_stickers = [s.name for s in guild.stickers if s.format == discord.StickerFormatType.ANIMATED]
+        static_stickers_display = ", ".join(static_stickers) if static_stickers else "None"
+        animated_stickers_display = ", ".join(animated_stickers) if animated_stickers else "None"
+
+        # Embed
+        embed = discord.Embed(
+            title=guild.name,
+            color=discord.Color.random(),
+            timestamp=datetime.utcnow()
+        )
+
+        # Server icon as top-right small icon
+        if guild.icon:
+            embed.set_author(name=guild.name, icon_url=guild.icon.url)
+
+        # Fields
+        embed.add_field(name="👑 Owner", value=guild.owner.mention, inline=True)
+        embed.add_field(
+            name="🧑 Members",
+            value=f"Humans: {humans}\nBots: {bots}\nTotal: {total_members}",
+            inline=True
+        )
+        embed.add_field(
+            name="🛠 Channels & Roles",
+            value=f"Channels: {total_channels}\nRoles: {total_roles}",
+            inline=True
+        )
+        embed.add_field(name="🔒 Verification", value=verif, inline=True)
+        embed.add_field(name="🚀 Boosts", value=f"Level: {boost_level}\nBoosters: {boost_count}", inline=True)
+        embed.add_field(name="😊 Emojis", value=f"Static: {static_emojis_display}\nAnimated: {animated_emojis_display}", inline=False)
+        embed.add_field(name="📌 Stickers", value=f"Static: {static_stickers_display}\nAnimated: {animated_stickers_display}", inline=False)
+
+        # Send embed
+        if is_interaction:
+            await source.response.send_message(embed=embed)
+        else:
+            await source.send(embed=embed)
 
 
     # Ping command (Prefix)
