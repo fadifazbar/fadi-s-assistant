@@ -143,31 +143,34 @@ class MessageLogger(commands.Cog):
 
             await self.log_say(interaction.user, message, interaction.channel, bot_message)
 
-    @app_commands.command(name="exportlogs", description="Export the current log channels config")
+    # export logs
+    @app_commands.command(name="exportlogs", description="Export the log channel settings (allowed users only)")
     async def export_logs(self, interaction: discord.Interaction):
-        # ✅ replace with your Discord user IDs
-        ALLOWED_USERS = {1167531276467708055}  
+        """Export the log_channels.json contents as a file."""
 
-        if interaction.user.id not in ALLOWED_USERS:
-            await interaction.response.send_message("⛔ You are not allowed to use this command. Only bot owner can.", ephemeral=True)
-            return
+        # ✅ Only allow specific users/admins
+        allowed_ids = {1167531276467708055}  # replace with your user IDs
+        if interaction.user.id not in allowed_ids:
+            return await interaction.response.send_message("❌ You are not allowed to use this command. Only bot owner can", ephemeral=True)
 
-        # Convert to readable JSON
-        import json
-        pretty_json = json.dumps(self.log_channels, indent=4)
+        # Format logs nicely
+        pretty_json = json.dumps(log_channels, indent=4)
 
-        # Send as file in DM
-        try:
-            await interaction.user.send(
-                content="📤 Here’s the exported log_channels.json file:",
-                file=discord.File(
-                    fp=io.BytesIO(pretty_json.encode()),
-                    filename="log_channels.json"
-                )
-            )
-            await interaction.response.send_message("✅ Export sent to your DMs.", ephemeral=True)
-        except discord.Forbidden:
-            await interaction.response.send_message("⚠️ I couldn’t DM you. Please enable DMs from server members.", ephemeral=True)
+        # ✅ Filename with guild name + timestamp
+        guild_name = interaction.guild.name if interaction.guild else "DM"
+        safe_name = guild_name.replace(" ", "_").replace("/", "_")  # avoid invalid filename chars
+        timestamp = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"logs_{safe_name}_{timestamp}.json"
+
+        # Write into memory buffer
+        file = discord.File(
+            fp=io.BytesIO(pretty_json.encode()),
+            filename=filename
+        )
+
+        # Send file in DM
+        await interaction.user.send("📂 Here are the exported log settings:", file=file)
+        await interaction.response.send_message("✅ Logs exported and sent to your DMs.", ephemeral=True)
 
 
 
