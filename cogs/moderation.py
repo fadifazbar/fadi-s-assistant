@@ -254,6 +254,110 @@ class Moderation(commands.Cog):
             logger.error(f"Error banning user: {e}")
             await self._send_response(ctx_or_interaction, "❌ An error occurred while banning the member!")
 
+        # ------------------------------------------------
+    # PREFIX COMMAND
+    # ------------------------------------------------
+    @commands.command(name="reactionrole")
+    @commands.has_permissions(manage_roles=True)
+    async def reactionrole_prefix(self, ctx, message_id: int, emoji: str, role: discord.Role):
+        """Create a reaction role (prefix version)"""
+        # Permission check: cannot assign role above user
+        if role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+            return await ctx.send("❌ You cannot create a reaction role with a role higher or equal to your top role.")
+
+        try:
+            message = await ctx.channel.fetch_message(message_id)
+        except discord.NotFound:
+            return await ctx.send("❌ Message not found.")
+
+        try:
+            await message.add_reaction(emoji)
+        except discord.HTTPException:
+            return await ctx.send("❌ Invalid emoji.")
+
+        await ctx.send(f"✅ Reaction role created: React with {emoji} to get {role.mention}")
+
+        # Store in bot memory (can later be made persistent)
+        if not hasattr(self.bot, "reaction_roles"):
+            self.bot.reaction_roles = {}
+        self.bot.reaction_roles[(message.id, str(emoji))] = role.id
+
+    # ------------------------------------------------
+    # SLASH COMMAND
+    # ------------------------------------------------
+    @app_commands.command(name="reactionrole", description="Create a reaction role on a message")
+    @app_commands.checks.has_permissions(manage_roles=True)
+    async def reactionrole_slash(self, interaction: discord.Interaction, messageid: str, emoji: str, role: discord.Role):
+        """Create a reaction role (slash version)"""
+        # Permission check
+        if role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
+            return await interaction.response.send_message(
+                "❌ You cannot create a reaction role with a role higher or equal to your top role.",
+                ephemeral=True
+            )
+
+        try:
+            message = await interaction.channel.fetch_message(int(messageid))
+        except discord.NotFound:
+            return await interaction.response.send_message("❌ Message not found.", ephemeral=True)
+
+        try:
+            await message.add_reaction(emoji)
+        except discord.HTTPException:
+            return await interaction.response.send_message("❌ Invalid emoji.", ephemeral=True)
+
+        await interaction.response.send_message(
+            f"✅ Reaction role created: React with {emoji} to get {role.mention}",
+            ephemeral=True
+        )
+
+        # Store in bot memory
+        if not hasattr(self.bot, "reaction_roles"):
+            self.bot.reaction_roles = {}
+        self.bot.reaction_roles[(message.id, str(emoji))] = role.id
+
+    # ------------------------------------------------
+    # LISTENERS FOR REACTS
+    # ------------------------------------------------
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        if not hasattr(self.bot, "reaction_roles"):
+            return
+
+        key = (payload.message_id, str(payload.emoji))
+        if key not in self.bot.reaction_roles:
+            return
+
+        guild = self.bot.get_guild(payload.guild_id)
+        role_id = self.bot.reaction_roles[key]
+        role = guild.get_role(role_id)
+        if not role:
+            return
+
+        member = guild.get_member(payload.user_id)
+        if member and not member.bot:
+            await member.add_roles(role, reason="Reaction role")
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
+        if not hasattr(self.bot, "reaction_roles"):
+            return
+
+        key = (payload.message_id, str(payload.emoji))
+        if key not in self.bot.reaction_roles:
+            return
+
+        guild = self.bot.get_guild(payload.guild_id)
+        role_id = self.bot.reaction_roles[key]
+        role = guild.get_role(role_id)
+        if not role:
+            return
+
+        member = guild.get_member(payload.user_id)
+        if member and not member.bot:
+            await member.remove_roles(role, reason="Reaction role removed")
+
+
 
 
     # -----------------------
