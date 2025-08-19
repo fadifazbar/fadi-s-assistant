@@ -270,7 +270,7 @@ class Moderation(commands.Cog):
     # ------------------------
     # Slash Command: /rolecolor
     # ------------------------
-    @commands.slash_command(name="rolecolor", description="Change a role's color")
+    @app_commands.command(name="rolecolor", description="Change a role's color")
     @commands.has_permissions(manage_roles=True)
     async def rolecolor_slash(
         self, ctx: discord.ApplicationContext, role: discord.Role, color: str
