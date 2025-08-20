@@ -11,7 +11,7 @@ from typing import Optional, List
 # ======================
 ytdl_format_options = {
     "format": "bestaudio[ext=m4a]/bestaudio/best",
-    "noplaylist": True,   # change to False if you want playlists
+    "noplaylist": False,   # change to False if you want playlists
     "quiet": True,
     "default_search": "auto",
     "extract_flat": False,
