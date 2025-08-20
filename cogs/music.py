@@ -441,8 +441,6 @@ class Music(commands.Cog):
         random.shuffle(self.queue)
         await interaction.response.send_message("🔀 The queue has been shuffled!")
 
-
-
 # Cog setup
 async def setup(bot: commands.Bot):
     await bot.add_cog(Music(bot))
