@@ -94,17 +94,14 @@ class MusicPlayer:
                 # announce now playing
                 embed = discord.Embed(
                     title="Now Playing 🎶",
-                    description=f"**{self.current.title}**",
+                    description=f"**[{self.current.title}]({self.current.webpage_url})**",
                     color=discord.Color.green(),
                 )
                 if self.current.thumbnail:
                     embed.set_thumbnail(url=self.current.thumbnail)
                 embed.add_field(name="Requested by", value=self.current.requester.mention)
-                if self.current.webpage_url:
-                    embed.add_field(name="Link", value=self.current.webpage_url)
                 try:
-                    channel = self.current.requester.voice.channel
-                    await channel.guild.system_channel.send(embed=embed)
+                    await self.guild.system_channel.send(embed=embed)
                 except:
                     pass
 
@@ -209,6 +206,7 @@ class Music(commands.Cog):
 
     # ---------- COMMANDS ----------
 
+    # --- Play ---
     @commands.command(name="play", aliases=["p"])
     async def play_prefix(self, ctx, *, query: str):
         await ctx.trigger_typing()
@@ -237,6 +235,72 @@ class Music(commands.Cog):
             pl._cycle_expected = len(tracks)
             await interaction.followup.send(f"✅ Added **{len(tracks)}** tracks.")
 
+    # --- Queue ---
+    @commands.command(name="queue", aliases=["q"])
+    async def queue_prefix(self, ctx):
+        pl = self.player(ctx.guild)
+        if not pl.queue and not pl.current:
+            return await ctx.reply("❌ Queue is empty.")
+        desc = ""
+        if pl.current:
+            desc += f"🎶 Now: **{pl.current.title}**\n"
+        for i, t in enumerate(list(pl.queue)[:10], 1):
+            desc += f"{i}. {t.title}\n"
+        embed = discord.Embed(title="Queue", description=desc, color=discord.Color.blurple())
+        await ctx.reply(embed=embed)
+
+    @app_commands.command(name="queue", description="Show queue")
+    async def queue_slash(self, interaction: discord.Interaction):
+        pl = self.player(interaction.guild)
+        if not pl.queue and not pl.current:
+            return await interaction.response.send_message("❌ Queue is empty.")
+        desc = ""
+        if pl.current:
+            desc += f"🎶 Now: **{pl.current.title}**\n"
+        for i, t in enumerate(list(pl.queue)[:10], 1):
+            desc += f"{i}. {t.title}\n"
+        embed = discord.Embed(title="Queue", description=desc, color=discord.Color.blurple())
+        await interaction.response.send_message(embed=embed)
+
+    # --- Pause ---
+    @commands.command(name="pause")
+    async def pause_prefix(self, ctx):
+        pl = self.player(ctx.guild)
+        if pl.voice and pl.voice.is_playing():
+            pl.voice.pause()
+            await ctx.reply("⏸️ Paused.")
+        else:
+            await ctx.reply("❌ Nothing is playing.")
+
+    @app_commands.command(name="pause", description="Pause music")
+    async def pause_slash(self, interaction: discord.Interaction):
+        pl = self.player(interaction.guild)
+        if pl.voice and pl.voice.is_playing():
+            pl.voice.pause()
+            await interaction.response.send_message("⏸️ Paused.")
+        else:
+            await interaction.response.send_message("❌ Nothing is playing.")
+
+    # --- Resume ---
+    @commands.command(name="resume")
+    async def resume_prefix(self, ctx):
+        pl = self.player(ctx.guild)
+        if pl.voice and pl.voice.is_paused():
+            pl.voice.resume()
+            await ctx.reply("▶️ Resumed.")
+        else:
+            await ctx.reply("❌ Nothing is paused.")
+
+    @app_commands.command(name="resume", description="Resume music")
+    async def resume_slash(self, interaction: discord.Interaction):
+        pl = self.player(interaction.guild)
+        if pl.voice and pl.voice.is_paused():
+            pl.voice.resume()
+            await interaction.response.send_message("▶️ Resumed.")
+        else:
+            await interaction.response.send_message("❌ Nothing is paused.")
+
+    # --- Skip ---
     @commands.command(name="skip")
     async def skip_prefix(self, ctx):
         pl = self.player(ctx.guild)
@@ -253,6 +317,7 @@ class Music(commands.Cog):
         pl.voice.stop()
         await interaction.response.send_message("⏭️ Skipped.")
 
+    # --- Stop ---
     @commands.command(name="stop")
     async def stop_prefix(self, ctx):
         pl = self.player(ctx.guild)
@@ -265,6 +330,7 @@ class Music(commands.Cog):
         await pl.stop_and_disconnect()
         await interaction.response.send_message("⏹️ Stopped and disconnected.")
 
+    # --- Loop ---
     @commands.command(name="loop")
     async def loop_prefix(self, ctx: commands.Context, mode: str = "off"):
         mode = (mode or "off").lower()
