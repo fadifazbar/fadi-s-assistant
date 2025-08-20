@@ -118,7 +118,7 @@ class Music(commands.Cog):
         self.bot = bot
         self.queue: List[Track] = []
         self.current: Optional[Track] = None
-        self.previous = None
+        self.previous: Optional[Track] = None
         self.loop_queue: bool = False  # Loop the entire queue as a playlist
         self.voice_cleanup_task: Optional[asyncio.Task] = None  # idle when nothing playing
         self.empty_vc_task: Optional[asyncio.Task] = None  # disconnect when VC empty
