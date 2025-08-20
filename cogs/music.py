@@ -19,7 +19,7 @@ ytdl_format_options = {
 }
 
 ffmpeg_options = {
-    'options': '-vn'
+    'options': '-vn -ar 48000 -b:a 192k'
 }
 
 ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
@@ -38,7 +38,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         loop = loop or asyncio.get_event_loop()
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
 
-        if "entries" in data:  # playlist
+        if "entries" in data:  # Playlist
             return [await cls.from_url(entry["webpage_url"], loop=loop, stream=stream, requester=requester) for entry in data["entries"]]
 
         filename = data["url"] if stream else ytdl.prepare_filename(data)
@@ -73,19 +73,26 @@ class Music(commands.Cog):
                 )
 
     def play_next(self, ctx_or_interaction):
+        vc = ctx_or_interaction.guild.voice_client
+
         if self.loop_mode == "one" and self.current:
-            ctx_or_interaction.guild.voice_client.play(
-                self.current,
-                after=lambda e: self.play_next(ctx_or_interaction) if not e else print(f"Player error: {e}")
-            )
+            # replay same song
+            new_source = discord.FFmpegPCMAudio(self.current.data["url"], **ffmpeg_options)
+            self.current = YTDLSource(new_source, data=self.current.data, requester=self.current.requester)
+            vc.play(self.current, after=lambda e: self.play_next(ctx_or_interaction) if not e else print(f"Player error: {e}"))
+            coro = ctx_or_interaction.channel.send(f"🔁 Looping current track: **{self.current.title}**")
+            asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
+
         elif self.queue:
+            # play next in queue
             self.current = self.queue.pop(0)
-            ctx_or_interaction.guild.voice_client.play(
-                self.current,
-                after=lambda e: self.play_next(ctx_or_interaction) if not e else print(f"Player error: {e}")
-            )
+            vc.play(self.current, after=lambda e: self.play_next(ctx_or_interaction) if not e else print(f"Player error: {e}"))
+            coro = ctx_or_interaction.channel.send(f"▶️ Now playing: **{self.current.title}** (requested by {self.current.requester.mention})")
+            asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
+
             if self.loop_mode == "all":
-                self.queue.append(self.current)
+                self.queue.append(self.current)  # re-add to end of queue
+
         else:
             self.current = None
 
@@ -105,7 +112,7 @@ class Music(commands.Cog):
         await self.ensure_voice(ctx)
         async with ctx.typing():
             msg = await self.add_to_queue(ctx, query, requester=ctx.author)
-            if not ctx.guild.voice_client.is_playing():
+            if not ctx.guild.voice_client.is_playing() and not ctx.guild.voice_client.is_paused():
                 self.play_next(ctx)
         await ctx.send(msg)
 
@@ -114,7 +121,7 @@ class Music(commands.Cog):
         await self.ensure_voice(interaction)
         await interaction.response.defer()
         msg = await self.add_to_queue(interaction, query, requester=interaction.user)
-        if not interaction.guild.voice_client.is_playing():
+        if not interaction.guild.voice_client.is_playing() and not interaction.guild.voice_client.is_paused():
             self.play_next(interaction)
         await interaction.followup.send(msg)
 
@@ -141,7 +148,7 @@ class Music(commands.Cog):
         if not self.queue:
             await ctx.send("📭 Queue is empty.")
         else:
-            queue_list = "\n".join([f"{i+1}. {song.title}" for i, song in enumerate(self.queue)])
+            queue_list = "\n".join([f"{i+1}. {song.title} (requested by {song.requester.mention})" for i, song in enumerate(self.queue)])
             await ctx.send(f"📜 Current Queue:\n{queue_list}")
 
     @app_commands.command(name="queue", description="Show the music queue")
@@ -149,7 +156,7 @@ class Music(commands.Cog):
         if not self.queue:
             await interaction.response.send_message("📭 Queue is empty.")
         else:
-            queue_list = "\n".join([f"{i+1}. {song.title}" for i, song in enumerate(self.queue)])
+            queue_list = "\n".join([f"{i+1}. {song.title} (requested by {song.requester.mention})" for i, song in enumerate(self.queue)])
             await interaction.response.send_message(f"📜 Current Queue:\n{queue_list}")
 
     # ---------- LOOP ----------
