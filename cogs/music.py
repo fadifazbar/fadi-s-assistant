@@ -50,8 +50,26 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
     @classmethod
     async def create_source(cls, track: Track):
-        # Create a fresh FFmpeg source for the given track.url (stream URL)
-        return cls(discord.FFmpegPCMAudio(track.url, **ffmpeg_options), track=track)
+        # Always re-extract the stream URL before playing (avoids cut-off on long videos)
+        loop = asyncio.get_running_loop()
+
+        def do_extract():
+            return ytdl.extract_info(track.webpage_url, download=False)
+
+        data = await loop.run_in_executor(None, do_extract)
+        if "entries" in data:
+            data = data["entries"][0]
+
+        stream_url = data["url"]
+
+        # Add reconnect options so ffmpeg continues if YouTube resets connection
+        opts = {
+            "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+            "options": "-vn"
+        }
+
+        return cls(discord.FFmpegPCMAudio(stream_url, **opts), track=track)
+
 
 
 async def fetch_track(query: str, requester) -> Track:
