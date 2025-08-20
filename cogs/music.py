@@ -208,7 +208,7 @@ class MusicPlayer:
 
             await asyncio.sleep(0.05)
 
-    async def _check_vc(self):
+async def _check_vc(self):
     vc = self.voice()
     return vc
         if not vc:
