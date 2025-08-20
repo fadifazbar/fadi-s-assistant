@@ -3,20 +3,19 @@ from discord.ext import commands
 from discord import app_commands
 import asyncio
 import yt_dlp
-import functools
 
 # ---------- YTDL Setup ----------
 ytdl_format_options = {
     'format': 'bestaudio/best',
     'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
     'restrictfilenames': True,
-    'noplaylist': False,  # ✅ allow playlists
+    'noplaylist': False,  # allow playlist support
     'nocheckcertificate': True,
-    'ignoreerrors': True,
+    'ignoreerrors': False,
     'quiet': True,
     'no_warnings': True,
     'default_search': 'ytsearch',
-    'source_address': '0.0.0.0'  # ipv6 issues fix
+    'source_address': '0.0.0.0'
 }
 
 ffmpeg_options = {
@@ -38,12 +37,11 @@ class YTDLSource(discord.PCMVolumeTransformer):
         loop = loop or asyncio.get_event_loop()
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
 
-        if 'entries' in data:  # ✅ playlist
-            return [cls(discord.FFmpegPCMAudio(entry['url'], **ffmpeg_options), data=entry)
-                    for entry in data['entries'] if entry]
-        else:  # ✅ single track
-            filename = data['url'] if stream else ytdl.prepare_filename(data)
-            return [cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)]
+        if "entries" in data:  # playlist
+            return [await cls.from_url(entry["webpage_url"], loop=loop, stream=stream) for entry in data["entries"]]
+
+        filename = data["url"] if stream else ytdl.prepare_filename(data)
+        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
 
 # ---------- Music Cog ----------
@@ -54,116 +52,92 @@ class Music(commands.Cog):
         self.current = None
 
     async def ensure_voice(self, ctx_or_interaction):
+        """Make sure bot only plays in one VC per server"""
         if isinstance(ctx_or_interaction, commands.Context):
-            channel = ctx_or_interaction.author.voice.channel if ctx_or_interaction.author.voice else None
+            author_channel = ctx_or_interaction.author.voice.channel if ctx_or_interaction.author.voice else None
         else:
-            channel = ctx_or_interaction.user.voice.channel if ctx_or_interaction.user.voice else None
+            author_channel = ctx_or_interaction.user.voice.channel if ctx_or_interaction.user.voice else None
 
-        if not channel:
+        if not author_channel:
             raise commands.CommandError("❌ You are not in a voice channel.")
 
-        if ctx_or_interaction.guild.voice_client is None:
-            await channel.connect()
-        else:
-            if ctx_or_interaction.guild.voice_client.channel != channel:
-                await ctx_or_interaction.guild.voice_client.move_to(channel)
+        voice_client = ctx_or_interaction.guild.voice_client
 
-    # ---------- Internal: Play Next ----------
+        if voice_client is None:
+            await author_channel.connect()
+        else:
+            if voice_client.channel != author_channel:
+                raise commands.CommandError(
+                    f"❌ I’m already playing music in **{voice_client.channel.name}**."
+                )
+
     def play_next(self, ctx_or_interaction):
         if self.queue:
             self.current = self.queue.pop(0)
-            vc = ctx_or_interaction.guild.voice_client
-            vc.play(self.current, after=lambda e: self.play_next(ctx_or_interaction))
+            ctx_or_interaction.guild.voice_client.play(
+                self.current,
+                after=lambda e: self.play_next(ctx_or_interaction) if not e else print(f"Player error: {e}")
+            )
+
+    async def add_to_queue(self, ctx_or_interaction, query, stream=True):
+        entries = await YTDLSource.from_url(query, loop=self.bot.loop, stream=stream)
+
+        if isinstance(entries, list):  # playlist
+            self.queue.extend(entries)
+            return f"📃 Added **{len(entries)} tracks** from playlist to the queue."
         else:
-            self.current = None
+            self.queue.append(entries)
+            return f"🎵 Added to queue: **{entries.title}**"
 
     # ---------- PLAY ----------
-    async def _play(self, ctx_or_interaction, query):
-        await self.ensure_voice(ctx_or_interaction)
-
-        loop = self.bot.loop
-        players = await YTDLSource.from_url(query, loop=loop, stream=True)
-
-        added_titles = []
-        for player in players:
-            if ctx_or_interaction.guild.voice_client.is_playing() or self.current:
-                self.queue.append(player)
-                added_titles.append(player.title)
-            else:
-                self.current = player
-                ctx_or_interaction.guild.voice_client.play(
-                    player,
-                    after=lambda e: self.play_next(ctx_or_interaction)
-                )
-                added_titles.append(player.title)
-
-        if isinstance(ctx_or_interaction, commands.Context):
-            await ctx_or_interaction.send(f"🎶 Added to queue: {', '.join(added_titles)}")
-        else:
-            await ctx_or_interaction.followup.send(f"🎶 Added to queue: {', '.join(added_titles)}")
-
     @commands.command(name="play")
     async def play_prefix(self, ctx, *, query: str):
-        """Play music or playlist from YouTube"""
+        await self.ensure_voice(ctx)
         async with ctx.typing():
-            await self._play(ctx, query)
+            msg = await self.add_to_queue(ctx, query)
+            if not ctx.guild.voice_client.is_playing():
+                self.play_next(ctx)
+        await ctx.send(msg)
 
-    @app_commands.command(name="play", description="Play music or playlist from YouTube")
+    @app_commands.command(name="play", description="Play music from YouTube or add to queue")
     async def play_slash(self, interaction: discord.Interaction, query: str):
+        await self.ensure_voice(interaction)
         await interaction.response.defer()
-        await self._play(interaction, query)
+        msg = await self.add_to_queue(interaction, query)
+        if not interaction.guild.voice_client.is_playing():
+            self.play_next(interaction)
+        await interaction.followup.send(msg)
 
     # ---------- QUEUE ----------
     @commands.command(name="queue")
     async def queue_prefix(self, ctx):
-        if not self.queue and not self.current:
+        if not self.queue:
             await ctx.send("📭 Queue is empty.")
         else:
-            message = f"🎶 Now Playing: **{self.current.title}**\n"
-            if self.queue:
-                message += "\n".join([f"{i+1}. {track.title}" for i, track in enumerate(self.queue)])
-            await ctx.send(message)
+            queue_list = "\n".join([f"{i+1}. {song.title}" for i, song in enumerate(self.queue)])
+            await ctx.send(f"📜 Current Queue:\n{queue_list}")
 
     @app_commands.command(name="queue", description="Show the music queue")
     async def queue_slash(self, interaction: discord.Interaction):
-        if not self.queue and not self.current:
+        if not self.queue:
             await interaction.response.send_message("📭 Queue is empty.")
         else:
-            message = f"🎶 Now Playing: **{self.current.title}**\n"
-            if self.queue:
-                message += "\n".join([f"{i+1}. {track.title}" for i, track in enumerate(self.queue)])
-            await interaction.response.send_message(message)
-
-    # ---------- NOW PLAYING ----------
-    @commands.command(name="nowplaying", aliases=["np"])
-    async def nowplaying_prefix(self, ctx):
-        if self.current:
-            await ctx.send(f"🎵 Now playing: **{self.current.title}**")
-        else:
-            await ctx.send("❌ Nothing is playing right now.")
-
-    @app_commands.command(name="nowplaying", description="Show current song")
-    async def nowplaying_slash(self, interaction: discord.Interaction):
-        if self.current:
-            await interaction.response.send_message(f"🎵 Now playing: **{self.current.title}**")
-        else:
-            await interaction.response.send_message("❌ Nothing is playing right now.")
+            queue_list = "\n".join([f"{i+1}. {song.title}" for i, song in enumerate(self.queue)])
+            await interaction.response.send_message(f"📜 Current Queue:\n{queue_list}")
 
     # ---------- STOP ----------
     @commands.command(name="stop")
     async def stop_prefix(self, ctx):
         if ctx.guild.voice_client:
-            await ctx.guild.voice_client.disconnect()
             self.queue.clear()
-            self.current = None
+            await ctx.guild.voice_client.disconnect()
             await ctx.send("🛑 Stopped and disconnected.")
 
     @app_commands.command(name="stop", description="Stop music and leave VC")
     async def stop_slash(self, interaction: discord.Interaction):
         if interaction.guild.voice_client:
-            await interaction.guild.voice_client.disconnect()
             self.queue.clear()
-            self.current = None
+            await interaction.guild.voice_client.disconnect()
             await interaction.response.send_message("🛑 Stopped and disconnected.")
 
     # ---------- SKIP ----------
@@ -171,13 +145,13 @@ class Music(commands.Cog):
     async def skip_prefix(self, ctx):
         if ctx.guild.voice_client and ctx.guild.voice_client.is_playing():
             ctx.guild.voice_client.stop()
-            await ctx.send("⏭️ Skipped the current track.")
+            await ctx.send("⏭️ Skipped.")
 
     @app_commands.command(name="skip", description="Skip the current song")
     async def skip_slash(self, interaction: discord.Interaction):
         if interaction.guild.voice_client and interaction.guild.voice_client.is_playing():
             interaction.guild.voice_client.stop()
-            await interaction.response.send_message("⏭️ Skipped the current track.")
+            await interaction.response.send_message("⏭️ Skipped.")
 
     # ---------- PAUSE / RESUME ----------
     @commands.command(name="pause")
