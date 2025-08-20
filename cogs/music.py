@@ -146,7 +146,7 @@ async def start_playback_if_idle(self, guild: discord.Guild, text_channel: disco
     # Re-fetch fresh URL to avoid expired links
     refreshed = await fetch_track(next_track.query, next_track.requester)
 
-    # 🔹 Save the current as previous before overwriting
+    # Save the current as previous before overwriting
     if self.current:
         self.previous = self.current
 
@@ -154,14 +154,15 @@ async def start_playback_if_idle(self, guild: discord.Guild, text_channel: disco
     source = await YTDLSource.create_source(refreshed)
 
     def after_play(err):
+        # Schedule the next track on the bot loop
         fut = self.bot.loop.create_task(self._after_track(guild, text_channel, had_error=err))
+        # Avoid "Task exception was never retrieved"
         try:
             fut.add_done_callback(lambda f: f.exception())
         except Exception:
             pass
 
     vc.play(source, after=after_play)
-
 
 
         # Cancel idle timers because music is playing now
