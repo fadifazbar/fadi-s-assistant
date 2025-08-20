@@ -188,8 +188,7 @@ class QueueView(discord.ui.View):
             )
         embed = discord.Embed(
             title="🎵 Queue",
-            description="
-".join(lines)[:4000] or "(no tracks on this page)",
+            description="\n".join(lines)[:4000] or "(no tracks on this page)",
             color=discord.Color.blurple(),
         )
         embed.set_footer(text=f"Page {self.page+1}/{self._page_count(total)} • Total: {total}")
