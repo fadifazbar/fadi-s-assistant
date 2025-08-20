@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands, tasks
 from discord import app_commands
 import yt_dlp
+import random
 import asyncio
 from typing import Optional, List
 
@@ -414,6 +415,28 @@ class Music(commands.Cog):
         else:
             await interaction.response.send_message("❌ Nothing is playing.")
 
+    # ======================
+    # SHUFFLE
+    # ======================
+    @commands.command(name="shuffle")
+    async def shuffle_(self, ctx):
+        if not self.queue:
+            await ctx.send("❌ The queue is empty, nothing to shuffle.")
+            return
+
+        random.shuffle(self.queue)
+        await ctx.send("🔀 The queue has been shuffled!")
+
+    @app_commands.command(name="shuffle", description="Shuffle the queue")
+    async def slash_shuffle(self, interaction: discord.Interaction):
+        if not self.queue:
+            await interaction.response.send_message("❌ The queue is empty, nothing to shuffle.")
+            return
+
+        random.shuffle(self.queue)
+        await interaction.response.send_message("🔀 The queue has been shuffled!")
+
+
     @commands.command(name="loop", help="Toggle playlist loop")
     async def loop_(self, ctx: commands.Context):
         self.loop_queue = not self.loop_queue
@@ -425,6 +448,8 @@ class Music(commands.Cog):
         await interaction.response.send_message(f"Loop is now {'enabled' if self.loop_queue else 'disabled'}.")
         # Also send the nicer embed announcement to channel
         await self.announce_loop_toggle(interaction.channel)
+
+
 
 
 # Cog setup
