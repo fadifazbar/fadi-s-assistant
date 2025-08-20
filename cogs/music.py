@@ -420,27 +420,6 @@ class Music(commands.Cog):
         # Also send the nicer embed announcement to channel
         await self.announce_loop_toggle(interaction.channel)
 
-    # ======================
-    # SHUFFLE
-    # ======================
-    @commands.command(name="shuffle")
-    async def shuffle_(self, ctx):
-        if not self.queue:
-            await ctx.send("❌ The queue is empty, nothing to shuffle.")
-            return
-
-        random.shuffle(self.queue)
-        await ctx.send("🔀 The queue has been shuffled!")
-
-    @app_commands.command(name="shuffle", description="Shuffle the queue")
-    async def slash_shuffle(self, interaction: discord.Interaction):
-        if not self.queue:
-            await interaction.response.send_message("❌ The queue is empty, nothing to shuffle.")
-            return
-
-        random.shuffle(self.queue)
-        await interaction.response.send_message("🔀 The queue has been shuffled!")
-
 # Cog setup
 async def setup(bot: commands.Bot):
     await bot.add_cog(Music(bot))
