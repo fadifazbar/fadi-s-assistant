@@ -450,6 +450,112 @@ class Music(commands.Cog):
         # Also send the nicer embed announcement to channel
         await self.announce_loop_toggle(interaction.channel)
 
+    async def do_back(self, ctx_or_inter):
+        # Detect if it's a slash command (Interaction) or prefix (Context)
+        is_interaction = isinstance(ctx_or_inter, discord.Interaction)
+
+        author = ctx_or_inter.user if is_interaction else ctx_or_inter.author
+        guild = ctx_or_inter.guild
+
+        if not author.voice or not author.voice.channel:
+            msg = "❌ You must be in a voice channel."
+            return (await ctx_or_inter.response.send_message(msg, ephemeral=True)
+                    if is_interaction else await ctx_or_inter.send(msg))
+
+        vc = guild.voice_client
+        if not vc or not vc.is_connected():
+            msg = "❌ I'm not connected to a voice channel."
+            return (await ctx_or_inter.response.send_message(msg, ephemeral=True)
+                    if is_interaction else await ctx_or_inter.send(msg))
+
+        if not self.previous:
+            msg = "⚠️ No previous track to go back to!"
+            return (await ctx_or_inter.response.send_message(msg, ephemeral=True)
+                    if is_interaction else await ctx_or_inter.send(msg))
+
+        # Push current back into queue if playing
+        if self.current:
+            self.queue.insert(0, self.current)
+
+        # Replay previous
+        self.current, self.previous = self.previous, None
+        source = await YTDLSource.create_source(self.current)
+        vc.stop()
+        # ctx_or_inter for play_next
+        vc.play(source, after=lambda _: self.bot.loop.create_task(self.play_next(ctx_or_inter)))
+
+        embed = discord.Embed(
+            title="⏮️ Back to Previous Track",
+            description=f"Now playing: [{self.current.title}]({self.current.webpage_url})",
+            color=discord.Color.orange()
+        )
+        embed.set_thumbnail(url=self.current.thumbnail)
+
+        return (await ctx_or_inter.response.send_message(embed=embed)
+                if is_interaction else await ctx_or_inter.send(embed=embed))
+
+    @app_commands.command(name="back", description="Go back to the previously played song")
+    async def back_slash(self, interaction: discord.Interaction):
+        await self.do_back(interaction)
+
+    @commands.command(name="back")
+    async def back_prefix(self, ctx):
+        await self.do_back(ctx)
+
+
+
+    async def do_unplay(self, ctx_or_inter, query: str):
+        is_interaction = isinstance(ctx_or_inter, discord.Interaction)
+        guild = ctx_or_inter.guild
+
+        if not self.queue:
+            msg = "⚠️ The queue is empty!"
+            return (await ctx_or_inter.response.send_message(msg, ephemeral=True)
+                    if is_interaction else await ctx_or_inter.send(msg))
+
+        # First try exact link match
+        target = None
+        for track in self.queue:
+            if query in (track.webpage_url or "") or query in (track.url or ""):
+                target = track
+                break
+
+        # If no link match, do fuzzy title search
+        if not target:
+            lowered = query.lower()
+            target = min(
+                self.queue,
+                key=lambda t: abs(len(t.title) - len(query)) + (0 if lowered in t.title.lower() else 10),
+                default=None
+            )
+
+        if not target:
+            msg = "❌ Could not find that song in the queue."
+            return (await ctx_or_inter.response.send_message(msg, ephemeral=True)
+                    if is_interaction else await ctx_or_inter.send(msg))
+
+        self.queue.remove(target)
+
+        embed = discord.Embed(
+            title="🗑️ Removed from Queue",
+            description=f"Removed: **{target.title}**",
+            color=discord.Color.red()
+        )
+        embed.set_thumbnail(url=target.thumbnail)
+
+        return (await ctx_or_inter.response.send_message(embed=embed)
+                if is_interaction else await ctx_or_inter.send(embed=embed))
+
+    @app_commands.command(name="unplay", description="Remove a song from the queue by title or link")
+    async def unplay_slash(self, interaction: discord.Interaction, query: str):
+        await self.do_unplay(interaction, query)
+
+    @commands.command(name="unplay")
+    async def unplay_prefix(self, ctx, *, query: str):
+        await self.do_unplay(ctx, query)
+
+
+
 
 
 
