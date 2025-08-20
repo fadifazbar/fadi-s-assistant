@@ -7,7 +7,7 @@ from discord import app_commands
 
 import yt_dlp
 
---- YTDL OPTIONS (fix SABR issue mid-2025) ---
+# --- YTDL OPTIONS (fix SABR issue mid-2025) ---
 
 ytdl_format_options = { "format": "bestaudio[ext=webm][acodec=opus]/bestaudio/best", "noplaylist": True, "quiet": True, "extract_flat": False, "default_search": "ytsearch", "source_address": "0.0.0.0",  # Force IPv4 }
 
