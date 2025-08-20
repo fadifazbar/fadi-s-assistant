@@ -805,46 +805,37 @@ async def setup(bot):
         await ctx.send(embed=embed, view=view)
 
     # ---------- Slash Commands ----------
-    @app_commands.command(name="snipe", description="Shows the last deleted message in this channel")
+    @app_commands.command(name="snipe", description="View the last deleted message in this channel")
     async def snipe_slash(self, interaction: discord.Interaction):
         deleted = self.deleted_messages.get(interaction.channel.id, [])
-        edited = self.edited_messages.get(interaction.channel.id, [])
-        if not deleted and not edited:
+
+        if not deleted:
             return await interaction.response.send_message(
-                "No deleted or edited messages to snipe!", ephemeral=True
+                "❌ No deleted messages to snipe!",
+                ephemeral=True
             )
 
-        if deleted:
-            embed = self.build_deleted_embed(deleted[-1])
-            embed.set_footer(text=f"Deleted message 1/{len(deleted)}")
-        else:
-            embed = discord.Embed(
-                description="No deleted messages yet.",
-                color=discord.Color.red()
-            )
+        embed = self.build_deleted_embed(deleted[-1])
+        embed.set_footer(text=f"Deleted message 1/{len(deleted)}")
         view = SnipeView(self, interaction.channel.id, mode="deleted")
+
         await interaction.response.send_message(embed=embed, view=view)
 
-    @app_commands.command(name="editsnipe", description="Shows the last edited message in this channel")
+    @app_commands.command(name="editsnipe", description="View the last edited message in this channel")
     async def editsnipe_slash(self, interaction: discord.Interaction):
-        deleted = self.deleted_messages.get(interaction.channel.id, [])
         edited = self.edited_messages.get(interaction.channel.id, [])
-        if not deleted and not edited:
+
+        if not edited:
             return await interaction.response.send_message(
-                "No deleted or edited messages to snipe!", ephemeral=True
+                "❌ No edited messages to snipe!",
+                ephemeral=True
             )
 
-        if edited:
-            embed = self.build_edited_embed(edited[-1])
-            embed.set_footer(text=f"Edited message 1/{len(edited)}")
-        else:
-            embed = discord.Embed(
-                description="No edited messages yet.",
-                color=discord.Color.orange()
-            )
+        embed = self.build_edited_embed(edited[-1])
+        embed.set_footer(text=f"Edited message 1/{len(edited)}")
         view = SnipeView(self, interaction.channel.id, mode="edited")
-        await interaction.response.send_message(embed=embed, view=view)
 
+        await interaction.response.send_message(embed=embed, view=view)
 
 # ---------- Buttons ----------
 class SnipeView(discord.ui.View):
