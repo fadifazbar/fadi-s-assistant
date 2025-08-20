@@ -657,7 +657,7 @@ async def setup(bot):
 
     # Info command (Slash)
     @app_commands.command(name="info", description="Show bot information")
-    async def info_slash(self, interaction: discord.Interaction):
+    async def info_slash(self, interaction: Interaction, member: discord.Member):
         """Show bot information (slash command)"""
         await self._show_info(interaction)
 
