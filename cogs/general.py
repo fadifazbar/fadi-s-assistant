@@ -155,49 +155,53 @@ class General(commands.Cog):
                 embed.description = f"❌ Command `{command_name}` not found!"
 
         # --- Show general help ---
-        else:
-            embed.description = f"A powerful moderation bot with both prefix (`{Config.PREFIX}`) and slash (`/`) commands."
-            embed.add_field(
-                name="🛡️ Moderation Commands",
-                value=f"`{Config.PREFIX}kick` - Kick a member\n"
-                      f"`{Config.PREFIX}ban` - Ban a member\n"
-                      f"`{Config.PREFIX}unban` - Unban a user by ID\n"
-                      f"`{Config.PREFIX}mute` - Mute a member\n"
-                      f"`{Config.PREFIX}unmute` - Unmute a member\n"
-                      f"`{Config.PREFIX}purge` - Delete messages\n"
-                      f"`{Config.PREFIX}giverole` - Give role to member\n"
-                      f"`{Config.PREFIX}takerole` - Remove role from member\n"
-                      f"`{Config.PREFIX}deletechannel` - Remove a channel\n"
-                      f"`{Config.PREFIX}renamechannel` - Rename a channel\n"
-                      f"`{Config.PREFIX}listroles` - List all roles\n"
-                      f"`{Config.PREFIX}saylogs` - Logs for say command\n"
-                      f"`{Config.PREFIX}rolerename` - Rename a role in the server\n"
-                      f"`{Config.PREFIX}rolecolor` - Change a color of a role with hex or color name\n"
-                      f"`{Config.PREFIX}rolecolors` - Shows you a list of all the available colors\n"
-                      f"`{Config.PREFIX}reactionrole` - Adds a reaction role to a message\n",
-                      f"`{Config.PREFIX}saychecklogs` - Checks for the say command logging channel",
-                ),
-                inline=True
-            )
+else:
+    embed.description = f"A powerful moderation bot with both prefix (`{Config.PREFIX}`) and slash (`/`) commands."
+    embed.add_field(
+        name="🛡️ Moderation Commands",
+        value=(
+            f"`{Config.PREFIX}kick` - Kick a member\n"
+            f"`{Config.PREFIX}ban` - Ban a member\n"
+            f"`{Config.PREFIX}unban` - Unban a user by ID\n"
+            f"`{Config.PREFIX}mute` - Mute a member\n"
+            f"`{Config.PREFIX}unmute` - Unmute a member\n"
+            f"`{Config.PREFIX}purge` - Delete messages\n"
+            f"`{Config.PREFIX}giverole` - Give role to member\n"
+            f"`{Config.PREFIX}takerole` - Remove role from member\n"
+            f"`{Config.PREFIX}deletechannel` - Remove a channel\n"
+            f"`{Config.PREFIX}renamechannel` - Rename a channel\n"
+            f"`{Config.PREFIX}listroles` - List all roles\n"
+            f"`{Config.PREFIX}saylogs` - Logs for say command\n"
+            f"`{Config.PREFIX}rolerename` - Rename a role in the server\n"
+            f"`{Config.PREFIX}rolecolor` - Change a color of a role with hex or color name\n"
+            f"`{Config.PREFIX}rolecolors` - Shows you a list of all the available colors\n"
+            f"`{Config.PREFIX}reactionrole` - Adds a reaction role to a message\n"
+            f"`{Config.PREFIX}saychecklogs` - Checks for the say command logging channel"
+        ),
+        inline=True
+    )
 
-            embed.add_field(
-                name="💬 General Commands",
-                value=f"`{Config.PREFIX}say` - Make bot say something\n"
-                      f"`{Config.PREFIX}help` - Show this help\n"
-                      f"`{Config.PREFIX}ping` - Check bot latency\n"
-                      f"`{Config.PREFIX}info` - Bot information\n"
-                      f"`{Config.PREFIX}avatar` - Show a user's avatar\n"
-                      f"`{Config.PREFIX}8ball` - Play 8ball\n"
-                      f"`{Config.PREFIX}ship` - Ship 2 users\n"
-                      f"`{Config.PREFIX}snipe` - Last deleted message\n"
-                      f"`{Config.PREFIX}editsnipe` - Last edited message\n"
-                      f"`{Config.PREFIX}randomnumber` - Generate a random number\n"
-                      f"`{Config.PREFIX}invite` - Get the bot invite link\n"
-                      f"`{Config.PREFIX}kiss` - Kiss a member\n"
-                f"`{Config.PREFIX}tictactoe` - Challenge another user to TicTacToe (XO)\n"
-                f"`{Config.PREFIX}serverinfo` - View the whole server info. like members/bots/boosts/ect.",
-                inline=True
-            )
+    embed.add_field(
+        name="💬 General Commands",
+        value=(
+            f"`{Config.PREFIX}say` - Make bot say something\n"
+            f"`{Config.PREFIX}help` - Show this help\n"
+            f"`{Config.PREFIX}ping` - Check bot latency\n"
+            f"`{Config.PREFIX}info` - Bot information\n"
+            f"`{Config.PREFIX}avatar` - Show a user's avatar\n"
+            f"`{Config.PREFIX}8ball` - Play 8ball\n"
+            f"`{Config.PREFIX}ship` - Ship 2 users\n"
+            f"`{Config.PREFIX}snipe` - Last deleted message\n"
+            f"`{Config.PREFIX}editsnipe` - Last edited message\n"
+            f"`{Config.PREFIX}randomnumber` - Generate a random number\n"
+            f"`{Config.PREFIX}invite` - Get the bot invite link\n"
+            f"`{Config.PREFIX}kiss` - Kiss a member\n"
+            f"`{Config.PREFIX}tictactoe` - Challenge another user to TicTacToe (XO)\n"
+            f"`{Config.PREFIX}serverinfo` - View the whole server info. like members/bots/boosts/etc."
+        ),
+        inline=True
+    )
+
 
             embed.add_field(
                 name="ℹ️ Usage Notes",
