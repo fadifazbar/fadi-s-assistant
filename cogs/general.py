@@ -604,94 +604,51 @@ class General(commands.Cog):
         embed.set_image(url=gif)
         await interaction.response.send_message(embed=embed)
 
-    # --- Prefix command ---
-@commands.command(name="fuck")
-async def kiss_prefix(self, ctx, member: discord.Member):
-    # Allowed users (inside function)
-    ALLOWED_USERS = [123456789012345678, 987654321098765432]  # Replace with real IDs
+    
 
-    if ctx.author.id not in ALLOWED_USERS:
-        return await ctx.send(f"❌ Sorry {ctx.author.mention}, you are not allowed to use this command.")
-
-    kiss_gifs = [
-        "https://i.pinimg.com/originals/77/8d/51/778d51aca07848160ad9b52e6df37b30.gif",
-        "https://gifdb.com/images/high/anime-kissing-498-x-280-gif-op3h5wkpm21z2dil.gif",
-        "https://gifdb.com/images/high/surprising-anime-kiss-togashi-yuuta-q5960hphr79b0rwy.gif",
-        "https://31.media.tumblr.com/ea7842aad07c00b098397bf4d00723c6/tumblr_n570yg0ZIv1rikkvpo1_500.gif",
-        "https://i.pinimg.com/originals/28/62/37/2862374acd572ef4b1f2728e7e88962b.gif",
-        "https://media3.giphy.com/media/v1.Y2lkPTZjMDliOTUyNGd5cG4wYTV4dng2YTQwM3lwdmVhYmZ1Mjk2dTNraTdrZXByODBldiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/bGm9FuBCGg4SY/source.gif",
-        "https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUyY3dtN3lhaTB5b2Ixa3d2amtxdjNzZjNkMGZxZjk1NXlob3BjNTF4YyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/EVODaJHSXZGta/giphy.gif",
-        "https://www.gifcen.com/wp-content/uploads/2022/03/anime-kiss-gif-7.gif",
-        "https://www.icegif.com/wp-content/uploads/2022/08/icegif-1219.gif",
-        "https://images.steamusercontent.com/ugc/775102481299729428/7468303EA0E2477C7CBD56914883C0C37AA97E40/?imw=5000&imh=5000&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=false",
-        "https://www.gifcen.com/wp-content/uploads/2022/03/anime-kiss-gif.gif",
-        "https://i.pinimg.com/originals/10/5a/7a/105a7ad7edbe74e5ca834348025cc650.gif",
-        "https://gifdb.com/images/high/anime-kissing-498-x-263-gif-psa9fpr8l6kipmoj.gif",
-        "https://64.media.tumblr.com/84756421d21634f5f65d0d0f4c9da86f/tumblr_n2jz1jqEtq1sggrnxo1_500.gif",
-        "https://64.media.tumblr.com/386629a5ea2079fb76dfc76e7216dec2/783ccc48501e3d96-b4/s540x810/3fa7d5db78585d42176f9ce4253fa05702be295b.gifv"
-    ]
-    gif = random.choice(kiss_gifs)
-    color = discord.Color(random.randint(0, 0xFFFFFF))
-    embed = discord.Embed(
-        description=f"*{ctx.author.mention} kissed {member.mention}*",
-        color=color
-    )
-    embed.set_image(url=gif)
-    await ctx.send(embed=embed)
-
-
-# --- Slash command ---
-    @app_commands.command(name="fuck", description="lowkey fuck someone")
+    # --- Slash command example ---
+    @app_commands.command(name="fuck", description="Lowkey fuck someone")
     @app_commands.describe(member="The member you want to fuck")
     async def fuck_slash(self, interaction: Interaction, member: discord.Member):
         # Allowed users
-        ALLOWED_USERS = [1167531276467708055, 1123292111404531783]  # Replace with real IDs
+        ALLOWED_USERS = [1167531276467708055, 1123292111404531783]
 
         if interaction.user.id not in ALLOWED_USERS:
-            await interaction.response.send_message("🚫 You’re not allowed to use this command.", ephemeral=True)
+            await interaction.response.send_message(
+                f"❌ Sorry {interaction.user.mention}, you are not allowed to use this command.",
+                ephemeral=True
+            )
             return
 
-        await interaction.response.send_message(f"😘 {interaction.user.mention} kissed {member.mention}!")
-        # Allowed users
-        ALLOWED_USERS = [1167531276467708055, 1123292111404531783]  # Replace with real IDs
+        gifs = [
+            "https://cdn.hentaigifz.com/46199/animefuck001.gif"
+            "https://el.phncdn.com/pics/gifs/046/726/901/(m=ldpwiqacxtE_Ai)(mh=WX86HgGsCMr_lBNi)46726901b.gif",
+            "https://xporn-gifs.com/wp-content/uploads/2024/05/Anime-Hentai-Gif-3.gif",
+            "https://otakusexart.com/wp-content/uploads/2019/09/hentai-onahole-doggystyle-sex-anime-fuck-gif.gif",
+            "https://cdn.hentaigifz.com/2627/newyearsexgiftdrawnanime001.gif",
+            "https://lh4.googleusercontent.com/proxy/9QuLrAksmg_Bz3jTvijY9hZybYrnYkBU7iL-3g20UjqCXhJVFn6D3LkWQsq-1Cl9hQ3L_a6miU6HNa0G_wKavdyMauXVQGXnvsvhAXzbXWqQBhzB5MNT8yumjQctgt3QQTjHUpNCe1rLfPlY0LJxaVSN2w",
+            "https://myteenwebcam.com/fapp/gifs/521d40bc16d520b31110014dc80409a1.gif",
+            "https://i.redd.it/6hu5hkt669xe1.gif",
+            "https://lh4.googleusercontent.com/proxy/hiKIse2lfD8Sde5nBRFg5kpucT-GjTagpOMWuqy-kNIpaWauN2psV0A1Jvnj1W_6WuSG029eVBTuB8ybm-OLIpJpcG1udbnutuZncJlh1gWQsqngBJK5OaWugepPA5iqOojiWnwBnYsfjQNpRwEyAPV9jw",
+            "https://el.phncdn.com/pics/gifs/049/821/161/(m=ldpwiqacxtE_Ai)(mh=yqDIRAxZNLyZAv7Y)49821161b.gif",
+            "https://i.redd.it/b4iyikbzbv251.gif",
+            "https://hentaiporns.net/r/entradas/2024/07/53cd3290e77694c9a0d0b3a1f3b5d59c.gif"
+        ]
 
-        if interaction.user.id not in ALLOWED_USERS:
-            await interaction.response.send_message("🚫 You’re not allowed to use this command.", ephemeral=True)
-            return
+        gif = random.choice(gifs)
+        color = discord.Color(random.randint(0, 0xFFFFFF))
 
-        await interaction.response.send_message(f"😘 {interaction.user.mention} kissed {member.mention}!")
-    # Allowed users (inside function)
-    ALLOWED_USERS = [1167531276467708055, 1123292111404531783]  # Replace with real IDs
-
-    if interaction.user.id not in ALLOWED_USERS:
-        return await interaction.response.send_message(
-            f"❌ Sorry {interaction.user.mention}, you are not allowed to use this command.",
-            ephemeral=True
+        embed = discord.Embed(
+            description=f"*{interaction.user.mention} fucked {member.mention}*",
+            color=color
         )
+        embed.set_image(url=gif)
 
-    fuck_gifs = [
-        "https://cdn.hentaigifz.com/46199/animefuck001.gif",
-        "https://el.phncdn.com/pics/gifs/046/726/901/(m=ldpwiqacxtE_Ai)(mh=WX86HgGsCMr_lBNi)46726901b.gif",
-        "https://xporn-gifs.com/wp-content/uploads/2024/05/Anime-Hentai-Gif-3.gif",
-        "https://otakusexart.com/wp-content/uploads/2019/09/hentai-onahole-doggystyle-sex-anime-fuck-gif.gif",
-        "https://cdn.hentaigifz.com/2627/newyearsexgiftdrawnanime001.gif",
-        "https://lh4.googleusercontent.com/proxy/9QuLrAksmg_Bz3jTvijY9hZybYrnYkBU7iL-3g20UjqCXhJVFn6D3LkWQsq-1Cl9hQ3L_a6miU6HNa0G_wKavdyMauXVQGXnvsvhAXzbXWqQBhzB5MNT8yumjQctgt3QQTjHUpNCe1rLfPlY0LJxaVSN2w",
-        "https://myteenwebcam.com/fapp/gifs/521d40bc16d520b31110014dc80409a1.gif",
-        "https://i.redd.it/6hu5hkt669xe1.gif",
-        "https://lh4.googleusercontent.com/proxy/hiKIse2lfD8Sde5nBRFg5kpucT-GjTagpOMWuqy-kNIpaWauN2psV0A1Jvnj1W_6WuSG029eVBTuB8ybm-OLIpJpcG1udbnutuZncJlh1gWQsqngBJK5OaWugepPA5iqOojiWnwBnYsfjQNpRwEyAPV9jw",
-        "https://el.phncdn.com/pics/gifs/049/821/161/(m=ldpwiqacxtE_Ai)(mh=yqDIRAxZNLyZAv7Y)49821161b.gif",
-        "https://i.redd.it/b4iyikbzbv251.gif",
-        "https://hentaiporns.net/r/entradas/2024/07/53cd3290e77694c9a0d0b3a1f3b5d59c.gif"
-    ]
-    gif = random.choice(fuck_gifs)
-    color = discord.Color(random.randint(0, 0xFFFFFF))
-    embed = discord.Embed(
-        description=f"*{interaction.user.mention} fucked {member.mention}*",
-        color=color
-    )
-    embed.set_image(url=gif)
-    await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
+
+async def setup(bot):
+    await bot.add_cog(General(bot))
 
 
     # Info command (Prefix)
