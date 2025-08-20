@@ -759,6 +759,30 @@ class General(commands.Cog):
         embed.add_field(name="After", value=after.content or "Empty", inline=False)
         return embed
 
+    # ---------- Prefix ----------
+    @commands.command(name="coinflip", aliases=["flip", "coin"])
+    async def coinflip_prefix(self, ctx: commands.Context):
+        """Flip a coin (prefix version)"""
+        result = random.choice(["Heads", "Tails"])
+        embed = discord.Embed(
+            title="🪙 Coin Flip",
+            description=f"🪙 The coin landed on __**{result}**__! 🪙",
+            color=discord.Color.gold()
+        )
+        await ctx.send(embed=embed)
+
+    # ---------- Slash ----------
+    @app_commands.command(name="coinflip", description="Flip a coin")
+    async def coinflip_slash(self, interaction: discord.Interaction):
+        """Flip a coin (slash version)"""
+        result = random.choice(["Heads", "Tails"])
+        embed = discord.Embed(
+            title="🪙 Coin Flip",
+            description=f"🪙 The coin landed on **__{result}**__! 🪙",
+            color=discord.Color.gold()
+        )
+        await interaction.response.send_message(embed=embed)
+
 
 async def setup(bot):
     await bot.add_cog(General(bot))
