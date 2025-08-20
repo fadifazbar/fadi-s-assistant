@@ -133,36 +133,35 @@ class Music(commands.Cog):
             vc = await channel.connect()
         return vc
 
-    async def start_playback_if_idle(self, guild: discord.Guild, text_channel: discord.abc.Messageable):
-        vc = guild.voice_client
-        if not vc or vc.is_playing() or vc.is_paused():
-            return
-        if not self.queue:
-            return
-        # Pop next track and refresh stream URL before playing
-        next_track = self.queue.pop(0)
+async def start_playback_if_idle(self, guild: discord.Guild, text_channel: discord.abc.Messageable):
+    vc = guild.voice_client
+    if not vc or vc.is_playing() or vc.is_paused():
+        return
+    if not self.queue:
+        return
 
-        # Re-fetch fresh URL to avoid expired links
-        refreshed = await fetch_track(next_track.query, next_track.requester)
+    # Pop next track and refresh stream URL before playing
+    next_track = self.queue.pop(0)
 
-        # 🔹 Save old track into previous before overwriting
-        if self.current:
-            self.previous = self.current
+    # Re-fetch fresh URL to avoid expired links
+    refreshed = await fetch_track(next_track.query, next_track.requester)
 
-        # 🔹 Now set current to refreshed
-        self.current = refreshed
-        source = await YTDLSource.create_source(refreshed)
+    # 🔹 Save the current as previous before overwriting
+    if self.current:
+        self.previous = self.current
 
-        def after_play(err):
-            # Schedule the next track on the bot loop
-            fut = self.bot.loop.create_task(self._after_track(guild, text_channel, had_error=err))
-            # Avoid "Task exception was never retrieved"
-            try:
-                fut.add_done_callback(lambda f: f.exception())
-            except Exception:
-                pass
+    self.current = refreshed
+    source = await YTDLSource.create_source(refreshed)
 
-        vc.play(source, after=after_play)
+    def after_play(err):
+        fut = self.bot.loop.create_task(self._after_track(guild, text_channel, had_error=err))
+        try:
+            fut.add_done_callback(lambda f: f.exception())
+        except Exception:
+            pass
+
+    vc.play(source, after=after_play)
+
 
 
         # Cancel idle timers because music is playing now
