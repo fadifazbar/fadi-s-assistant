@@ -1,0 +1,15 @@
+[phases.setup]
+nixPkgs = [
+  "ffmpeg",
+  "opus",
+  "python311", # or python312 depending on your bot
+  "pkg-config",
+]
+
+[phases.build]
+cmds = [
+  "pip install -r requirements.txt"
+]
+
+[start]
+cmd = "python main.py"
