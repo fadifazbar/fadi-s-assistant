@@ -805,6 +805,7 @@ async def setup(bot):
         await ctx.send(embed=embed, view=view)
 
     # ---------- Slash Commands ----------
+
     @app_commands.command(name="snipe", description="View the last deleted message in this channel")
     async def snipe_slash(self, interaction: discord.Interaction):
         deleted = self.deleted_messages.get(interaction.channel.id, [])
