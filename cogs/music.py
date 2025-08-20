@@ -302,16 +302,16 @@ class Music(commands.Cog):
         self.idle_tasks[guild.id] = self.bot.loop.create_task(_idle_task())
 
     # ------------- embeds -------------
-    async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
-        dur = track.pretty_duration()
-        bar = _progress_bar(0, track.duration)
-        embed = discord.Embed(
-            title="🎶 Now Playing",
-            description=f"[{track.title}]({track.webpage_url})
-{bar}
-`0:00 / {dur}`",
-            color=discord.Color.green(),
-        )
+async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
+    dur = track.pretty_duration()
+    bar = _progress_bar(0, track.duration)
+    embed = discord.Embed(
+        title="🎶 Now Playing",
+        description=f"[{track.title}]({track.webpage_url})\n{bar}\n`0:00 / {dur}`",
+        color=discord.Color.green(),
+    )
+
+
         if track.thumbnail:
             embed.set_thumbnail(url=track.thumbnail)
         if track.uploader:
