@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from discord import app_commands
+from discord import Interaction
 import logging
 import pilmoji
 import asyncio
@@ -642,7 +643,7 @@ async def kiss_prefix(self, ctx, member: discord.Member):
 # --- Slash command ---
 @app_commands.command(name="fuck", description="lowkey fuck someone")
 @app_commands.describe(member="The member you want to fuck")
-async def kiss_slash(self, interaction: discord.Interaction, member: discord.Member):
+async def fuck_slash(self, interaction: Interaction, member: discord.Member):
     # Allowed users (inside function)
     ALLOWED_USERS = [1167531276467708055, 1123292111404531783]  # Replace with real IDs
 
