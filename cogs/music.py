@@ -104,10 +104,16 @@ class Music(commands.Cog):
             return
         if not self.queue:
             return
-        # Pop next track and play
+        # Pop next track and refresh stream URL before playing
         next_track = self.queue.pop(0)
-        self.current = next_track
-        source = await YTDLSource.create_source(next_track)
+
+
+        # Re-fetch fresh URL to avoid expired links
+        refreshed = await fetch_track(next_track.query, next_track.requester)
+
+
+        self.current = refreshed
+        source = await YTDLSource.create_source(refreshed)
 
         def after_play(err):
             # Schedule the next track on the bot loop
