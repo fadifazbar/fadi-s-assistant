@@ -195,14 +195,20 @@ class MusicPlayer:
                 elif self.loop_mode == "all":
                     # append to end to cycle the playlist (even if user skipped)
                     self.queue.append(finished)
+                    # Announce Loop
+                if len(self.queue) == len(self.original_queue):
+                    # means why cycled through everything 
+                    try:
+                        await self.text_channel.send("🔁 Playlist looprr successfully.")
+                    except Exception:
+                        pass
 
                 self._wake.set()
                 continue
 
             await asyncio.sleep(0.05)
 
-    async def _check_afk(self):
-        vc = self.voice()
+    async def _chec   vc = self.voice()
         if not vc:
             return
 
@@ -401,25 +407,33 @@ class Music(commands.Cog):
 
     # LOOP
     LOOP_CHOICES = [
-        app_commands.Choice(name="off", value="off"),
-        app_commands.Choice(name="one", value="one"),
-        app_commands.Choice(name="all", value="all"),
-    ]
+    app_commands.Choice(name="off", value="off"),
+    app_commands.Choice(name="one", value="one"),
+    app_commands.Choice(name="all", value="all"),
+]
 
-    @commands.command(name="loop")
-    async def loop_prefix(self, ctx: commands.Context, mode: str = "off"):
-        mode = mode.lower()
-        if mode not in {"off", "one", "all"}:
-            return await ctx.reply("❌ Choose `off`, `one`, or `all`.")
-        self.player(ctx.guild).loop_mode = mode
-        await ctx.reply(f"🔁 Loop mode set to **{mode}**")
+# Prefix command
+@commands.command(name="loop")
+async def loop_prefix(self, ctx: commands.Context, mode: str = "off"):
+    mode = mode.lower()
+    if mode not in {"off", "one", "all"}:
+        return await ctx.reply("❌ Choose `off`, `one`, or `all`.")
 
-    @app_commands.command(name="loop", description="Set loop mode")
-    @app_commands.choices(mode=LOOP_CHOICES)
-    async def loop_slash(self, interaction: discord.Interaction, mode: app_commands.Choice[str]):
-        self.player(interaction.guild).loop_mode = mode.value
-        await interaction.response.send_message(f"🔁 Loop mode set to **{mode.value}**")
+    self.player(ctx.guild).loop_mode = mode
+    msg = f"🔁 Loop mode set to **{mode}**"
+    if mode == "all":
+        msg += "\n(Playlist will restart when it finishes — I’ll announce when it loops)"
+    await ctx.reply(msg)
 
+# Slash command
+@app_commands.command(name="loop", description="Set loop mode")
+@app_commands.choices(mode=LOOP_CHOICES)
+async def loop_slash(self, interaction: discord.Interaction, mode: app_commands.Choice[str]):
+    self.player(interaction.guild).loop_mode = mode.value
+    msg = f"🔁 Loop mode set to **{mode.value}**"
+    if mode.value == "all":
+        msg += "\n(Playlist will restart when it finishes — I’ll announce when it loops)"
+    await interaction.response.send_message(msg)
     # CONTROLS
     @commands.command(name="skip")
     async def skip_prefix(self, ctx: commands.Context):
