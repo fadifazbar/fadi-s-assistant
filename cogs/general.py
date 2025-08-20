@@ -645,10 +645,6 @@ class General(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
 
-async def setup(bot):
-    await bot.add_cog(General(bot))
-
-
     # Info command (Prefix)
     @commands.command(name="info", aliases=["about"])
     async def info_prefix(self, ctx: commands.Context):
