@@ -1,363 +1,253 @@
 import asyncio
-import time
-from collections import deque
-
 import discord
 from discord.ext import commands
 from discord import app_commands
 import yt_dlp
+from collections import deque
+import time
 
-
-# ----------- YTDL SETUP -----------
-ytdl_format_options = {
+YTDL_OPTS = {
     "format": "bestaudio/best",
-    "noplaylist": False,
     "quiet": True,
+    "noplaylist": False,
     "default_search": "ytsearch",
-    "extract_flat": "in_playlist",
 }
-ffmpeg_options = {"options": "-vn"}
-ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
+FFMPEG_OPTS = {
+    "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+    "options": "-vn"
+}
+ytdl = yt_dlp.YoutubeDL(YTDL_OPTS)
 
 
-# ----------- TRACK -----------
 class Track:
-    def __init__(self, source, title, url, webpage_url, thumbnail, requester):
-        self.source = source
-        self.title = title
-        self.url = url
-        self.webpage_url = webpage_url
-        self.thumbnail = thumbnail
+    def __init__(self, info, requester):
+        self.title = info.get("title")
+        self.web_url = info.get("webpage_url")
+        self.url = info["url"]
+        self.duration = info.get("duration")
+        self.thumbnail = info.get("thumbnail")
         self.requester = requester
 
 
-# ----------- PLAYER -----------
 class MusicPlayer:
     def __init__(self, bot, guild):
         self.bot = bot
         self.guild = guild
         self.queue = deque()
-        self.current: Track | None = None
-        self.voice: discord.VoiceClient | None = None
-        self.loop_mode = "off"  # off, one, all
-        self._task = bot.loop.create_task(self.player_loop())
-        self._event = asyncio.Event()
-        self._alone_since = None
-        self._idle_since = None
-        self._cycle_progress = 0
-        self._cycle_expected = 0
-
-    def is_connected(self):
-        return self.voice and self.voice.is_connected()
-
-    def enqueue(self, tracks):
-        for t in tracks:
-            self.queue.append(t)
-        if not self._event.is_set():
-            self._event.set()
-
-    async def player_loop(self):
-        while True:
-            try:
-                self._event.clear()
-
-                # auto-disconnect if alone or idle 5 minutes
-                if self.voice and self.voice.channel:
-                    if self.is_alone():
-                        if self._alone_since is None:
-                            self._alone_since = time.time()
-                        elif time.time() - self._alone_since >= 300:
-                            await self.stop_and_disconnect()
-                            return
-                    else:
-                        self._alone_since = None
-
-                if not self.queue:
-                    if self._idle_since is None:
-                        self._idle_since = time.time()
-                    elif time.time() - self._idle_since >= 300:
-                        await self.stop_and_disconnect()
-                        return
-                    await self._event.wait()
-                    continue
-                else:
-                    self._idle_since = None
-
-                self.current = self.queue.popleft()
-                source = discord.FFmpegPCMAudio(
-                    self.current.url, **ffmpeg_options
-                )
-                self.voice.play(
-                    source, after=lambda e: self.bot.loop.call_soon_threadsafe(self._event.set)
-                )
-
-                # announce now playing
-                embed = discord.Embed(
-                    title="Now Playing 🎶",
-                    description=f"**[{self.current.title}]({self.current.webpage_url})**",
-                    color=discord.Color.green(),
-                )
-                if self.current.thumbnail:
-                    embed.set_thumbnail(url=self.current.thumbnail)
-                embed.add_field(name="Requested by", value=self.current.requester.mention)
-                try:
-                    await self.guild.system_channel.send(embed=embed)
-                except:
-                    pass
-
-                # wait for song to end
-                while self.voice.is_playing() or self.voice.is_paused():
-                    await asyncio.sleep(1)
-
-                finished = self.current
-                self.current = None
-
-                # handle looping
-                if self.loop_mode == "one":
-                    self.queue.appendleft(finished)
-                elif self.loop_mode == "all":
-                    self.queue.append(finished)
-                    self._cycle_progress += 1
-                    if self._cycle_expected and self._cycle_progress >= self._cycle_expected:
-                        self._cycle_progress = 0
-                        await self.announce_cycle()
-
-            except Exception as e:
-                print(f"Player error: {e}")
-                await asyncio.sleep(2)
-
-    async def announce_cycle(self):
-        try:
-            await self.guild.system_channel.send("🔁 Playlist looped successfully.")
-        except:
-            pass
-
-    async def stop_and_disconnect(self):
-        if self.voice:
-            await self.voice.disconnect()
-        self.queue.clear()
+        self.voice = None
         self.current = None
-        self._event.set()
+        self.play_next = asyncio.Event()
+        self.looping = False
+        self.start_time = None
+        self.task = asyncio.create_task(self.loop())
 
-    def is_alone(self):
-        if not self.voice or not self.voice.channel:
-            return False
-        return len(self.voice.channel.members) == 1
+    async def add(self, query, requester):
+        data = await asyncio.to_thread(lambda: ytdl.extract_info(query, download=False))
+        if "entries" in data:
+            data = data["entries"][0]
+        track = Track(data, requester)
+        self.queue.append(track)
+        return track
+
+    async def connect(self, channel):
+        if self.voice and self.voice.is_connected():
+            await self.voice.move_to(channel)
+        else:
+            self.voice = await channel.connect()
+
+    async def loop(self):
+        while True:
+            self.play_next.clear()
+
+            if not self.queue:
+                await asyncio.sleep(300)  # 5 min idle timeout
+                if not self.queue and (not self.voice or not self.voice.is_playing()):
+                    if self.voice:
+                        await self.voice.disconnect()
+                    return
+                continue
+
+            self.current = self.queue.popleft()
+            self.start_time = time.time()
+
+            source = await discord.FFmpegOpusAudio.from_probe(self.current.url, **FFMPEG_OPTS)
+            self.voice.play(source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.play_next.set))
+
+            chan = self.voice.channel.guild.system_channel or discord.utils.get(self.guild.text_channels, permissions__send_messages=True)
+            if chan:
+                embed = self.make_embed("Now Playing", self.current, "🎶")
+                await chan.send(embed=embed)
+
+            await self.play_next.wait()
+
+            if self.looping and self.current:
+                self.queue.appendleft(self.current)
+
+    def make_embed(self, title, track, emoji="🎵", show_progress=False):
+        embed = discord.Embed(title=f"{emoji} {title}", description=f"[{track.title}]({track.web_url})", color=0x7289DA)
+        if track.thumbnail:
+            embed.set_thumbnail(url=track.thumbnail)
+        embed.add_field(name="Requested by", value=track.requester.mention, inline=True)
+        if track.duration:
+            length = self.format_time(track.duration)
+            if show_progress and self.start_time:
+                elapsed = int(time.time() - self.start_time)
+                bar = self.progress_bar(elapsed, track.duration)
+                embed.add_field(name="Progress", value=f"{self.format_time(elapsed)} / {length}\n{bar}", inline=False)
+            else:
+                embed.add_field(name="Length", value=length, inline=True)
+        return embed
+
+    @staticmethod
+    def format_time(seconds):
+        m, s = divmod(int(seconds), 60)
+        h, m = divmod(m, 60)
+        return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+    @staticmethod
+    def progress_bar(elapsed, total, length=15):
+        filled = int(length * elapsed // total) if total else 0
+        return "▓" * filled + "░" * (length - filled)
 
 
-# ----------- COG -----------
 class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.players = {}
 
-    def player(self, guild: discord.Guild):
+    def get_player(self, ctx_or_inter):
+        guild = ctx_or_inter.guild
         if guild.id not in self.players:
             self.players[guild.id] = MusicPlayer(self.bot, guild)
         return self.players[guild.id]
 
-    async def _connect(self, ctx_or_inter):
-        if isinstance(ctx_or_inter, commands.Context):
-            channel = ctx_or_inter.author.voice.channel
-        else:
-            channel = ctx_or_inter.user.voice.channel
-        pl = self.player(ctx_or_inter.guild)
-        if not pl.voice or not pl.is_connected():
-            pl.voice = await channel.connect()
-        return pl
+    # -------------- PREFIX COMMANDS --------------
+    @commands.command(name="play")
+    async def play_cmd(self, ctx, *, query: str):
+        if not ctx.author.voice:
+            return await ctx.send("❌ You must be in a voice channel.")
+        player = self.get_player(ctx)
+        await player.connect(ctx.author.voice.channel)
+        track = await player.add(query, ctx.author)
+        embed = player.make_embed("Added to Queue", track, "➕")
+        await ctx.send(embed=embed)
 
-    async def _extract_tracks(self, query, requester):
-        loop = asyncio.get_event_loop()
-        try:
-            data = await loop.run_in_executor(None, lambda: ytdl.extract_info(query, download=False))
-        except Exception as e:
-            print(f"ytdl error: {e}")
-            return []
-        if data is None:
-            return []
+    @commands.command(name="skip")
+    async def skip_cmd(self, ctx):
+        player = self.get_player(ctx)
+        if player.voice and player.voice.is_playing():
+            player.voice.stop()
+            await ctx.send("⏭️ Skipped.")
 
-        entries = []
-        if "entries" in data:
-            for e in data["entries"]:
-                if not e:
-                    continue
-                entries.append(
-                    Track(
-                        e.get("url"),
-                        e.get("title", "Unknown"),
-                        e.get("url"),
-                        e.get("webpage_url"),
-                        e.get("thumbnail"),
-                        requester,
-                    )
-                )
-        else:
-            entries.append(
-                Track(
-                    data.get("url"),
-                    data.get("title", "Unknown"),
-                    data.get("url"),
-                    data.get("webpage_url"),
-                    data.get("thumbnail"),
-                    requester,
-                )
-            )
-        return entries
+    @commands.command(name="pause")
+    async def pause_cmd(self, ctx):
+        player = self.get_player(ctx)
+        if player.voice and player.voice.is_playing():
+            player.voice.pause()
+            await ctx.send("⏸️ Paused.")
 
-    # ---------- COMMANDS ----------
+    @commands.command(name="resume")
+    async def resume_cmd(self, ctx):
+        player = self.get_player(ctx)
+        if player.voice and player.voice.is_paused():
+            player.voice.resume()
+            await ctx.send("▶️ Resumed.")
 
-    # --- Play ---
-    @commands.command(name="play", aliases=["p"])
-    async def play_prefix(self, ctx, *, query: str):
-        await ctx.trigger_typing()
-        pl = await self._connect(ctx)
-        tracks = await self._extract_tracks(query, requester=ctx.author)
-        if not tracks:
-            return await ctx.reply("❌ Couldn't find anything.")
-        pl.enqueue(tracks)
-        if len(tracks) == 1:
-            await ctx.reply(f"✅ Added **{tracks[0].title}**")
-        else:
-            pl._cycle_expected = len(tracks)
-            await ctx.reply(f"✅ Added **{len(tracks)}** tracks.")
+    @commands.command(name="stop")
+    async def stop_cmd(self, ctx):
+        player = self.get_player(ctx)
+        if player.voice:
+            player.queue.clear()
+            await player.voice.disconnect()
+            await ctx.send("🛑 Stopped and disconnected.")
 
-    @app_commands.command(name="play", description="Play music")
-    async def play_slash(self, interaction: discord.Interaction, query: str):
-        await interaction.response.defer()
-        pl = await self._connect(interaction)
-        tracks = await self._extract_tracks(query, requester=interaction.user)
-        if not tracks:
-            return await interaction.followup.send("❌ Couldn't find anything.")
-        pl.enqueue(tracks)
-        if len(tracks) == 1:
-            await interaction.followup.send(f"✅ Added **{tracks[0].title}**")
-        else:
-            pl._cycle_expected = len(tracks)
-            await interaction.followup.send(f"✅ Added **{len(tracks)}** tracks.")
+    @commands.command(name="loop")
+    async def loop_cmd(self, ctx):
+        player = self.get_player(ctx)
+        player.looping = not player.looping
+        await ctx.send("🔁 Loop enabled." if player.looping else "➡️ Loop disabled.")
 
-    # --- Queue ---
-    @commands.command(name="queue", aliases=["q"])
-    async def queue_prefix(self, ctx):
-        pl = self.player(ctx.guild)
-        if not pl.queue and not pl.current:
-            return await ctx.reply("❌ Queue is empty.")
-        desc = ""
-        if pl.current:
-            desc += f"🎶 Now: **{pl.current.title}**\n"
-        for i, t in enumerate(list(pl.queue)[:10], 1):
-            desc += f"{i}. {t.title}\n"
-        embed = discord.Embed(title="Queue", description=desc, color=discord.Color.blurple())
-        await ctx.reply(embed=embed)
+    @commands.command(name="queue")
+    async def queue_cmd(self, ctx):
+        player = self.get_player(ctx)
+        if not player.queue:
+            return await ctx.send("🎵 Queue is empty.")
+        embed = discord.Embed(title="📜 Current Queue", color=0x00ffcc)
+        for i, t in enumerate(list(player.queue)[:10], start=1):
+            embed.add_field(name=f"{i}.", value=f"[{t.title}]({t.web_url}) • {t.requester.mention}", inline=False)
+        await ctx.send(embed=embed)
 
-    @app_commands.command(name="queue", description="Show queue")
-    async def queue_slash(self, interaction: discord.Interaction):
-        pl = self.player(interaction.guild)
-        if not pl.queue and not pl.current:
-            return await interaction.response.send_message("❌ Queue is empty.")
-        desc = ""
-        if pl.current:
-            desc += f"🎶 Now: **{pl.current.title}**\n"
-        for i, t in enumerate(list(pl.queue)[:10], 1):
-            desc += f"{i}. {t.title}\n"
-        embed = discord.Embed(title="Queue", description=desc, color=discord.Color.blurple())
+    @commands.command(name="nowplaying", aliases=["np"])
+    async def nowplaying_cmd(self, ctx):
+        player = self.get_player(ctx)
+        if not player.current:
+            return await ctx.send("❌ Nothing is playing right now.")
+        embed = player.make_embed("Now Playing", player.current, "🎵", show_progress=True)
+        await ctx.send(embed=embed)
+
+    # -------------- SLASH COMMANDS --------------
+    @app_commands.command(name="play", description="Play a song")
+    async def slash_play(self, interaction: discord.Interaction, query: str):
+        if not interaction.user.voice:
+            return await interaction.response.send_message("❌ You must be in a voice channel.", ephemeral=True)
+        player = self.get_player(interaction)
+        await player.connect(interaction.user.voice.channel)
+        track = await player.add(query, interaction.user)
+        embed = player.make_embed("Added to Queue", track, "➕")
         await interaction.response.send_message(embed=embed)
 
-    # --- Pause ---
-    @commands.command(name="pause")
-    async def pause_prefix(self, ctx):
-        pl = self.player(ctx.guild)
-        if pl.voice and pl.voice.is_playing():
-            pl.voice.pause()
-            await ctx.reply("⏸️ Paused.")
-        else:
-            await ctx.reply("❌ Nothing is playing.")
+    @app_commands.command(name="skip", description="Skip current song")
+    async def slash_skip(self, interaction: discord.Interaction):
+        player = self.get_player(interaction)
+        if player.voice and player.voice.is_playing():
+            player.voice.stop()
+            await interaction.response.send_message("⏭️ Skipped.")
 
     @app_commands.command(name="pause", description="Pause music")
-    async def pause_slash(self, interaction: discord.Interaction):
-        pl = self.player(interaction.guild)
-        if pl.voice and pl.voice.is_playing():
-            pl.voice.pause()
+    async def slash_pause(self, interaction: discord.Interaction):
+        player = self.get_player(interaction)
+        if player.voice and player.voice.is_playing():
+            player.voice.pause()
             await interaction.response.send_message("⏸️ Paused.")
-        else:
-            await interaction.response.send_message("❌ Nothing is playing.")
-
-    # --- Resume ---
-    @commands.command(name="resume")
-    async def resume_prefix(self, ctx):
-        pl = self.player(ctx.guild)
-        if pl.voice and pl.voice.is_paused():
-            pl.voice.resume()
-            await ctx.reply("▶️ Resumed.")
-        else:
-            await ctx.reply("❌ Nothing is paused.")
 
     @app_commands.command(name="resume", description="Resume music")
-    async def resume_slash(self, interaction: discord.Interaction):
-        pl = self.player(interaction.guild)
-        if pl.voice and pl.voice.is_paused():
-            pl.voice.resume()
+    async def slash_resume(self, interaction: discord.Interaction):
+        player = self.get_player(interaction)
+        if player.voice and player.voice.is_paused():
+            player.voice.resume()
             await interaction.response.send_message("▶️ Resumed.")
-        else:
-            await interaction.response.send_message("❌ Nothing is paused.")
 
-    # --- Skip ---
-    @commands.command(name="skip")
-    async def skip_prefix(self, ctx):
-        pl = self.player(ctx.guild)
-        if not pl.voice or not pl.voice.is_playing():
-            return await ctx.reply("❌ Nothing is playing.")
-        pl.voice.stop()
-        await ctx.reply("⏭️ Skipped.")
+    @app_commands.command(name="stop", description="Stop and disconnect")
+    async def slash_stop(self, interaction: discord.Interaction):
+        player = self.get_player(interaction)
+        if player.voice:
+            player.queue.clear()
+            await player.voice.disconnect()
+            await interaction.response.send_message("🛑 Stopped and disconnected.")
 
-    @app_commands.command(name="skip", description="Skip current track")
-    async def skip_slash(self, interaction: discord.Interaction):
-        pl = self.player(interaction.guild)
-        if not pl.voice or not pl.voice.is_playing():
-            return await interaction.response.send_message("❌ Nothing is playing.")
-        pl.voice.stop()
-        await interaction.response.send_message("⏭️ Skipped.")
+    @app_commands.command(name="loop", description="Toggle loop")
+    async def slash_loop(self, interaction: discord.Interaction):
+        player = self.get_player(interaction)
+        player.looping = not player.looping
+        await interaction.response.send_message("🔁 Loop enabled." if player.looping else "➡️ Loop disabled.")
 
-    # --- Stop ---
-    @commands.command(name="stop")
-    async def stop_prefix(self, ctx):
-        pl = self.player(ctx.guild)
-        await pl.stop_and_disconnect()
-        await ctx.reply("⏹️ Stopped and disconnected.")
+    @app_commands.command(name="queue", description="Show queue")
+    async def slash_queue(self, interaction: discord.Interaction):
+        player = self.get_player(interaction)
+        if not player.queue:
+            return await interaction.response.send_message("🎵 Queue is empty.")
+        embed = discord.Embed(title="📜 Current Queue", color=0x00ffcc)
+        for i, t in enumerate(list(player.queue)[:10], start=1):
+            embed.add_field(name=f"{i}.", value=f"[{t.title}]({t.web_url}) • {t.requester.mention}", inline=False)
+        await interaction.response.send_message(embed=embed)
 
-    @app_commands.command(name="stop", description="Stop music")
-    async def stop_slash(self, interaction: discord.Interaction):
-        pl = self.player(interaction.guild)
-        await pl.stop_and_disconnect()
-        await interaction.response.send_message("⏹️ Stopped and disconnected.")
-
-    # --- Loop ---
-    @commands.command(name="loop")
-    async def loop_prefix(self, ctx: commands.Context, mode: str = "off"):
-        mode = (mode or "off").lower()
-        if mode not in {"off", "one", "all"}:
-            return await ctx.reply("❌ Choose `off`, `one`, or `all`.")
-        pl = self.player(ctx.guild)
-        pl.loop_mode = mode
-        pl._cycle_progress = 0
-        pl._cycle_expected = 0
-        msg = f"🔁 Loop mode set to **{mode}**" if mode != "off" else "⏹️ Looping disabled."
-        await ctx.reply(msg)
-
-    LOOP_CHOICES = [
-        app_commands.Choice(name="off", value="off"),
-        app_commands.Choice(name="one", value="one"),
-        app_commands.Choice(name="all", value="all"),
-    ]
-
-    @app_commands.command(name="loop", description="Set loop mode")
-    @app_commands.choices(mode=LOOP_CHOICES)
-    async def loop_slash(self, interaction: discord.Interaction, mode: app_commands.Choice[str]):
-        pl = self.player(interaction.guild)
-        pl.loop_mode = mode.value
-        pl._cycle_progress = 0
-        pl._cycle_expected = 0
-        msg = f"🔁 Loop mode set to **{mode.value}**" if mode.value != "off" else "⏹️ Looping disabled."
-        await interaction.response.send_message(msg)
+    @app_commands.command(name="nowplaying", description="Show the currently playing track")
+    async def slash_nowplaying(self, interaction: discord.Interaction):
+        player = self.get_player(interaction)
+        if not player.current:
+            return await interaction.response.send_message("❌ Nothing is playing right now.", ephemeral=True)
+        embed = player.make_embed("Now Playing", player.current, "🎵", show_progress=True)
+        await interaction.response.send_message(embed=embed)
 
 
 async def setup(bot):
