@@ -133,42 +133,43 @@ class Music(commands.Cog):
             vc = await channel.connect()
         return vc
 
-async def start_playback_if_idle(self, guild: discord.Guild, text_channel: discord.abc.Messageable):
-    vc = guild.voice_client
-    if not vc or vc.is_playing() or vc.is_paused():
-        return
-    if not self.queue:
-        return
+    async def start_playback_if_idle(self, guild: discord.Guild, text_channel: discord.abc.Messageable):
+        vc = guild.voice_client
+        if not vc or vc.is_playing() or vc.is_paused():
+            return
+        if not self.queue:
+            return
 
-    # Pop next track
-    next_track = self.queue.pop(0)
+        # Pop next track
+        next_track = self.queue.pop(0)
 
-    # Save current -> previous
-    if self.current:
-        self.previous = self.current
+        # Save current -> previous
+        if self.current:
+            self.previous = self.current
 
-    # Re-fetch fresh URL to avoid expired links
-    refreshed = await fetch_track(next_track.query, next_track.requester)
+        # Re-fetch fresh URL to avoid expired links
+        refreshed = await fetch_track(next_track.query, next_track.requester)
 
-    # Update current track
-    self.current = refreshed
-    source = await YTDLSource.create_source(refreshed)
+        # Update current track
+        self.current = refreshed
+        source = await YTDLSource.create_source(refreshed)
 
-    def after_play(err):
-        fut = self.bot.loop.create_task(self._after_track(guild, text_channel, had_error=err))
-        try:
-            fut.add_done_callback(lambda f: f.exception())
-        except Exception:
-            pass
+        def after_play(err):
+            if err:
+                print(f"Playback error: {err}")
+            fut = self.bot.loop.create_task(self._after_track(guild, text_channel, had_error=err))
+            try:
+                fut.add_done_callback(lambda f: f.exception())
+            except Exception:
+                pass
 
-    vc.play(source, after=after_play)
+        vc.play(source, after=after_play)
 
-    # Cancel idle timers because music is playing now
-    await self.cancel_idle_timers()
+        # Cancel idle timers because music is playing now
+        await self.cancel_idle_timers()
 
-    # Announce now playing
-    await self.announce_now_playing(text_channel, refreshed)
-
+        # Announce now playing
+        await self.announce_now_playing(text_channel, refreshed)
 
     async def _after_track(self, guild: discord.Guild, text_channel: discord.abc.Messageable, had_error):
         if had_error:
@@ -571,11 +572,6 @@ async def start_playback_if_idle(self, guild: discord.Guild, text_channel: disco
     @commands.command(name="unplay")
     async def unplay_prefix(self, ctx, *, query: str):
         await self.do_unplay(ctx, query)
-
-
-
-
-
 
 # Cog setup
 async def setup(bot: commands.Bot):
