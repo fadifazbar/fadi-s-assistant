@@ -19,7 +19,7 @@ ytdl_format_options = {
 }
 
 ffmpeg_options = {
-    'options': '-vn -ar 48000 -b:a 192k'
+    'options': '-vn'
 }
 
 ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
