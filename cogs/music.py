@@ -9,13 +9,27 @@ import yt_dlp
 
 # --- YTDL OPTIONS (fix SABR issue mid-2025) ---
 
-ytdl_format_options = { "format": "bestaudio[ext=webm][acodec=opus]/bestaudio/best", "noplaylist": True, "quiet": True, "extract_flat": False, "default_search": "ytsearch", "source_address": "0.0.0.0",  # Force IPv4 }
+ytdl_format_options = {
+    "format": "bestaudio[ext=webm][acodec=opus]/bestaudio/best",
+    "noplaylist": True,
+    "quiet": True,
+    "extract_flat": False,
+    "default_search": "ytsearch",
+    "source_address": "0.0.0.0"  # Force IPv4
+}
 
 ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
 
-ffmpeg_options = { "options": "-vn" }
+ffmpeg_options = {
+    "options": "-vn"
+}
 
-class YTDLSource(discord.PCMVolumeTransformer): def init(self, source, *, data, requester): super().init(source) self.data = data self.requester = requester
+class YTDLSource(discord.PCMVolumeTransformer):
+    def __init__(self, source, *, data, requester):
+        super().__init__(source)
+        self.data = data
+        self.requester = requester
+
 
 @classmethod
 async def create_source(cls, query, *, loop, requester):
