@@ -10,12 +10,13 @@ from typing import Optional, List
 # YTDL + FFMPEG CONFIG
 # ======================
 ytdl_format_options = {
-    "format": "bestaudio[ext=m4a]/bestaudio/best",
+    "format": "bestaudio[ext=webm]/bestaudio/best",  # prefer webm/opus instead of m4a
     "noplaylist": False,
     "quiet": True,
     "default_search": "auto",
     "extract_flat": False,
-    "source_address": "0.0.0.0",  # bind to ipv4 since ipv6 sometimes breaks
+    "geo_bypass": True,
+    "source_address": "0.0.0.0",  # force ipv4 (less issues with googlevideo)
 }
 
 ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
@@ -52,25 +53,38 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
     @classmethod
     async def create_source(cls, track: Track):
-        # Always re-extract the stream URL before playing (avoids cut-off on long videos)
         loop = asyncio.get_running_loop()
 
-        def do_extract():
-            return ytdl.extract_info(track.webpage_url, download=False)
+        def do_extract(download=False):
+            return ytdl.extract_info(track.webpage_url, download=download)
 
-        data = await loop.run_in_executor(None, do_extract)
+        try:
+            # First try stream mode
+            data = await loop.run_in_executor(None, lambda: do_extract(download=False))
+        except Exception:
+            # If SABR or other errors happen → retry with download=True
+            data = await loop.run_in_executor(None, lambda: do_extract(download=True))
+            if "entries" in data:
+                data = data["entries"][0]
+
+            filename = ytdl.prepare_filename(data)
+            return cls(discord.FFmpegPCMAudio(filename, **{
+                "options": "-vn"
+            }), track=track)
+
         if "entries" in data:
             data = data["entries"][0]
 
         stream_url = data["url"]
 
-        # Add reconnect options so ffmpeg continues if YouTube resets connection
+        # FFmpeg reconnect flags (useful for YT hiccups)
         opts = {
             "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
             "options": "-vn"
         }
 
         return cls(discord.FFmpegPCMAudio(stream_url, **opts), track=track)
+
 
 
 
