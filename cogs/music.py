@@ -164,12 +164,11 @@ async def start_playback_if_idle(self, guild: discord.Guild, text_channel: disco
 
     vc.play(source, after=after_play)
 
+    # Cancel idle timers because music is playing now
+    await self.cancel_idle_timers()
 
-        # Cancel idle timers because music is playing now
-        await self.cancel_idle_timers()
-
-        # Announce now playing
-        await self.announce_now_playing(text_channel, next_track)
+    # Announce now playing
+    await self.announce_now_playing(text_channel, next_track)
 
     async def _after_track(self, guild: discord.Guild, text_channel: discord.abc.Messageable, had_error):
         if had_error:
