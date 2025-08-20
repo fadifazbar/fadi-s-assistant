@@ -214,13 +214,13 @@ async def _check_vc(self):
         return None
     return vc
 
-        # Alone tracking
-        if self.is_alone():
-            if self._alone_since is None:
-                self._alone_since = time.time()
-        else:
-            self._alone_since = None
 
+# Alone tracking
+if self.is_alone():
+    if self._alone_since is None:
+        self._alone_since = time.time()
+else:
+    self._alone_since = None
         now = time.time()
 
         # Alone 5 minutes
