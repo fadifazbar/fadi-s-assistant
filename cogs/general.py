@@ -602,49 +602,6 @@ class General(commands.Cog):
         embed.set_image(url=gif)
         await interaction.response.send_message(embed=embed)
 
-    
-
-    # --- Slash command example ---
-    @app_commands.command(name="fuck", description="Lowkey fuck someone")
-    @app_commands.describe(member="The member you want to fuck")
-    async def fuck_slash(self, interaction: Interaction, member: discord.Member):
-        # Allowed users
-        ALLOWED_USERS = [1167531276467708055, 1123292111404531783, 1127551581957664829, 1115297901829181440, 1398946351815065693, 1322172278623961098]
-
-        if interaction.user.id not in ALLOWED_USERS:
-            await interaction.response.send_message(
-                f"❌ Sorry {interaction.user.mention}, you are not allowed to use this command.",
-                ephemeral=True
-            )
-            return
-
-        gifs = [
-            "https://cdn.hentaigifz.com/46199/animefuck001.gif"
-            "https://el.phncdn.com/pics/gifs/046/726/901/(m=ldpwiqacxtE_Ai)(mh=WX86HgGsCMr_lBNi)46726901b.gif",
-            "https://xporn-gifs.com/wp-content/uploads/2024/05/Anime-Hentai-Gif-3.gif",
-            "https://otakusexart.com/wp-content/uploads/2019/09/hentai-onahole-doggystyle-sex-anime-fuck-gif.gif",
-            "https://cdn.hentaigifz.com/2627/newyearsexgiftdrawnanime001.gif",
-            "https://lh4.googleusercontent.com/proxy/9QuLrAksmg_Bz3jTvijY9hZybYrnYkBU7iL-3g20UjqCXhJVFn6D3LkWQsq-1Cl9hQ3L_a6miU6HNa0G_wKavdyMauXVQGXnvsvhAXzbXWqQBhzB5MNT8yumjQctgt3QQTjHUpNCe1rLfPlY0LJxaVSN2w",
-            "https://myteenwebcam.com/fapp/gifs/521d40bc16d520b31110014dc80409a1.gif",
-            "https://i.redd.it/6hu5hkt669xe1.gif",
-            "https://lh4.googleusercontent.com/proxy/hiKIse2lfD8Sde5nBRFg5kpucT-GjTagpOMWuqy-kNIpaWauN2psV0A1Jvnj1W_6WuSG029eVBTuB8ybm-OLIpJpcG1udbnutuZncJlh1gWQsqngBJK5OaWugepPA5iqOojiWnwBnYsfjQNpRwEyAPV9jw",
-            "https://el.phncdn.com/pics/gifs/049/821/161/(m=ldpwiqacxtE_Ai)(mh=yqDIRAxZNLyZAv7Y)49821161b.gif",
-            "https://i.redd.it/b4iyikbzbv251.gif",
-            "https://hentaiporns.net/r/entradas/2024/07/53cd3290e77694c9a0d0b3a1f3b5d59c.gif"
-        ]
-
-        gif = random.choice(gifs)
-        color = discord.Color(random.randint(0, 0xFFFFFF))
-
-        embed = discord.Embed(
-            description=f"*{interaction.user.mention} fucked {member.mention}*",
-            color=color
-        )
-        embed.set_image(url=gif)
-
-        await interaction.response.send_message(embed=embed)
-
-
     # Info command (Prefix)
     @commands.command(name="info", aliases=["about"])
     async def info_prefix(self, ctx: commands.Context):
