@@ -130,7 +130,7 @@ def _entry_to_track(entry: dict, requester) -> Optional[Track]:
 
 
 # ==========
-// Music Cog
+# Music Cog
 # ==========
 class Music(commands.Cog):
     def __init__(self, bot: commands.Bot):
