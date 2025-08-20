@@ -4,3 +4,6 @@ Pillow
 pilmoji
 emoji==2.2.0
 PyNaCl
+yt-dlp
+pynacl
+ffmpeg
