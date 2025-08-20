@@ -1,254 +1,181 @@
-import asyncio
-import discord
-from discord.ext import commands
-from discord import app_commands
-import yt_dlp
-from collections import deque
-import time
+import discord from discord.ext import commands, tasks from discord import app_commands import asyncio import yt_dlp import datetime
 
-YTDL_OPTS = {
-    "format": "bestaudio/best",
-    "quiet": True,
-    "noplaylist": False,
-    "default_search": "ytsearch",
-}
-FFMPEG_OPTS = {
-    "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-    "options": "-vn"
-}
-ytdl = yt_dlp.YoutubeDL(YTDL_OPTS)
+--- YTDL OPTIONS (fix SABR issue mid-2025) ---
 
+ytdl_format_options = { "format": "bestaudio[ext=webm][acodec=opus]/bestaudio/best", "noplaylist": True, "quiet": True, "extract_flat": False, "default_search": "ytsearch", "source_address": "0.0.0.0",  # Force IPv4 }
 
-class Track:
-    def __init__(self, info, requester):
-        self.title = info.get("title")
-        self.web_url = info.get("webpage_url")
-        self.url = info["url"]
-        self.duration = info.get("duration")
-        self.thumbnail = info.get("thumbnail")
-        self.requester = requester
+ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
 
+ffmpeg_options = { "options": "-vn" }
 
-class MusicPlayer:
-    def __init__(self, bot, guild):
-        self.bot = bot
-        self.guild = guild
-        self.queue = deque()
-        self.voice = None
+class YTDLSource(discord.PCMVolumeTransformer): def init(self, source, *, data, requester): super().init(source) self.data = data self.requester = requester
+
+@classmethod
+async def create_source(cls, query, *, loop, requester):
+    loop = loop or asyncio.get_event_loop()
+    data = await loop.run_in_executor(None, lambda: ytdl.extract_info(query, download=False))
+
+    if "entries" in data:
+        data = data["entries"][0]
+
+    filename = data["url"]
+    return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data, requester=requester)
+
+class MusicPlayer: def init(self, ctx): self.ctx = ctx self.queue = [] self.current = None self.looping = False self.idle_task = None
+
+def add_to_queue(self, source):
+    self.queue.append(source)
+    return source
+
+async def play_next(self):
+    if self.looping and self.current:
+        self.queue.insert(0, self.current)
+
+    if self.queue:
+        self.current = self.queue.pop(0)
+        self.ctx.voice_client.play(
+            self.current,
+            after=lambda e: asyncio.run_coroutine_threadsafe(self.play_next(), self.ctx.bot.loop)
+        )
+        await self.announce_now_playing()
+    else:
         self.current = None
-        self.play_next = asyncio.Event()
-        self.looping = False
-        self.start_time = None
-        self.task = asyncio.create_task(self.loop())
+        self.start_idle_timer()
 
-    async def add(self, query, requester):
-        data = await asyncio.to_thread(lambda: ytdl.extract_info(query, download=False))
-        if "entries" in data:
-            data = data["entries"][0]
-        track = Track(data, requester)
-        self.queue.append(track)
-        return track
+def start_idle_timer(self):
+    if self.idle_task:
+        self.idle_task.cancel()
 
-    async def connect(self, channel):
-        if self.voice and self.voice.is_connected():
-            await self.voice.move_to(channel)
-        else:
-            self.voice = await channel.connect()
+    async def idle_disconnect():
+        await asyncio.sleep(300)  # 5 min
+        if not self.current and self.ctx.voice_client:
+            await self.ctx.voice_client.disconnect()
+            embed = discord.Embed(
+                title="⏹ Disconnected",
+                description="No music for 5 minutes. Leaving voice channel.",
+                color=discord.Color.red()
+            )
+            await self.ctx.send(embed=embed)
 
-    async def loop(self):
-        while True:
-            self.play_next.clear()
+    self.idle_task = self.ctx.bot.loop.create_task(idle_disconnect())
 
-            if not self.queue:
-                await asyncio.sleep(300)  # 5 min idle timeout
-                if not self.queue and (not self.voice or not self.voice.is_playing()):
-                    if self.voice:
-                        await self.voice.disconnect()
-                    return
-                continue
+async def announce_now_playing(self):
+    if not self.current:
+        return
+    embed = discord.Embed(
+        title="🎶 Now Playing",
+        description=f"[{self.current.data['title']}]({self.current.data['webpage_url']})",
+        color=discord.Color.green()
+    )
+    embed.set_thumbnail(url=self.current.data.get("thumbnail"))
+    embed.add_field(name="Duration", value=str(datetime.timedelta(seconds=self.current.data.get("duration", 0))), inline=True)
+    embed.add_field(name="Requested by", value=self.current.requester.mention, inline=True)
+    await self.ctx.send(embed=embed)
 
-            self.current = self.queue.popleft()
-            self.start_time = time.time()
+class Music(commands.Cog): def init(self, bot): self.bot = bot self.players = {}
 
-            source = await discord.FFmpegOpusAudio.from_probe(self.current.url, **FFMPEG_OPTS)
-            self.voice.play(source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.play_next.set))
+def get_player(self, ctx):
+    return self.players.setdefault(ctx.guild.id, MusicPlayer(ctx))
 
-            chan = self.voice.channel.guild.system_channel or discord.utils.get(self.guild.text_channels, permissions__send_messages=True)
-            if chan:
-                embed = self.make_embed("Now Playing", self.current, "🎶")
-                await chan.send(embed=embed)
+async def join_vc(self, interaction):
+    channel = interaction.user.voice.channel
+    if not interaction.guild.voice_client:
+        await channel.connect()
 
-            await self.play_next.wait()
+# --- Commands ---
+@app_commands.command(name="play", description="Play a song from YouTube or search")
+async def play(self, interaction: discord.Interaction, query: str):
+    await interaction.response.defer()
+    ctx = await commands.Context.from_interaction(interaction)
+    player = self.get_player(ctx)
 
-            if self.looping and self.current:
-                self.queue.appendleft(self.current)
+    if not ctx.voice_client:
+        await self.join_vc(interaction)
 
-    def make_embed(self, title, track, emoji="🎵", show_progress=False):
-        embed = discord.Embed(title=f"{emoji} {title}", description=f"[{track.title}]({track.web_url})", color=0x7289DA)
-        if track.thumbnail:
-            embed.set_thumbnail(url=track.thumbnail)
-        embed.add_field(name="Requested by", value=track.requester.mention, inline=True)
-        if track.duration:
-            length = self.format_time(track.duration)
-            if show_progress and self.start_time:
-                elapsed = int(time.time() - self.start_time)
-                bar = self.progress_bar(elapsed, track.duration)
-                embed.add_field(name="Progress", value=f"{self.format_time(elapsed)} / {length}\n{bar}", inline=False)
-            else:
-                embed.add_field(name="Length", value=length, inline=True)
-        return embed
+    source = await YTDLSource.create_source(query, loop=self.bot.loop, requester=interaction.user)
+    player.add_to_queue(source)
 
-    @staticmethod
-    def format_time(seconds):
-        m, s = divmod(int(seconds), 60)
-        h, m = divmod(m, 60)
-        return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+    if not ctx.voice_client.is_playing():
+        await player.play_next()
+    else:
+        embed = discord.Embed(
+            title="➕ Added to Queue",
+            description=f"[{source.data['title']}]({source.data['webpage_url']})",
+            color=discord.Color.blurple()
+        )
+        embed.set_thumbnail(url=source.data.get("thumbnail"))
+        embed.add_field(name="Duration", value=str(datetime.timedelta(seconds=source.data.get("duration", 0))), inline=True)
+        embed.add_field(name="Requested by", value=interaction.user.mention, inline=True)
+        await interaction.followup.send(embed=embed)
 
-    @staticmethod
-    def progress_bar(elapsed, total, length=15):
-        filled = int(length * elapsed // total) if total else 0
-        return "▓" * filled + "░" * (length - filled)
+@app_commands.command(name="skip", description="Skip the current song")
+async def skip(self, interaction: discord.Interaction):
+    await interaction.response.defer()
+    ctx = await commands.Context.from_interaction(interaction)
+    if ctx.voice_client and ctx.voice_client.is_playing():
+        ctx.voice_client.stop()
+        await interaction.followup.send("⏭ Skipped!")
+    else:
+        await interaction.followup.send("❌ Nothing is playing.")
 
+@app_commands.command(name="queue", description="Show the current queue")
+async def queue(self, interaction: discord.Interaction):
+    await interaction.response.defer()
+    ctx = await commands.Context.from_interaction(interaction)
+    player = self.get_player(ctx)
+    if not player.queue:
+        return await interaction.followup.send("📭 The queue is empty.")
 
-class Music(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-        self.players = {}
+    embed = discord.Embed(title="🎵 Queue", color=discord.Color.purple())
+    for i, track in enumerate(player.queue[:10], 1):
+        embed.add_field(
+            name=f"{i}. {track.data['title']}",
+            value=f"Requested by {track.requester.mention}",
+            inline=False
+        )
+    await interaction.followup.send(embed=embed)
 
-    def get_player(self, ctx_or_inter):
-        guild = ctx_or_inter.guild
-        if guild.id not in self.players:
-            self.players[guild.id] = MusicPlayer(self.bot, guild)
-        return self.players[guild.id]
+@app_commands.command(name="loop", description="Toggle loop for current track")
+async def loop(self, interaction: discord.Interaction):
+    await interaction.response.defer()
+    ctx = await commands.Context.from_interaction(interaction)
+    player = self.get_player(ctx)
+    player.looping = not player.looping
+    await interaction.followup.send("🔁 Looping enabled" if player.looping else "▶ Looping disabled")
 
-    # -------------- PREFIX COMMANDS --------------
-    @commands.command(name="play")
-    async def play_cmd(self, ctx, *, query: str):
-        if not ctx.author.voice:
-            return await ctx.send("❌ You must be in a voice channel.")
-        player = self.get_player(ctx)
-        await player.connect(ctx.author.voice.channel)
-        track = await player.add(query, ctx.author)
-        embed = player.make_embed("Added to Queue", track, "➕")
-        await ctx.send(embed=embed)
+@app_commands.command(name="stop", description="Stop music and clear queue")
+async def stop(self, interaction: discord.Interaction):
+    await interaction.response.defer()
+    ctx = await commands.Context.from_interaction(interaction)
+    player = self.get_player(ctx)
+    player.queue.clear()
+    if ctx.voice_client:
+        await ctx.voice_client.disconnect()
+    await interaction.followup.send("⏹ Stopped and cleared queue.")
 
-    @commands.command(name="skip")
-    async def skip_cmd(self, ctx):
-        player = self.get_player(ctx)
-        if player.voice and player.voice.is_playing():
-            player.voice.stop()
-            await ctx.send("⏭️ Skipped.")
+@app_commands.command(name="nowplaying", description="Show what is currently playing")
+async def nowplaying(self, interaction: discord.Interaction):
+    await interaction.response.defer()
+    ctx = await commands.Context.from_interaction(interaction)
+    player = self.get_player(ctx)
+    if not player.current:
+        return await interaction.followup.send("❌ Nothing is currently playing.")
 
-    @commands.command(name="pause")
-    async def pause_cmd(self, ctx):
-        player = self.get_player(ctx)
-        if player.voice and player.voice.is_playing():
-            player.voice.pause()
-            await ctx.send("⏸️ Paused.")
+    pos = int(ctx.voice_client.source.read()) if ctx.voice_client and ctx.voice_client.source else 0
+    total = player.current.data.get("duration", 0)
+    bar_length = 20
+    filled = int((pos / total) * bar_length) if total > 0 else 0
+    progress_bar = "▬" * filled + "🔘" + "▬" * (bar_length - filled)
 
-    @commands.command(name="resume")
-    async def resume_cmd(self, ctx):
-        player = self.get_player(ctx)
-        if player.voice and player.voice.is_paused():
-            player.voice.resume()
-            await ctx.send("▶️ Resumed.")
+    embed = discord.Embed(
+        title="🎶 Now Playing",
+        description=f"[{player.current.data['title']}]({player.current.data['webpage_url']})\n{progress_bar}",
+        color=discord.Color.green()
+    )
+    embed.set_thumbnail(url=player.current.data.get("thumbnail"))
+    embed.add_field(name="Duration", value=str(datetime.timedelta(seconds=total)), inline=True)
+    embed.add_field(name="Requested by", value=player.current.requester.mention, inline=True)
+    await interaction.followup.send(embed=embed)
 
-    @commands.command(name="stop")
-    async def stop_cmd(self, ctx):
-        player = self.get_player(ctx)
-        if player.voice:
-            player.queue.clear()
-            await player.voice.disconnect()
-            await ctx.send("🛑 Stopped and disconnected.")
+async def setup(bot): await bot.add_cog(Music(bot))
 
-    @commands.command(name="loop")
-    async def loop_cmd(self, ctx):
-        player = self.get_player(ctx)
-        player.looping = not player.looping
-        await ctx.send("🔁 Loop enabled." if player.looping else "➡️ Loop disabled.")
-
-    @commands.command(name="queue")
-    async def queue_cmd(self, ctx):
-        player = self.get_player(ctx)
-        if not player.queue:
-            return await ctx.send("🎵 Queue is empty.")
-        embed = discord.Embed(title="📜 Current Queue", color=0x00ffcc)
-        for i, t in enumerate(list(player.queue)[:10], start=1):
-            embed.add_field(name=f"{i}.", value=f"[{t.title}]({t.web_url}) • {t.requester.mention}", inline=False)
-        await ctx.send(embed=embed)
-
-    @commands.command(name="nowplaying", aliases=["np"])
-    async def nowplaying_cmd(self, ctx):
-        player = self.get_player(ctx)
-        if not player.current:
-            return await ctx.send("❌ Nothing is playing right now.")
-        embed = player.make_embed("Now Playing", player.current, "🎵", show_progress=True)
-        await ctx.send(embed=embed)
-
-    # -------------- SLASH COMMANDS --------------
-    @app_commands.command(name="play", description="Play a song")
-    async def slash_play(self, interaction: discord.Interaction, query: str):
-        if not interaction.user.voice:
-            return await interaction.response.send_message("❌ You must be in a voice channel.", ephemeral=True)
-        player = self.get_player(interaction)
-        await player.connect(interaction.user.voice.channel)
-        track = await player.add(query, interaction.user)
-        embed = player.make_embed("Added to Queue", track, "➕")
-        await interaction.response.send_message(embed=embed)
-
-    @app_commands.command(name="skip", description="Skip current song")
-    async def slash_skip(self, interaction: discord.Interaction):
-        player = self.get_player(interaction)
-        if player.voice and player.voice.is_playing():
-            player.voice.stop()
-            await interaction.response.send_message("⏭️ Skipped.")
-
-    @app_commands.command(name="pause", description="Pause music")
-    async def slash_pause(self, interaction: discord.Interaction):
-        player = self.get_player(interaction)
-        if player.voice and player.voice.is_playing():
-            player.voice.pause()
-            await interaction.response.send_message("⏸️ Paused.")
-
-    @app_commands.command(name="resume", description="Resume music")
-    async def slash_resume(self, interaction: discord.Interaction):
-        player = self.get_player(interaction)
-        if player.voice and player.voice.is_paused():
-            player.voice.resume()
-            await interaction.response.send_message("▶️ Resumed.")
-
-    @app_commands.command(name="stop", description="Stop and disconnect")
-    async def slash_stop(self, interaction: discord.Interaction):
-        player = self.get_player(interaction)
-        if player.voice:
-            player.queue.clear()
-            await player.voice.disconnect()
-            await interaction.response.send_message("🛑 Stopped and disconnected.")
-
-    @app_commands.command(name="loop", description="Toggle loop")
-    async def slash_loop(self, interaction: discord.Interaction):
-        player = self.get_player(interaction)
-        player.looping = not player.looping
-        await interaction.response.send_message("🔁 Loop enabled." if player.looping else "➡️ Loop disabled.")
-
-    @app_commands.command(name="queue", description="Show queue")
-    async def slash_queue(self, interaction: discord.Interaction):
-        player = self.get_player(interaction)
-        if not player.queue:
-            return await interaction.response.send_message("🎵 Queue is empty.")
-        embed = discord.Embed(title="📜 Current Queue", color=0x00ffcc)
-        for i, t in enumerate(list(player.queue)[:10], start=1):
-            embed.add_field(name=f"{i}.", value=f"[{t.title}]({t.web_url}) • {t.requester.mention}", inline=False)
-        await interaction.response.send_message(embed=embed)
-
-    @app_commands.command(name="nowplaying", description="Show the currently playing track")
-    async def slash_nowplaying(self, interaction: discord.Interaction):
-        player = self.get_player(interaction)
-        if not player.current:
-            return await interaction.response.send_message("❌ Nothing is playing right now.", ephemeral=True)
-        embed = player.make_embed("Now Playing", player.current, "🎵", show_progress=True)
-        await interaction.response.send_message(embed=embed)
-
-
-async def setup(bot):
-    await bot.add_cog(Music(bot))
