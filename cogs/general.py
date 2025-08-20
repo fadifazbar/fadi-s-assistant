@@ -118,12 +118,9 @@ class General(commands.Cog):
             "mute": ("🔇 Mute", f"`{Config.PREFIX}mute <member> [duration] [reason]` or `/mute`\nMute a member (ex: 5m,2h,1d)"),
             "unmute": ("🔊 Unmute", f"`{Config.PREFIX}unmute <member>` or `/unmute`\nRemove timeout from a member"),
             "unban": ("✅ Unban", f"`{Config.PREFIX}unban <user_id> [reason]` or `/unban`\nUnban a user by ID"),
-            "clear": ("🧹 Purge", f"`{Config.PREFIX}clear [amount]` or `/clear`\nDelete messages (default: 10, max: 100)"),
-            "purge": ("🧹 Purge", f"`{Config.PREFIX}purge [amount]` or `/purge`\nDelete messages"),
+            "purge": ("🧹 Purge", f"`{Config.PREFIX}purge <amount>` or `/purge`\nDelete messages (default: 10, max: 100)")"),
             "say": ("💬 Say", f"`{Config.PREFIX}say <message>` or `/say`\nMake the bot say something"),
-            "addrole": ("➕ Add Role", f"`{Config.PREFIX}addrole <member> <role_name>` or `/addrole`\nGive a role to a member"),
-            "giverole": ("➕ Add Role", f"`{Config.PREFIX}giverole <member> <role_name>` or `/giverole`\nGive a role"),
-            "removerole": ("➖ Remove Role", f"`{Config.PREFIX}removerole <member> <role_name>` or `/removerole`\nRemove a role"),
+            "giverole": ("➕ Give Role", f"`{Config.PREFIX}giverole <member> <role_name>` or `/giverole`\nGive a role"),
             "takerole": ("➖ Remove Role", f"`{Config.PREFIX}takerole <member> <role_name>` or `/takerole`\nRemove a role"),
             "deletechannel": ("🗑️ Delete Channel", f"`{Config.PREFIX}deletechannel <channel>` or `/deletechannel`\nRemove a channel"),
             "renamechannel": ("✏️ Rename Channel", f"`{Config.PREFIX}renamechannel <channel> <new_name>` or `/renamechannel`\nRename a channel"),
@@ -142,7 +139,10 @@ class General(commands.Cog):
             "rolerename": ("📝 RoleRename", f"`{Config.PREFIX}rolerename <role> <new name>` or `/rolerename`\nRename a role in the server"),
             "tictactoe": ("📝 TicTacToe (XOXO)", f"`{Config.PREFIX}xoxo <member>` or `/tictactoe`\nPlay a game of TicTacToe (XOXO) with another user"),
             "rolecolor": ("🖍️ RoleColor", f"`{Config.PREFIX}rolecolor <role> <colorname/hex code>` or `/rolecolor`\nRecolor any role you want with hex code or color name"),
-            "rolecolors": ("🌈 RoleColors", f"`{Config.PREFIX}rolecolors` or `/rolecolors`\nShows a list of the available colors")
+            "rolecolors": ("🌈 RoleColors", f"`{Config.PREFIX}rolecolors` or `/rolecolors`\nShows a list of the available colors"),
+            "reactionrole": ("🎭 ReactionRole", f"`{Config.PREFIX}reactionrole <message id> <emoji> <role>` or `/reactionrole`\nAdd a reaction role to a message"),
+            "saychecklogs": ("💬 SayCheckLogs", f"`{Config.PREFIX}saychecklogs` or `/saychecklogs`\nChecks which channel have the say command logs"),
+            "serverinfo": ("❓ ServerInfo", f"`{Config.PREFIX}serverinfo` or `/serverinf`\Check info about the server"),
         }
 
         # --- Show specific command help ---
@@ -165,15 +165,17 @@ class General(commands.Cog):
                       f"`{Config.PREFIX}mute` - Mute a member\n"
                       f"`{Config.PREFIX}unmute` - Unmute a member\n"
                       f"`{Config.PREFIX}purge` - Delete messages\n"
-                      f"`{Config.PREFIX}addrole` - Give role to member\n"
-                      f"`{Config.PREFIX}removerole` - Remove role from member\n"
+                      f"`{Config.PREFIX}giverole` - Give role to member\n"
+                      f"`{Config.PREFIX}takerole` - Remove role from member\n"
                       f"`{Config.PREFIX}deletechannel` - Remove a channel\n"
                       f"`{Config.PREFIX}renamechannel` - Rename a channel\n"
                       f"`{Config.PREFIX}listroles` - List all roles\n"
                       f"`{Config.PREFIX}saylogs` - Logs for say command\n"
                 f"`{Config.PREFIX}rolerename` - Rename a role in the server\n"
                 f"`{Config.PREFIX}rolecolor` - Change a color of a role with hex or color name\n"
-                f"`{Config.PREFIX}rolecolors` - Shows you a list of all the available colors.",
+                f"`{Config.PREFIX}rolecolors` - Shows you a list of all the available colors\n"
+                f"`{Config.PREFIX}reactionrole` - Adds a reaction role to a message\n",
+                f"`{Config.PREFIX}saychecklogs` - Checks for the say command logging channel",
                 inline=True
             )
 
