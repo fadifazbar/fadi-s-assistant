@@ -1,14 +1,17 @@
-[phases.setup]
-nixPkgs = [
-  "ffmpeg",
-  "opus",
-  "python311", # or python312 depending on your bot
-  "pkg-config",
-]
+[build]
+builder = "nixpacks"
 
-[phases.build]
+[variables]
+PYTHONUNBUFFERED = "1"
+
+[phases.setup]
+nixPkgs = ["python312", "ffmpeg", "opus"]
+
+[phases.install]
 cmds = [
-  "pip install -r requirements.txt"
+  "pip install --upgrade pip",
+  "pip install -r requirements.txt",
+  "pip install -U yt-dlp"
 ]
 
 [start]
