@@ -208,7 +208,7 @@ class MusicPlayer:
 
             await asyncio.sleep(0.05)
 
-async def _check_vc(self):
+        async def _check_vc(self):
     vc = self.voice()
     if not vc:
         return None
@@ -221,7 +221,6 @@ if self.is_alone():
         self._alone_since = time.time()
 else:
     self._alone_since = None
-        now = time.time()
 
         # Alone 5 minutes
         if self._alone_since and (now - self._alone_since) >= 300:
