@@ -1,4 +1,11 @@
-import discord from discord.ext import commands, tasks from discord import app_commands import asyncio import yt_dlp import datetime
+import asyncio
+import datetime
+
+import discord
+from discord.ext import commands, tasks
+from discord import app_commands
+
+import yt_dlp
 
 --- YTDL OPTIONS (fix SABR issue mid-2025) ---
 
