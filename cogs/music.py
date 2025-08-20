@@ -10,13 +10,14 @@ from typing import Optional, List
 # YTDL + FFMPEG CONFIG
 # ======================
 ytdl_format_options = {
-    "format": "bestaudio[ext=webm][acodec=opus]/bestaudio/best",
-    "noplaylist": True,
+    "format": "bestaudio[ext=m4a]/bestaudio/best",
+    "noplaylist": False,
     "quiet": True,
+    "default_search": "auto",
     "extract_flat": False,
-    "default_search": "ytsearch",
-    "source_address": "0.0.0.0",  # Force IPv4
+    "source_address": "0.0.0.0",  # bind to ipv4 since ipv6 sometimes breaks
 }
+
 ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
 
 ffmpeg_options = {"options": "-vn"}
