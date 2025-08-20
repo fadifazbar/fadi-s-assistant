@@ -141,11 +141,14 @@ class Music(commands.Cog):
         # Pop next track and refresh stream URL before playing
         next_track = self.queue.pop(0)
 
-
         # Re-fetch fresh URL to avoid expired links
         refreshed = await fetch_track(next_track.query, next_track.requester)
 
+        # 🔹 Save old track into previous before overwriting
+        if self.current:
+            self.previous = self.current
 
+        # 🔹 Now set current to refreshed
         self.current = refreshed
         source = await YTDLSource.create_source(refreshed)
 
@@ -159,6 +162,7 @@ class Music(commands.Cog):
                 pass
 
         vc.play(source, after=after_play)
+
 
         # Cancel idle timers because music is playing now
         await self.cancel_idle_timers()
