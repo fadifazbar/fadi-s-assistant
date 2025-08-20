@@ -210,9 +210,9 @@ class MusicPlayer:
 
 async def _check_vc(self):
     vc = self.voice()
+    if not vc:
+        return None
     return vc
-        if not vc:
-            return
 
         # Alone tracking
         if self.is_alone():
