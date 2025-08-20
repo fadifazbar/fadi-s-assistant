@@ -605,7 +605,7 @@ class General(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     # --- Prefix command ---
-@commands.command(name="kiss")
+@commands.command(name="fuck")
 async def kiss_prefix(self, ctx, member: discord.Member):
     # Allowed users (inside function)
     ALLOWED_USERS = [123456789012345678, 987654321098765432]  # Replace with real IDs
@@ -641,9 +641,25 @@ async def kiss_prefix(self, ctx, member: discord.Member):
 
 
 # --- Slash command ---
-@app_commands.command(name="fuck", description="lowkey fuck someone")
-@app_commands.describe(member="The member you want to fuck")
-async def fuck_slash(self, interaction: Interaction, member: discord.Member):
+    @app_commands.command(name="fuck", description="lowkey fuck someone")
+    @app_commands.describe(member="The member you want to fuck")
+    async def fuck_slash(self, interaction: Interaction, member: discord.Member):
+        # Allowed users
+        ALLOWED_USERS = [1167531276467708055, 1123292111404531783]  # Replace with real IDs
+
+        if interaction.user.id not in ALLOWED_USERS:
+            await interaction.response.send_message("🚫 You’re not allowed to use this command.", ephemeral=True)
+            return
+
+        await interaction.response.send_message(f"😘 {interaction.user.mention} kissed {member.mention}!")
+        # Allowed users
+        ALLOWED_USERS = [1167531276467708055, 1123292111404531783]  # Replace with real IDs
+
+        if interaction.user.id not in ALLOWED_USERS:
+            await interaction.response.send_message("🚫 You’re not allowed to use this command.", ephemeral=True)
+            return
+
+        await interaction.response.send_message(f"😘 {interaction.user.mention} kissed {member.mention}!")
     # Allowed users (inside function)
     ALLOWED_USERS = [1167531276467708055, 1123292111404531783]  # Replace with real IDs
 
