@@ -525,10 +525,9 @@ class Music(commands.Cog):
         if t.webpage_url:
             embed.add_field(name="Link", value=t.webpage_url, inline=True)
             if isinstance(ctx_or_inter, commands.Context):
-            await ctx_or_inter.send(embed=embed)
-        else:
-            await ctx_or_inter.followup.send(embed=embed)
-
+                await ctx_or_inter.send(embed=embed)
+            else:
+                await ctx_or_inter.followup.send(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(Music(bot))
