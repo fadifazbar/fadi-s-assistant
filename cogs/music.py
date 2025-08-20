@@ -311,13 +311,16 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
         color=discord.Color.green(),
     )
 
-
-        if track.thumbnail:
-            embed.set_thumbnail(url=track.thumbnail)
-        if track.uploader:
-            embed.add_field(name="Channel", value=track.uploader, inline=True)
-        embed.add_field(name="Requested by", value=getattr(track.requester, "mention", str(track.requester)), inline=True)
-        await channel.send(embed=embed)
+    if track.thumbnail:
+        embed.set_thumbnail(url=track.thumbnail)
+    if track.uploader:
+        embed.add_field(name="Channel", value=track.uploader, inline=True)
+    embed.add_field(
+        name="Requested by",
+        value=getattr(track.requester, "mention", str(track.requester)),
+        inline=True,
+    )
+    await channel.send(embed=embed)
 
     async def _announce_added(self, channel: discord.abc.Messageable, track: Track, pos: int):
         embed = discord.Embed(
