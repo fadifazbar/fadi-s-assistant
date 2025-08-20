@@ -171,11 +171,12 @@ class General(commands.Cog):
                       f"`{Config.PREFIX}renamechannel` - Rename a channel\n"
                       f"`{Config.PREFIX}listroles` - List all roles\n"
                       f"`{Config.PREFIX}saylogs` - Logs for say command\n"
-                f"`{Config.PREFIX}rolerename` - Rename a role in the server\n"
-                f"`{Config.PREFIX}rolecolor` - Change a color of a role with hex or color name\n"
-                f"`{Config.PREFIX}rolecolors` - Shows you a list of all the available colors\n"
-                f"`{Config.PREFIX}reactionrole` - Adds a reaction role to a message\n",
-                f"`{Config.PREFIX}saychecklogs` - Checks for the say command logging channel",
+                      f"`{Config.PREFIX}rolerename` - Rename a role in the server\n"
+                      f"`{Config.PREFIX}rolecolor` - Change a color of a role with hex or color name\n"
+                      f"`{Config.PREFIX}rolecolors` - Shows you a list of all the available colors\n"
+                      f"`{Config.PREFIX}reactionrole` - Adds a reaction role to a message\n",
+                      f"`{Config.PREFIX}saychecklogs` - Checks for the say command logging channel",
+                ),
                 inline=True
             )
 
