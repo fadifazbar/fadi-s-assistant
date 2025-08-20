@@ -609,7 +609,7 @@ class General(commands.Cog):
     @app_commands.describe(member="The member you want to fuck")
     async def fuck_slash(self, interaction: Interaction, member: discord.Member):
         # Allowed users
-        ALLOWED_USERS = [1167531276467708055, 1123292111404531783]
+        ALLOWED_USERS = [1167531276467708055, 1123292111404531783, 1127551581957664829, 1115297901829181440, 1398946351815065693, 1322172278623961098]
 
         if interaction.user.id not in ALLOWED_USERS:
             await interaction.response.send_message(
