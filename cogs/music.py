@@ -1,5 +1,7 @@
 import asyncio
 from typing import Optional, List, Dict
+import random
+
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -10,7 +12,7 @@ import yt_dlp
 # yt-dlp & ffmpeg config
 # ======================
 YTDL_OPTS = {
-    # Prefer direct audio streams (m4a/webm). This helps avoid SABR/HLS weirdness.
+    # Prefer direct audio streams (m4a/webm). Helps avoid SABR/HLS formats.
     "format": "bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best",
     "noplaylist": False,                 # ✅ allow playlists
     "quiet": True,
@@ -20,8 +22,10 @@ YTDL_OPTS = {
     "retries": 3,
     "skip_unavailable_fragments": True,
     "ignoreerrors": "only_download",     # skip broken entries in playlists
-    # Try a client profile less likely to hit SABR-only formats
+    # Use a client profile less likely to hit SABR-only formats
     "extractor_args": {"youtube": {"player_client": ["android"]}},
+    # Speed up large playlists: we only need basic fields at queue time
+    "extract_flat": "in_playlist",
     "cachedir": False,
 }
 ytdl = yt_dlp.YoutubeDL(YTDL_OPTS)
@@ -77,7 +81,14 @@ async def _fresh_stream_url(webpage_url: str) -> Optional[str]:
         return None
     if "entries" in info:
         info = info["entries"][0]
-    return info.get("url")
+    # Prefer direct url; fall back to bestaudio format URL if needed
+    url = info.get("url")
+    if url:
+        return url
+    for fmt in (info.get("formats") or []):
+        if fmt.get("acodec") not in (None, "none") and fmt.get("url"):
+            return fmt["url"]
+    return None
 
 
 def _is_unplayable(entry: dict) -> bool:
@@ -88,7 +99,9 @@ def _is_unplayable(entry: dict) -> bool:
         return True
     if entry.get("availability") in ("private", "needs_auth"):
         return True
-    # Some playlist entries come as "url": <id> (not full URL). We'll fix that later.
+    live_status = entry.get("live_status")
+    if live_status in ("is_live", "is_upcoming"):
+        return True
     return False
 
 
@@ -103,7 +116,6 @@ def _entry_to_track(entry: dict, requester) -> Optional[Track]:
         if vid_id:
             webpage_url = f"https://www.youtube.com/watch?v={vid_id}"
         else:
-            # fall back to direct url; if neither is present, skip
             webpage_url = entry.get("url")
     if not webpage_url:
         return None
@@ -118,13 +130,15 @@ def _entry_to_track(entry: dict, requester) -> Optional[Track]:
 
 
 # ==========
-# Music Cog
+// Music Cog
 # ==========
 class Music(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.queues: Dict[int, List[Track]] = {}
         self.currents: Dict[int, Optional[Track]] = {}
+        self.shuffle_enabled: Dict[int, bool] = {}
+        self.loop_enabled: Dict[int, bool] = {}
 
     # auto-sync slash commands when cog loads (so /play shows up)
     async def cog_load(self):
@@ -133,9 +147,24 @@ class Music(commands.Cog):
         except Exception:
             pass
 
-    # ---------- queue helpers ----------
+    # ---------- state helpers ----------
     def _queue(self, guild_id: int) -> List[Track]:
         return self.queues.setdefault(guild_id, [])
+
+    def is_shuffle(self, guild_id: int) -> bool:
+        return self.shuffle_enabled.get(guild_id, False)
+
+    def is_loop(self, guild_id: int) -> bool:
+        return self.loop_enabled.get(guild_id, False)
+
+    def _dequeue_next(self, guild_id: int) -> Optional[Track]:
+        q = self._queue(guild_id)
+        if not q:
+            return None
+        if self.is_shuffle(guild_id):
+            idx = random.randrange(len(q))
+            return q.pop(idx)
+        return q.pop(0)
 
     async def _ensure_voice(self, guild: discord.Guild, voice_channel: discord.VoiceChannel):
         vc = guild.voice_client
@@ -144,6 +173,7 @@ class Music(commands.Cog):
         elif not vc:
             await voice_channel.connect()
 
+    # ---------- announce helpers ----------
     async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
         embed = discord.Embed(
             title="🎶 Now Playing",
@@ -174,31 +204,44 @@ class Music(commands.Cog):
         embed.add_field(name="Position", value=str(pos), inline=True)
         await channel.send(embed=embed)
 
+    # ---------- playback core ----------
     async def _start_if_idle(self, guild: discord.Guild, channel: discord.abc.Messageable):
         vc = guild.voice_client
-        q = self._queue(guild.id)
-        if not vc or vc.is_playing() or vc.is_paused() or not q:
+        if not vc:
+            return
+        if vc.is_playing() or vc.is_paused():
             return
 
-        track = q.pop(0)
-        self.currents[guild.id] = track
+        next_track = self._dequeue_next(guild.id)
+        if not next_track:
+            self.currents[guild.id] = None
+            return
 
-        stream_url = await _fresh_stream_url(track.webpage_url)
+        self.currents[guild.id] = next_track
+        stream_url = await _fresh_stream_url(next_track.webpage_url)
         if not stream_url:
-            await channel.send(f"⚠️ Could not fetch stream for **{track.title}** — skipping.")
+            await channel.send(f"⚠️ Could not fetch stream for **{next_track.title}** — skipping.")
             self.currents[guild.id] = None
             return await self._start_if_idle(guild, channel)
 
+        # capture played track for the callback
+        played = next_track
+
         def _after(err: Optional[Exception]):
-            fut = self.bot.loop.create_task(self._after_track(guild, channel, err))
+            fut = self.bot.loop.create_task(self._after_track(guild, channel, played, err))
             fut.add_done_callback(lambda f: f.exception())
 
         vc.play(discord.FFmpegPCMAudio(stream_url, **FFMPEG_OPTS), after=_after)
-        await self._announce_now(channel, track)
+        await self._announce_now(channel, next_track)
 
-    async def _after_track(self, guild: discord.Guild, channel: discord.abc.Messageable, err):
+    async def _after_track(self, guild: discord.Guild, channel: discord.abc.Messageable, played: Optional[Track], err):
         if err:
             await channel.send(f"⚠️ Playback error: {err}")
+
+        # If looping, send the played track back to the end of the queue
+        if played and self.is_loop(guild.id):
+            self._queue(guild.id).append(played)
+
         self.currents[guild.id] = None
         await self._start_if_idle(guild, channel)
 
@@ -269,7 +312,7 @@ class Music(commands.Cog):
     async def skip_prefix(self, ctx: commands.Context):
         vc = ctx.guild.voice_client
         if vc and vc.is_playing():
-            vc.stop()
+            vc.stop()  # _after_track will handle loop/next
             await ctx.send("⏭️ Skipped.")
         else:
             await ctx.send("❌ Nothing is playing.")
@@ -295,6 +338,18 @@ class Music(commands.Cog):
             await ctx.send("🛑 Stopped music and left the channel.")
         else:
             await ctx.send("❌ Not connected.")
+
+    @commands.command(name="shuffle", help="Toggle shuffle mode.")
+    async def shuffle_prefix(self, ctx: commands.Context):
+        state = not self.is_shuffle(ctx.guild.id)
+        self.shuffle_enabled[ctx.guild.id] = state
+        await ctx.send("🔀 Shuffle enabled." if state else "➡️ Shuffle disabled.")
+
+    @commands.command(name="loop", help="Toggle looping of the whole queue.")
+    async def loop_prefix(self, ctx: commands.Context):
+        state = not self.is_loop(ctx.guild.id)
+        self.loop_enabled[ctx.guild.id] = state
+        await ctx.send("🔁 Loop enabled." if state else "➡️ Loop disabled.")
 
     # =====================
     # SLASH COMMANDS (/) 🎯
@@ -328,7 +383,7 @@ class Music(commands.Cog):
     async def skip_slash(self, interaction: discord.Interaction):
         vc = interaction.guild.voice_client
         if vc and vc.is_playing():
-            vc.stop()
+            vc.stop()  # _after_track will handle loop/next
             await interaction.response.send_message("⏭️ Skipped.")
         else:
             await interaction.response.send_message("❌ Nothing is playing.", ephemeral=True)
@@ -364,6 +419,18 @@ class Music(commands.Cog):
             await interaction.response.send_message("🛑 Stopped music and left the channel.")
         else:
             await interaction.response.send_message("❌ Not connected.", ephemeral=True)
+
+    @app_commands.command(name="shuffle", description="Toggle shuffle mode.")
+    async def shuffle_slash(self, interaction: discord.Interaction):
+        state = not self.is_shuffle(interaction.guild.id)
+        self.shuffle_enabled[interaction.guild.id] = state
+        await interaction.response.send_message("🔀 Shuffle enabled." if state else "➡️ Shuffle disabled.")
+
+    @app_commands.command(name="loop", description="Toggle looping of the whole queue.")
+    async def loop_slash(self, interaction: discord.Interaction):
+        state = not self.is_loop(interaction.guild.id)
+        self.loop_enabled[interaction.guild.id] = state
+        await interaction.response.send_message("🔁 Loop enabled." if state else "➡️ Loop disabled.")
 
 
 # ===========
