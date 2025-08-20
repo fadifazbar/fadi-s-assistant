@@ -34,6 +34,7 @@ class ModBot(commands.Bot):
         await self.load_extension('cogs.general')
         await self.load_extension('cogs.serverinfo')
         await self.load_extension('cogs.reactionrole')
+        await self.load_extension("snipeeditsnipe")
         
         # Sync slash commands
         try:
