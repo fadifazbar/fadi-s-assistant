@@ -675,7 +675,7 @@ class Moderation(commands.Cog):
             await self._send_response(ctx_or_interaction, "❌ An error occurred while unbanning the user!")
     
     # Add Role command (Prefix)
-    @commands.command(name="addrole", aliases=["giverole"])
+    @commands.command(name="giverole", aliases=["addrole"])
     @has_mod_permissions()
     @commands.guild_only()
     async def addrole_prefix(self, ctx, member: discord.Member, *, role_input: str):
@@ -688,7 +688,7 @@ class Moderation(commands.Cog):
         await self._add_role(ctx, member, role, ctx.author)
     
     # Add Role command (Slash)
-    @discord.app_commands.command(name="addrole", description="Give a role to a member")
+    @discord.app_commands.command(name="giverole", description="Give a role to a member")
     @discord.app_commands.describe(
         member="The member to give the role to",
         role="The role to give (searchable)"
@@ -807,7 +807,7 @@ class Moderation(commands.Cog):
 
     
     # Remove Role command (Prefix)
-    @commands.command(name="removerole", aliases=["takerole"])
+    @commands.command(name="takerole", aliases=["removerole"])
     @has_mod_permissions()
     @commands.guild_only()
     async def removerole_prefix(self, ctx, member: discord.Member, *, role_input: str):
@@ -820,7 +820,7 @@ class Moderation(commands.Cog):
         await self._remove_role(ctx, member, role, ctx.author)
     
     # Remove Role command (Slash)
-    @discord.app_commands.command(name="removerole", description="Remove a role from a member")
+    @discord.app_commands.command(name="takerole", description="Remove a role from a member")
     @discord.app_commands.describe(
         member="The member to remove the role from",
         role="The role to remove (searchable)"
