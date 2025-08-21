@@ -17,6 +17,7 @@ class ModBot(commands.Bot):
         intents.guilds = True
         intents.members = True
         intents.moderation = True
+        intents.presences = True
         
         super().__init__(
             command_prefix=Config.PREFIX,
