@@ -390,12 +390,6 @@ class Moderation(commands.Cog):
         embed.set_footer(text=f"Updated by {interaction.user}", icon_url=interaction.user.display_avatar.url)
 
         await interaction.response.send_message(embed=embed)
-
-    # sync slash commands on cog load
-    async def cog_load(self):
-        if not self.bot.tree.get_command("slowmode"):
-            self.bot.tree.add_command(self.slowmode_slash)
-
     
     # Clear messages command (Prefix)
     @commands.command(name="purge", aliases=["clear"])
