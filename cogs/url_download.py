@@ -1,107 +1,112 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import yt_dlp
-import os
+import yt_dlp as youtube_dl
 import asyncio
-import random
+import os
 import time
-import subprocess
+
 
 class URLDownload(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def download_and_compress(self, url: str, output_path: str, max_size: int = 8 * 1024 * 1024):
-        """Download video and compress if needed"""
-        ydl_opts = {
-            'outtmpl': output_path,
-            'format': 'bestvideo+bestaudio/best',
-            'merge_output_format': 'mp4'
-        }
+    async def download_and_compress(self, url: str, output_path: str, progress_callback):
+        loop = asyncio.get_running_loop()
 
-        # Download video
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+        def _download():
+            ydl_opts = {
+                'outtmpl': output_path,
+                'format': 'bestvideo+bestaudio/best',
+                'merge_output_format': 'mp4',
+                'quiet': True,
+                'no_warnings': True,
+                'progress_hooks': [progress_callback]
+            }
+            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+            return output_path
 
-        # If file too large → compress
-        while os.path.getsize(output_path) > max_size:
-            compressed_path = output_path.replace(".mp4", "_compressed.mp4")
+        final_path = await loop.run_in_executor(None, _download)
+        return final_path
 
-            # Lower resolution + bitrate to shrink file
-            cmd = [
-                "ffmpeg", "-i", output_path,
-                "-vf", "scale=iw/2:ih/2",  # half resolution
-                "-b:v", "800k",  # lower bitrate
-                "-b:a", "96k",   # lower audio bitrate
-                "-y", compressed_path
-            ]
-            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    def build_progress_bar(self, percent: float) -> str:
+        blocks = 10
+        filled_blocks = int((percent / 100) * blocks)
+        bar = "🟥" * filled_blocks + "⬛" * (blocks - filled_blocks)
+        return f"{percent:.1f}% / 100%\n{bar}"
 
-            os.remove(output_path)
-            os.rename(compressed_path, output_path)
-
-        return output_path
-
-    async def send_video(self, ctx_or_interaction, url: str, user):
+    async def send_video(self, ctx_or_inter, url: str, requester, is_slash=False):
         start_time = time.time()
-        embed = discord.Embed(
-            title="📥 Fetching video...",
-            description=f"From: `{url}`",
-            color=random.choice([discord.Color.red(), discord.Color.blue(), discord.Color.green(), discord.Color.orange()])
-        )
-        msg = await (ctx_or_interaction.send(embed=embed) if isinstance(ctx_or_interaction, commands.Context) else ctx_or_interaction.response.send_message(embed=embed))
-
         output_path = "video.mp4"
+
+        # Initial embed
+        embed = discord.Embed(
+            title="Downloading...",
+            description=f"Fetching video from: `{url}`",
+            color=discord.Color.red()
+        )
+        if is_slash:
+            await ctx_or_inter.response.send_message(embed=embed)
+            message = await ctx_or_inter.original_response()
+        else:
+            message = await ctx_or_inter.send(embed=embed)
+
+        last_update = {"percent": 0}
+
+        def progress_hook(d):
+            if d["status"] == "downloading":
+                percent = d.get("_percent_str", "0%").strip()
+                try:
+                    percent = float(percent.replace("%", ""))
+                except ValueError:
+                    percent = 0.0
+
+                # Update only every 10%
+                if percent - last_update["percent"] >= 10:
+                    last_update["percent"] = percent
+                    new_embed = discord.Embed(
+                        title="Downloading...",
+                        description=self.build_progress_bar(percent),
+                        color=discord.Color.orange()
+                    )
+                    asyncio.run_coroutine_threadsafe(message.edit(embed=new_embed), self.bot.loop)
+
         try:
-            if os.path.exists(output_path):
-                os.remove(output_path)
+            final_path = await self.download_and_compress(url, output_path, progress_hook)
 
-            final_path = await self.download_and_compress(url, output_path)
-
+            # Send result
             elapsed = round(time.time() - start_time, 2)
             file = discord.File(final_path, filename="video.mp4")
 
-            embed = discord.Embed(
+            result_embed = discord.Embed(
                 title="✅ Download Complete",
-                description=f"Here is your video from: `{url}`",
-                color=random.choice([discord.Color.red(), discord.Color.blue(), discord.Color.green(), discord.Color.orange()])
+                color=discord.Color.green()
             )
-            embed.set_footer(text=f"Run by: {user} | Took {elapsed}s", icon_url=user.display_avatar.url)
+            result_embed.set_footer(
+                text=f"Runed by: {requester} | Took {elapsed}s",
+                icon_url=requester.display_avatar.url
+            )
+            await message.edit(embed=result_embed, attachments=[file])
 
-            if isinstance(ctx_or_interaction, commands.Context):
-                await msg.edit(embed=embed, attachments=[file])
-            else:
-                await msg.edit(embed=embed, attachments=[file])
-
+            os.remove(final_path)
         except Exception as e:
             error_embed = discord.Embed(
                 title="❌ Error",
-                description=f"Failed to download: {e}",
+                description=str(e),
                 color=discord.Color.red()
             )
-            if isinstance(ctx_or_interaction, commands.Context):
-                await msg.edit(embed=error_embed)
-            else:
-                await msg.edit(embed=error_embed)
+            await message.edit(embed=error_embed)
 
-        finally:
-            if os.path.exists(output_path):
-                os.remove(output_path)
-
-    # ===============================
-    # PREFIX COMMAND
-    # ===============================
+    # Prefix command
     @commands.command(name="urldownload")
-    async def urldownload_prefix(self, ctx: commands.Context, url: str):
-        await self.send_video(ctx, url, ctx.author)
+    async def urldownload_prefix(self, ctx, url: str):
+        await self.send_video(ctx, url, ctx.author, is_slash=False)
 
-    # ===============================
-    # SLASH COMMAND
-    # ===============================
-    @app_commands.command(name="urldownload", description="Download a video from any URL")
+    # Slash command
+    @app_commands.command(name="urldownload", description="Download a video from a link")
     async def urldownload_slash(self, interaction: discord.Interaction, url: str):
-        await self.send_video(interaction, url, interaction.user)
+        await self.send_video(interaction, url, interaction.user, is_slash=True)
 
 
 async def setup(bot):
