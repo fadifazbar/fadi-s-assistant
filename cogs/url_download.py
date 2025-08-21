@@ -10,7 +10,7 @@ import math
 
 # ---------- CONFIG ----------
 # ✅ Update this with your Railway app domain
-EXTERNAL_HOST = "https://fadi-s-assistant-production.up.railway.app"  
+EXTERNAL_HOST = "https://fadi-s-assistant-production.up.railway.app/upload" 
 MAX_DISCORD_FILESIZE = 8 * 1024 * 1024  # 8MB
 # ----------------------------
 
