@@ -1,9 +1,11 @@
 import discord
+from discord import app_commands
 from discord.ext import commands
 import yt_dlp
 import aiohttp
 import os
 import time
+import asyncio
 
 # ---------- CONFIG ----------
 EXTERNAL_HOST = "https://files.example.com/upload"  # Replace with your hosting API
@@ -29,15 +31,33 @@ async def upload_external(file_path: str):
                     return res.get("url", None)
                 return None
 
+class ProgressHook:
+    """Handles yt-dlp progress reporting."""
+    def __init__(self, message: discord.Message):
+        self.message = message
+        self.last_update = 0
+
+    async def hook(self, d):
+        if d['status'] == 'downloading':
+            percent = d.get("_percent_str", "").strip()
+            now = time.time()
+            # Update every 2 seconds to prevent rate limits
+            if now - self.last_update > 2:
+                self.last_update = now
+                await self.message.edit(content=f"⬇️ Downloading... {percent}")
+        elif d['status'] == 'finished':
+            await self.message.edit(content="📦 Merging & Finalizing...")
+
 class URLDownload(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="urldownload")
-    async def urldownload(self, ctx, url: str):
+    @app_commands.command(name="urldownload", description="Download a video from a URL")
+    async def urldownload(self, interaction: discord.Interaction, url: str):
         start_time = time.time()
 
-        status_msg = await ctx.send("🔄 Fetching video...")
+        await interaction.response.defer(thinking=True)
+        status_msg = await interaction.followup.send("🔄 Fetching video...", wait=True)
 
         ydl_opts = {
             "format": "best[ext=mp4]/best",
@@ -57,7 +77,12 @@ class URLDownload(commands.Cog):
                 quality = info.get("format_note", "unknown")
                 filename = ydl.prepare_filename(info)
 
-                await status_msg.edit(content="⬇️ Downloading...")
+            # Add progress hook
+            progress = ProgressHook(status_msg)
+            ydl_opts["progress_hooks"] = [lambda d: asyncio.create_task(progress.hook(d))]
+
+            await status_msg.edit(content="⬇️ Downloading...")
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
 
             file_size = os.path.getsize(filename)
@@ -77,7 +102,7 @@ class URLDownload(commands.Cog):
             # --- If ≤ 8MB: upload to Discord ---
             if file_size <= MAX_DISCORD_FILESIZE:
                 await status_msg.edit(content="📤 Uploading to Discord...")
-                await ctx.send(embed=embed, file=discord.File(filename))
+                await interaction.followup.send(embed=embed, file=discord.File(filename))
 
             # --- If > 8MB: external hosting ---
             else:
@@ -91,9 +116,9 @@ class URLDownload(commands.Cog):
 
                 if link:
                     embed.add_field(name="🔗 External Link", value=link, inline=False)
-                    await ctx.send(embed=embed)
+                    await interaction.followup.send(embed=embed)
                 else:
-                    await ctx.send("❌ Upload failed. Please try again later.")
+                    await interaction.followup.send("❌ Upload failed. Please try again later.")
 
         except Exception as e:
             await status_msg.edit(content=f"❌ Download Failed\nError: `{e}`")
