@@ -1,39 +1,54 @@
-from fastapi import FastAPI, UploadFile, Form
+import os
+import time
+from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import FileResponse, JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-import os, uuid, aiofiles
+from starlette.background import BackgroundTasks
+from pathlib import Path
+import shutil
+import asyncio
 
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+app = FastAPI()
 
-app = FastAPI(title="Discord File Host")
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+MAX_FILE_AGE = 48 * 3600  # 48 hours in seconds
+
 
 @app.post("/upload")
-async def upload(file: UploadFile, expires_in: int = Form(3600)):
-    ext = os.path.splitext(file.filename)[-1]
-    file_id = f"{uuid.uuid4().hex}{ext}"
-    file_path = os.path.join(UPLOAD_DIR, file_id)
+async def upload_file(file: UploadFile = File(...)):
+    """Save uploaded file and return public URL."""
+    file_path = UPLOAD_DIR / file.filename
+    with open(file_path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
 
-    async with aiofiles.open(file_path, "wb") as f:
-        while chunk := await file.read(1024 * 1024):
-            await f.write(chunk)
+    return {"file_url": f"/files/{file.filename}"}
 
-    return JSONResponse({
-        "status": "success",
-        "file_url": f"/files/{file_id}"
-    })
 
-@app.get("/files/{file_id}")
-async def get_file(file_id: str):
-    file_path = os.path.join(UPLOAD_DIR, file_id)
-    if not os.path.exists(file_path):
+@app.get("/files/{filename}")
+async def get_file(filename: str):
+    """Serve uploaded file."""
+    file_path = UPLOAD_DIR / filename
+    if not file_path.exists():
         return JSONResponse({"error": "File not found"}, status_code=404)
-    return FileResponse(file_path, filename=file_id)
+    return FileResponse(file_path)
+
+
+async def cleanup_old_files():
+    """Delete files older than 48 hours."""
+    while True:
+        now = time.time()
+        for file in UPLOAD_DIR.iterdir():
+            if file.is_file():
+                if now - file.stat().st_mtime > MAX_FILE_AGE:
+                    try:
+                        file.unlink()
+                        print(f"🗑️ Deleted old file: {file}")
+                    except Exception as e:
+                        print(f"⚠️ Error deleting {file}: {e}")
+        await asyncio.sleep(3600)  # Run cleanup every 1 hour
+
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(cleanup_old_files())
