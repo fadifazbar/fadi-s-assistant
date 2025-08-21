@@ -142,7 +142,8 @@ class General(commands.Cog):
             "reactionrole": ("🎭 ReactionRole", f"`{Config.PREFIX}reactionrole <message id> <emoji> <role>` or `/reactionrole`\nAdd a reaction role to a message"),
             "saychecklogs": ("💬 SayCheckLogs", f"`{Config.PREFIX}saychecklogs` or `/saychecklogs`\nChecks which channel have the say command logs"),
             "serverinfo": ("❓ ServerInfo", f"`{Config.PREFIX}serverinfo` or `/serverinfo`\nCheck info about the server"),
-            "coinflip": ("💲 CoinFlip", f"`{Config.PREFIX}coinflip` or `/coinflip`\nFlips a coin and gives a head or tails!")
+            "coinflip": ("💲 CoinFlip", f"`{Config.PREFIX}coinflip` or `/coinflip`\nFlips a coin and gives a head or tails!\n"),
+            "userinfo": ("🎭 UserInfo", f"`{Config.PREFIX}userinfo <member>` or `/userinfo`\nShows some information about a user\n")
         }
 
         # --- Show specific command help ---
@@ -199,6 +200,7 @@ class General(commands.Cog):
                     f"`{Config.PREFIX}tictactoe` - Challenge another user to TicTacToe (XO)\n"
                     f"`{Config.PREFIX}serverinfo` - View the whole server info. like members/bots/boosts/etc.\n"
                     f"`{Config.PREFIX}coinflip` - Flip a coin to get heads or tails"
+                    f"`{Config.PREFIX}userinfo` - Check some information about a user"
                 ),
                 inline=True
             )
@@ -241,6 +243,73 @@ class General(commands.Cog):
                 await ctx_or_interaction.response.send_message(embed=embed, ephemeral=ephemeral)
             else:
                 await ctx_or_interaction.followup.send(embed=embed, ephemeral=ephemeral)
+
+        # ===============================
+    # PREFIX COMMAND
+    # ===============================
+    @commands.command(name="userinfo", aliases=["user", "whois"])
+    async def userinfo_prefix(self, ctx: commands.Context, member: discord.Member = None):
+        member = member or ctx.author
+        embed = self.build_userinfo_embed(member, ctx.author)
+        await ctx.send(embed=embed)
+
+    # ===============================
+    # SLASH COMMAND
+    # ===============================
+    @app_commands.command(name="userinfo", description="Show detailed information about a user")
+    async def userinfo_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
+        embed = self.build_userinfo_embed(member, interaction.user)
+        await interaction.response.send_message(embed=embed)
+
+    # ===============================
+    # EMBED BUILDER
+    # ===============================
+    def build_userinfo_embed(self, member: discord.Member, requester: discord.Member) -> discord.Embed:
+        # random embed color
+        color = discord.Color.random()
+
+        # roles (excluding @everyone)
+        roles = [role.mention for role in member.roles if role != member.guild.default_role]
+        roles_display = ", ".join(roles) if roles else "None"
+
+        # check Nitro / boosting
+        premium = []
+        if member.premium_since:  # boosting this server
+            premium.append("🚀 Server Booster")
+        if member.public_flags.nitro:  # nitro badge check (Discord flags)
+            premium.append("✨ Nitro")
+        premium_display = ", ".join(premium) if premium else "None"
+
+        embed = discord.Embed(
+            title=f"👤 User Info",
+            description=f"Information about {member.mention}",
+            color=color,
+            timestamp=datetime.utcnow()
+        )
+
+        # big profile picture
+        embed.set_thumbnail(url=member.display_avatar.url)
+
+        # fields
+        embed.add_field(name="🆔 User ID", value=member.id, inline=False)
+        embed.add_field(name="📛 Nickname", value=member.nick if member.nick else "None", inline=False)
+        embed.add_field(name="🤖 Bot?", value="Yes 🤖" if member.bot else "No 🙎", inline=True)
+
+        embed.add_field(name="📆 Account Created", value=member.created_at.strftime("%b %d, %Y %H:%M:%S"), inline=False)
+        embed.add_field(name="📥 Joined Server", value=member.joined_at.strftime("%b %d, %Y %H:%M:%S"), inline=False)
+
+        embed.add_field(name=f"🎭 Roles [{len(roles)}]", value=roles_display, inline=False)
+        embed.add_field(name="💎 Premium / Boost", value=premium_display, inline=False)
+
+        embed.set_footer(text=f"Requested by {requester}", icon_url=requester.display_avatar.url)
+        return embed
+
+    # sync slash commands on cog load
+    async def cog_load(self):
+        if not self.bot.tree.get_command("userinfo"):
+            self.bot.tree.add_command(self.userinfo_slash)
+
 
     
     # Ping command (Prefix)
