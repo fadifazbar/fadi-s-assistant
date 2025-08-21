@@ -328,18 +328,26 @@ class General(commands.Cog):
     # SLASH COMMAND
     # ===============================
     @app_commands.command(name="userinfo", description="Show detailed information about a user")
-    async def userinfo_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def userinfo_slash(
+        self,
+        interaction: discord.Interaction,
+        member: discord.Member = None
+    ):
+        # Default to the command user if no target provided
         member = member or interaction.user
 
-        # Always resolve member properly (important for presences/activities!)
-        if isinstance(member, discord.User):
-            try:
-                member = await interaction.guild.fetch_member(member.id)
-            except Exception:
-                member = interaction.guild.get_member(member.id)
+        # ✅ Force fetch to ensure we get full Member object with presence + activities
+        try:
+            member = await interaction.guild.fetch_member(member.id)
+        except Exception:
+            member = interaction.guild.get_member(member.id)
 
+        # Build the embed
         embed = self.build_userinfo_embed(member, interaction.user)
+
+        # Send it
         await interaction.response.send_message(embed=embed)
+
 
     
     # Ping command (Prefix)
