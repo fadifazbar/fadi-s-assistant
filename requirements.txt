@@ -7,3 +7,7 @@ PyNaCl
 yt-dlp
 pynacl
 ffmpeg
+fastapi
+uvicorn[standard]
+aiofiles
+python-multipart
