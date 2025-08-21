@@ -49,7 +49,7 @@ class ProgressHook:
 
             # Bar updates only every 10% but percent shows exact
             bar_step = math.floor(percent_float / 10)
-            bar = "🟥" * bar_step + "⬛" * (10 - bar_step)
+            bar = "🟩" * bar_step + "⬛" * (10 - bar_step)
 
             now = time.time()
             if now - self.last_update > 1:  # limit updates
@@ -121,8 +121,9 @@ class URLDownload(commands.Cog):
             else:
                 await status_msg.edit(
                     content=f"⚠️ File too large to fit Discord limits ({sizeof_fmt(file_size)}).\n"
-                            f"Auto-compression not possible for this size.\n"
-                            f"Using external hosting to download your video"
+                            f"📁 Auto-compression not possible for this size.\n"
+                            f"🔗 Using external hosting to download your video.\n"
+                            f"🗑️ This file will be removed from the external hosting after __**48 Hours**__."
                 )
 
                 link = await upload_external(filename)
