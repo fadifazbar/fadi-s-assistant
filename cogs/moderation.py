@@ -299,6 +299,94 @@ class Moderation(commands.Cog):
             await ctx.send("❌ I don't have permission to change this role.")
         except Exception as e:
             await ctx.send(f"❌ Error: {e}")
+
+        # ===============================
+    # PREFIX COMMANDS
+    # ===============================
+    @commands.command(name="lock")
+    @commands.has_permissions(manage_channels=True)
+    async def lock_prefix(self, ctx: commands.Context, channel: discord.TextChannel = None):
+        """Lock a text channel"""
+        channel = channel or ctx.channel
+        overwrite = channel.overwrites_for(ctx.guild.default_role)
+        overwrite.send_messages = False
+        await channel.set_permissions(ctx.guild.default_role, overwrite=overwrite)
+
+        embed = discord.Embed(
+            title="🔒 Channel Locked",
+            description=f"{channel.mention} has been **locked**.",
+            color=random.choice([
+                discord.Color.red(), discord.Color.orange(), discord.Color.blurple()
+            ]),
+            timestamp=datetime.utcnow()
+        )
+        embed.set_footer(text=f"Locked by {ctx.author}", icon_url=ctx.author.display_avatar.url)
+        await ctx.send(embed=embed)
+
+
+    @commands.command(name="unlock")
+    @commands.has_permissions(manage_channels=True)
+    async def unlock_prefix(self, ctx: commands.Context, channel: discord.TextChannel = None):
+        """Unlock a text channel"""
+        channel = channel or ctx.channel
+        overwrite = channel.overwrites_for(ctx.guild.default_role)
+        overwrite.send_messages = True
+        await channel.set_permissions(ctx.guild.default_role, overwrite=overwrite)
+
+        embed = discord.Embed(
+            title="🔓 Channel Unlocked",
+            description=f"{channel.mention} has been **unlocked**.",
+            color=random.choice([
+                discord.Color.green(), discord.Color.blurple(), discord.Color.gold()
+            ]),
+            timestamp=datetime.utcnow()
+        )
+        embed.set_footer(text=f"Unlocked by {ctx.author}", icon_url=ctx.author.display_avatar.url)
+        await ctx.send(embed=embed)
+
+
+    # ===============================
+    # SLASH COMMANDS
+    # ===============================
+    @app_commands.command(name="lock", description="Lock a text channel")
+    @app_commands.checks.has_permissions(manage_channels=True)
+    async def lock_slash(self, interaction: discord.Interaction, channel: discord.TextChannel = None):
+        channel = channel or interaction.channel
+        overwrite = channel.overwrites_for(interaction.guild.default_role)
+        overwrite.send_messages = False
+        await channel.set_permissions(interaction.guild.default_role, overwrite=overwrite)
+
+        embed = discord.Embed(
+            title="🔒 Channel Locked",
+            description=f"{channel.mention} has been **locked**.",
+            color=random.choice([
+                discord.Color.red(), discord.Color.orange(), discord.Color.blurple()
+            ]),
+            timestamp=datetime.utcnow()
+        )
+        embed.set_footer(text=f"Locked by {interaction.user}", icon_url=interaction.user.display_avatar.url)
+        await interaction.response.send_message(embed=embed)
+
+
+    @app_commands.command(name="unlock", description="Unlock a text channel")
+    @app_commands.checks.has_permissions(manage_channels=True)
+    async def unlock_slash(self, interaction: discord.Interaction, channel: discord.TextChannel = None):
+        channel = channel or interaction.channel
+        overwrite = channel.overwrites_for(interaction.guild.default_role)
+        overwrite.send_messages = True
+        await channel.set_permissions(interaction.guild.default_role, overwrite=overwrite)
+
+        embed = discord.Embed(
+            title="🔓 Channel Unlocked",
+            description=f"{channel.mention} has been **unlocked**.",
+            color=random.choice([
+                discord.Color.green(), discord.Color.blurple(), discord.Color.gold()
+            ]),
+            timestamp=datetime.utcnow()
+        )
+        embed.set_footer(text=f"Unlocked by {interaction.user}", icon_url=interaction.user.display_avatar.url)
+        await interaction.response.send_message(embed=embed)
+
     
     # -----------------------
     # Prefix command: list all colors
