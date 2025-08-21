@@ -333,20 +333,22 @@ class General(commands.Cog):
         interaction: discord.Interaction,
         member: discord.Member = None
     ):
-        # Default to the command user if no target provided
         member = member or interaction.user
 
-        # ✅ Force fetch to ensure we get full Member object with presence + activities
-        try:
-            member = await interaction.guild.fetch_member(member.id)
-        except Exception:
-            member = interaction.guild.get_member(member.id)
+        # ✅ Prefer cached member (this has presences + activities if available)
+        cached_member = interaction.guild.get_member(member.id)
+        if cached_member:
+            member = cached_member
+        else:
+            # fallback: fetch (no live presence guaranteed)
+            try:
+                member = await interaction.guild.fetch_member(member.id)
+            except Exception:
+                pass
 
-        # Build the embed
         embed = self.build_userinfo_embed(member, interaction.user)
-
-        # Send it
         await interaction.response.send_message(embed=embed)
+
 
 
     
