@@ -730,7 +730,32 @@ class General(commands.Cog):
         embed.set_image(url=gif)
         await interaction.response.send_message(embed=embed)
 
-        # ===============================
+    # ===============================
+    # PREFIX COMMAND
+    # ===============================
+    @commands.command(name="banner")
+    async def banner_prefix(self, ctx: commands.Context, member: discord.Member = None):
+        member = member or ctx.author
+
+        # fetch full user to get banner
+        user = await self.bot.fetch_user(member.id)
+        if not user.banner:
+            return await ctx.send("❌ This user has no banner set.")
+
+        colors = [
+            discord.Color.blurple(), discord.Color.green(), discord.Color.orange(),
+            discord.Color.purple(), discord.Color.gold(), discord.Color.red()
+        ]
+        embed = discord.Embed(
+            title=f"🖼️ {user.name}'s Banner",
+            color=random.choice(colors)
+        )
+        embed.set_image(url=user.banner.url)
+        embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.display_avatar.url)
+
+        await ctx.send(embed=embed)
+
+    # ===============================
     # SLASH COMMAND
     # ===============================
     @app_commands.command(name="banner", description="Show the banner of a user")
@@ -750,42 +775,10 @@ class General(commands.Cog):
             color=random.choice(colors)
         )
         embed.set_image(url=user.banner.url)
-        embed.set_thumbnail(url=user.display_avatar.url)
         embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.display_avatar.url)
 
-        view = discord.ui.View()
-        view.add_item(discord.ui.Button(label="📥 Download Banner", url=user.banner.url))
+        await interaction.response.send_message(embed=embed)
 
-        await interaction.response.send_message(embed=embed, view=view)
-
-
-    # ===============================
-    # PREFIX COMMAND
-    # ===============================
-    @commands.command(name="banner")
-    async def banner_prefix(self, ctx: commands.Context, member: discord.Member = None):
-        member = member or ctx.author
-
-        user = await self.bot.fetch_user(member.id)
-        if not user.banner:
-            return await ctx.send("❌ This user has no banner set.")
-
-        colors = [
-            discord.Color.blurple(), discord.Color.green(), discord.Color.orange(),
-            discord.Color.purple(), discord.Color.gold(), discord.Color.red()
-        ]
-        embed = discord.Embed(
-            title=f"🖼️ {user.name}'s Banner",
-            color=random.choice(colors)
-        )
-        embed.set_image(url=user.banner.url)
-        embed.set_thumbnail(url=user.display_avatar.url)
-        embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.display_avatar.url)
-
-        view = discord.ui.View()
-        view.add_item(discord.ui.Button(label="📥 Download Banner", url=user.banner.url))
-
-        await ctx.send(embed=embed, view=view)
 
 
     # Info command (Prefix)
