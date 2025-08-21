@@ -244,9 +244,13 @@ class General(commands.Cog):
             else:
                 await ctx_or_interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
+    # ===============================
+    # Helper Embed Builder
+    # ===============================
     def build_userinfo_embed(self, member: discord.Member, requester: discord.abc.User) -> discord.Embed:
         color = discord.Color.random()
 
+        # Status map
         status_map = {
             discord.Status.online: "🟢 Online",
             discord.Status.idle: "🌙 Idle",
@@ -255,43 +259,44 @@ class General(commands.Cog):
         }
         status_display = status_map.get(getattr(member, "status", discord.Status.offline), "❓ Unknown")
 
-        # Activity (first interesting one)
+        # Activity display
         activity_display = "❌ None"
         acts = getattr(member, "activities", None)
         if acts:
-            picked = None
             for a in acts:
                 if a.type == discord.ActivityType.playing:
-                    picked = f"🎮 Playing **{a.name}**"
+                    activity_display = f"🎮 Playing **{a.name}**"
                     break
                 if a.type == discord.ActivityType.listening:
-                    picked = f"🎧 Listening to **{getattr(a, 'title', a.name)}**"
+                    activity_display = f"🎧 Listening to **{getattr(a, 'title', a.name)}**"
                     break
                 if a.type == discord.ActivityType.watching:
-                    picked = f"📺 Watching **{a.name}**"
+                    activity_display = f"📺 Watching **{a.name}**"
                     break
                 if a.type == discord.ActivityType.streaming:
-                    picked = f"📡 Streaming **{a.name}**"
+                    activity_display = f"📡 Streaming **{a.name}**"
                     break
                 if isinstance(a, discord.CustomActivity):
                     text = a.name or "Custom Status"
                     if a.emoji:
                         text = f"{a.emoji} {text}"
-                    picked = f"💬 {text}"
+                    activity_display = f"💬 {text}"
                     break
-            if picked:
-                activity_display = picked
 
         embed = discord.Embed(
             title=f"👤 User Info — {member}",
+            description=f"━━━━━━━━━━━━━━━━━━━━\n📌 Detailed information about {member.mention}\n━━━━━━━━━━━━━━━━━━━━",
             color=color,
             timestamp=datetime.utcnow()
         )
+
+        # Avatar
         embed.set_thumbnail(url=member.display_avatar.url)
 
+        # Main fields
         embed.add_field(name="🆔 User ID", value=f"`{member.id}`", inline=False)
-        embed.add_field(name="📛 Username", value=member.name, inline=True)
-        embed.add_field(name="🏷️ Display Name", value=member.display_name, inline=True)
+        embed.add_field(name="📛 Username", value=member.name or "Unknown", inline=True)
+        embed.add_field(name="🏷️ Display Name", value=member.display_name or "Unknown", inline=True)
         embed.add_field(
             name="📆 Joined Discord",
             value=member.created_at.strftime("%b %d, %Y"),
@@ -305,94 +310,36 @@ class General(commands.Cog):
         embed.add_field(name="📶 Status", value=status_display, inline=True)
         embed.add_field(name="🎯 Activity", value=activity_display, inline=False)
 
+        # Footer
         embed.set_footer(text=f"Requested by {requester}", icon_url=requester.display_avatar.url)
+
         return embed
 
+    # ===============================
+    # PREFIX COMMAND
+    # ===============================
     @commands.command(name="userinfo")
     async def userinfo_prefix(self, ctx: commands.Context, member: discord.Member = None):
         member = member or ctx.author
         embed = self.build_userinfo_embed(member, ctx.author)
         await ctx.send(embed=embed)
 
+    # ===============================
+    # SLASH COMMAND
+    # ===============================
     @app_commands.command(name="userinfo", description="Show detailed information about a user")
     async def userinfo_slash(self, interaction: discord.Interaction, member: discord.Member = None):
-        # Always try to use the cached Member for presence/activities
-        target = member or interaction.user
-        cached = interaction.guild.get_member(target.id)
-        if cached is None:
+        member = member or interaction.user
+
+        # Always resolve member properly (important for presences/activities!)
+        if isinstance(member, discord.User):
             try:
-                await interaction.guild.chunk()
+                member = await interaction.guild.fetch_member(member.id)
             except Exception:
-                pass
-            cached = interaction.guild.get_member(target.id)
-        member = cached or target
+                member = interaction.guild.get_member(member.id)
+
         embed = self.build_userinfo_embed(member, interaction.user)
         await interaction.response.send_message(embed=embed)
-
-
-    # ===============================
-    # EMBED BUILDER
-    # ===============================
-    def build_userinfo_embed(self, member: discord.Member, requester: discord.Member) -> discord.Embed:
-        color = discord.Color.random()
-
-        # roles (excluding @everyone)
-        roles = [role.mention for role in member.roles if role != member.guild.default_role]
-        roles_display = ", ".join(roles) if roles else "None"
-
-        # status mapping
-        status_map = {
-            discord.Status.online: "🟢 Online",
-            discord.Status.idle: "🌙 Idle",
-            discord.Status.dnd: "⛔ Do Not Disturb",
-            discord.Status.offline: "⚫ Offline"
-        }
-        status_display = status_map.get(member.status, "❓ Unknown")
-
-        # activity
-        activity_texts = []
-        for activity in member.activities:
-            if isinstance(activity, discord.Game):
-                activity_texts.append(f"🎮 Playing **{activity.name}**")
-            elif isinstance(activity, discord.Spotify):
-                activity_texts.append(f"🎧 Listening to **{activity.title}** by **{activity.artist}**")
-            elif isinstance(activity, discord.CustomActivity):
-                activity_texts.append(f"💬 {activity.name or activity.emoji}")
-            else:
-                activity_texts.append(f"📌 {activity.type.name.title()} {activity.name}")
-
-        activities_display = "\n".join(activity_texts) if activity_texts else "None"
-
-        embed = discord.Embed(
-            title=f"👤 User Info",
-            description=f"Information about {member.mention}",
-            color=color,
-            timestamp=datetime.utcnow()
-        )
-
-
-    # =====================================
-    # EMBED BUILDER
-    # =====================================
-    def build_userinfo_embed(self, member: discord.Member, requester: discord.abc.User) -> discord.Embed:
-        # random embed color
-        color = discord.Color.random()
-
-        # status mapping
-        status_map = {
-            discord.Status.online: "🟢 Online",
-            discord.Status.idle: "🌙 Idle",
-            discord.Status.dnd: "⛔ Do Not Disturb",
-            discord.Status.offline: "⚫ Offline"
-        }
-        status_display = status_map.get(member.status, "❓ Unknown")
-
-        # activity
-        if member.activities:
-            activity = None
-            for act in member.activities:
-                if act.type == discord.ActivityType.playing:
-                    activity = f"🎮 Playing **{act.name}**"
 
     
     # Ping command (Prefix)
