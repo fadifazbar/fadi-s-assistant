@@ -9,7 +9,8 @@ import asyncio
 import math
 
 # ---------- CONFIG ----------
-EXTERNAL_HOST = "https://your-railway-app.up.railway.app/upload"  # Replace with your FastAPI host
+# ✅ Update this with your Railway app domain
+EXTERNAL_HOST = "https://fadi-s-assistant-production.up.railway.app"  
 MAX_DISCORD_FILESIZE = 8 * 1024 * 1024  # 8MB
 # ----------------------------
 
@@ -23,13 +24,14 @@ def sizeof_fmt(num, suffix="B"):
 
 async def upload_external(file_path: str):
     """Upload file to external hosting and return link."""
+    upload_url = f"{EXTERNAL_HOST}/upload"  # always POST here
     async with aiohttp.ClientSession() as session:
         with open(file_path, "rb") as f:
             data = {"file": f}
-            async with session.post(EXTERNAL_HOST, data=data) as resp:
+            async with session.post(upload_url, data=data) as resp:
                 if resp.status == 200:
                     res = await resp.json()
-                    return f"{EXTERNAL_HOST.replace('/upload','')}{res.get('file_url')}"
+                    return res.get("file_url")  # already contains full public link
                 return None
 
 class ProgressHook:
