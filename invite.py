@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-INVITE_LINK = "https://discord.com/oauth2/authorize?client_id=1406641375641993317&permissions=8&integration_type=0&scope=bot"
+INVITE_LINK = "https://discord.com/oauth2/authorize?client_id=1242542083059749005&permissions=8&integration_type=0&scope=bot"
 
 class Invite(commands.Cog):
     """Invite command (prefix + slash)"""
