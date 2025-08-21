@@ -345,6 +345,97 @@ class Moderation(commands.Cog):
         embed.set_footer(text=f"Unlocked by {ctx.author}", icon_url=ctx.author.display_avatar.url)
         await ctx.send(embed=embed)
 
+        # ===============================
+    # NICKNAME COMMANDS
+    # ===============================
+
+    # PREFIX COMMAND - Change Nickname
+    @commands.command(name="nick", aliases=["nickname"])
+    @commands.has_permissions(manage_nicknames=True)
+    async def nick_prefix(self, ctx: commands.Context, member: discord.Member, *, nickname: str):
+        """Change a member's nickname (mod only)."""
+        if member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+            return await ctx.send("❌ You cannot change the nickname of someone with an equal or higher role.")
+
+        try:
+            old_name = member.display_name
+            await member.edit(nick=nickname)
+            embed = discord.Embed(
+                title="✏️ Nickname Changed",
+                description=f"**{old_name}** ➝ **{nickname}**",
+                color=discord.Color.blurple(),
+                timestamp=datetime.utcnow()
+            )
+            embed.set_footer(text=f"Changed by {ctx.author}", icon_url=ctx.author.display_avatar.url)
+            await ctx.send(embed=embed)
+        except discord.Forbidden:
+            await ctx.send("❌ I don’t have permission to change that user’s nickname.")
+
+    # PREFIX COMMAND - Reset Nickname
+    @commands.command(name="resetnick")
+    @commands.has_permissions(manage_nicknames=True)
+    async def resetnick_prefix(self, ctx: commands.Context, member: discord.Member):
+        """Reset a member's nickname to default (mod only)."""
+        if member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+            return await ctx.send("❌ You cannot reset the nickname of someone with an equal or higher role.")
+
+        try:
+            await member.edit(nick=None)
+            embed = discord.Embed(
+                title="🔄 Nickname Reset",
+                description=f"Nickname reset for {member.mention}",
+                color=discord.Color.green(),
+                timestamp=datetime.utcnow()
+            )
+            embed.set_footer(text=f"Reset by {ctx.author}", icon_url=ctx.author.display_avatar.url)
+            await ctx.send(embed=embed)
+        except discord.Forbidden:
+            await ctx.send("❌ I don’t have permission to reset that user’s nickname.")
+
+    # ===============================
+    # SLASH COMMANDS
+    # ===============================
+
+    @app_commands.command(name="nick", description="Change a member's nickname (mod only).")
+    @app_commands.checks.has_permissions(manage_nicknames=True)
+    async def nick_slash(self, interaction: discord.Interaction, member: discord.Member, nickname: str):
+        if member.top_role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
+            return await interaction.response.send_message("❌ You cannot change the nickname of someone with an equal or higher role.", ephemeral=True)
+
+        try:
+            old_name = member.display_name
+            await member.edit(nick=nickname)
+            embed = discord.Embed(
+                title="✏️ Nickname Changed",
+                description=f"**{old_name}** ➝ **{nickname}**",
+                color=discord.Color.blurple(),
+                timestamp=datetime.utcnow()
+            )
+            embed.set_footer(text=f"Changed by {interaction.user}", icon_url=interaction.user.display_avatar.url)
+            await interaction.response.send_message(embed=embed)
+        except discord.Forbidden:
+            await interaction.response.send_message("❌ I don’t have permission to change that user’s nickname.", ephemeral=True)
+
+    @app_commands.command(name="resetnick", description="Reset a member's nickname (mod only).")
+    @app_commands.checks.has_permissions(manage_nicknames=True)
+    async def resetnick_slash(self, interaction: discord.Interaction, member: discord.Member):
+        if member.top_role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
+            return await interaction.response.send_message("❌ You cannot reset the nickname of someone with an equal or higher role.", ephemeral=True)
+
+        try:
+            await member.edit(nick=None)
+            embed = discord.Embed(
+                title="🔄 Nickname Reset",
+                description=f"Nickname reset for {member.mention}",
+                color=discord.Color.green(),
+                timestamp=datetime.utcnow()
+            )
+            embed.set_footer(text=f"Reset by {interaction.user}", icon_url=interaction.user.display_avatar.url)
+            await interaction.response.send_message(embed=embed)
+        except discord.Forbidden:
+            await interaction.response.send_message("❌ I don’t have permission to reset that user’s nickname.", ephemeral=True)
+
+
 
     # ===============================
     # SLASH COMMANDS
