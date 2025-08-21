@@ -141,7 +141,8 @@ class General(commands.Cog):
             "rolecolors": ("🌈 RoleColors", f"`{Config.PREFIX}rolecolors` or `/rolecolors`\nShows a list of the available colors"),
             "reactionrole": ("🎭 ReactionRole", f"`{Config.PREFIX}reactionrole <message id> <emoji> <role>` or `/reactionrole`\nAdd a reaction role to a message"),
             "saychecklogs": ("💬 SayCheckLogs", f"`{Config.PREFIX}saychecklogs` or `/saychecklogs`\nChecks which channel have the say command logs"),
-            "serverinfo": ("❓ ServerInfo", f"`{Config.PREFIX}serverinfo` or `/serverinfo`\nCheck info about the server")
+            "serverinfo": ("❓ ServerInfo", f"`{Config.PREFIX}serverinfo` or `/serverinfo`\nCheck info about the server"),
+            "coinflip": ("💲 CoinFlip", f"`{Config.PREFIX}coinflip` or `/coinflip`\nFlips a coin and gives a head or tails!")
         }
 
         # --- Show specific command help ---
@@ -197,6 +198,22 @@ class General(commands.Cog):
                     f"`{Config.PREFIX}kiss` - Kiss a member\n"
                     f"`{Config.PREFIX}tictactoe` - Challenge another user to TicTacToe (XO)\n"
                     f"`{Config.PREFIX}serverinfo` - View the whole server info. like members/bots/boosts/etc."
+                ),
+                inline=True
+            )
+
+            embed.add_field(
+                name="🎶 Music Commands",
+                value=(
+                    f"`{Config.PREFIX}play` - Plays the music you want (search or link only youtube)\n"
+                    f"`{Config.PREFIX}queue` - Show the current music queue\n"
+                    f"`{Config.PREFIX}skip` - Skips a music\n"
+                    f"`{Config.PREFIX}pause` - Pause music playback\n"
+                    f"`{Config.PREFIX}resume` - Resume music playback\n"
+                    f"`{Config.PREFIX}nowplaying` - Shows the current playing music\n"
+                    f"`{Config.PREFIX}stopmusic` - Stops the music and disconnects the bot\n"
+                    f"`{Config.PREFIX}loop` - Loops the playback or playlist\n"
+                    f"`{Config.PREFIX}stopmusic` - Makes music selection randomized\n"
                 ),
                 inline=True
             )
