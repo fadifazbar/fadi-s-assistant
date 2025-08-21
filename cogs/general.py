@@ -322,11 +322,6 @@ class General(commands.Cog):
 
         embed.set_footer(text=f"Requested by {requester}", icon_url=requester.display_avatar.url)
         return embed
-
-    # sync slash commands on cog load
-    async def cog_load(self):
-        if not self.bot.tree.get_command("userinfo"):
-            self.bot.tree.add_command(self.userinfo_slash)
     
     # Ping command (Prefix)
     @commands.command(name="ping")
