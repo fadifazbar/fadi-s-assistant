@@ -1,11 +1,12 @@
 import os
 import time
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.background import BackgroundTasks
 from pathlib import Path
 import shutil
 import asyncio
+import uvicorn
 
 app = FastAPI()
 
@@ -16,13 +17,15 @@ MAX_FILE_AGE = 48 * 3600  # 48 hours in seconds
 
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(request: Request, file: UploadFile = File(...)):
     """Save uploaded file and return public URL."""
     file_path = UPLOAD_DIR / file.filename
     with open(file_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    return {"file_url": f"/files/{file.filename}"}
+    # Build full public URL (uses Railway domain)
+    base_url = str(request.base_url).rstrip("/")
+    return {"file_url": f"{base_url}/files/{file.filename}"}
 
 
 @app.get("/files/{filename}")
@@ -52,3 +55,8 @@ async def cleanup_old_files():
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(cleanup_old_files())
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))  # Railway provides PORT
+    uvicorn.run("server:app", host="0.0.0.0", port=port, reload=False)
