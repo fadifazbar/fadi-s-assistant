@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import asyncio
 import logging
+import random
 import re
 from datetime import datetime, timedelta
 from typing import Optional, Union, List
