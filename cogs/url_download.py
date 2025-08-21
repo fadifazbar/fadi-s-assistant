@@ -4,9 +4,11 @@ import math
 import asyncio
 import discord
 import yt_dlp as youtube_dl
+import subprocess
+import uuid
 
 # ───────────────────────────────────────────────
-# Progress Hook
+# Progress Hook Class
 # ───────────────────────────────────────────────
 class YTDLLogger:
     def __init__(self, message):
@@ -29,10 +31,8 @@ class YTDLLogger:
         status = d['status']
         now = time.time()
 
-        # Only update every 2 sec to prevent rate limit spam
         if now - self.last_update < 2 and status == "downloading":
             return
-
         self.last_update = now
 
         if status == 'downloading':
@@ -45,7 +45,6 @@ class YTDLLogger:
             except:
                 p = 0.0
 
-            # Progress bar
             blocks = int(p // 10)
             bar = "🟩" * blocks + "⬛" * (10 - blocks)
 
@@ -65,12 +64,51 @@ class YTDLLogger:
         await self.update_message(d['ctx'])
 
 # ───────────────────────────────────────────────
+# Helper Functions
+# ───────────────────────────────────────────────
+def get_discord_limit(guild):
+    if guild.premium_tier == 0:
+        return 8
+    elif guild.premium_tier == 1:
+        return 50
+    elif guild.premium_tier == 2:
+        return 100
+    else:
+        return 500
+
+def compress_video(input_path, output_path, target_mb):
+    """Compress with ffmpeg to fit under target size (MB)."""
+    try:
+        size_bytes = os.path.getsize(input_path)
+        target_bitrate = (target_mb * 8 * 1024 * 1024) / (os.path.getsize(input_path) / (1024 * 1024))
+
+        command = [
+            "ffmpeg",
+            "-y",
+            "-i", input_path,
+            "-b:v", f"{int(target_bitrate)}k",
+            "-bufsize", f"{int(target_bitrate)}k",
+            "-maxrate", f"{int(target_bitrate)}k",
+            output_path
+        ]
+
+        subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return os.path.exists(output_path)
+    except Exception as e:
+        print(f"[Compression Error] {e}")
+        return False
+
+# Placeholder external upload (replace with your file host logic)
+def upload_external(file_path):
+    fake_url = f"https://files.example.com/{uuid.uuid4().hex}.mp4"
+    return fake_url
+
+# ───────────────────────────────────────────────
 # Main download function
 # ───────────────────────────────────────────────
-async def download_video(ctx, url, output_path, max_filesize):
+async def download_video(ctx, url, output_path):
     start_time = time.time()
 
-    # Initial embed
     embed = discord.Embed(
         title="🔄 Fetching Video Info...",
         description="Please wait...",
@@ -103,10 +141,12 @@ async def download_video(ctx, url, output_path, max_filesize):
         title = info.get("title", "Unknown Title")
 
         file_path = ydl_opts["outtmpl"]
-        file_size = os.path.getsize(file_path) / (1024 * 1024)  # MB
+        file_size = os.path.getsize(file_path) / (1024 * 1024)
         elapsed = time.time() - start_time
 
-        # Build final embed
+        guild = ctx.guild
+        limit = get_discord_limit(guild)
+
         final = discord.Embed(
             title="✅ Download Complete",
             description=f"**{title}**",
@@ -116,24 +156,30 @@ async def download_video(ctx, url, output_path, max_filesize):
         final.add_field(name="Quality", value=quality, inline=True)
         final.add_field(name="Download Time", value=f"{elapsed:.1f} sec", inline=True)
 
-        # Nitro-based limits
-        guild = ctx.guild
-        if guild.premium_tier == 0:
-            limit = 8
-        elif guild.premium_tier == 1:
-            limit = 50
-        elif guild.premium_tier == 2:
-            limit = 100
-        else:
-            limit = 500
-
+        # If fits within Discord limit
         if file_size <= limit:
-            final.set_footer(text=f"File Size: {file_size:.2f} MB (Under Discord limit: {limit} MB)")
+            final.set_footer(text=f"File Size: {file_size:.2f} MB (Under {limit} MB limit)")
             await msg.edit(embed=final)
             await ctx.send(file=discord.File(file_path))
         else:
+            # Try compression
+            compressed_path = output_path.replace(".mp4", "_compressed.mp4")
+            success = compress_video(file_path, compressed_path, limit)
+
+            if success:
+                compressed_size = os.path.getsize(compressed_path) / (1024 * 1024)
+                if compressed_size <= limit:
+                    final.title = "✅ Download Compressed & Complete"
+                    final.set_footer(text=f"Compressed File Size: {compressed_size:.2f} MB (Under {limit} MB limit)")
+                    await msg.edit(embed=final)
+                    await ctx.send(file=discord.File(compressed_path))
+                    return
+
+            # Upload to external if still too big
+            external_link = upload_external(file_path)
             final.title = "⚠️ File Too Large for Discord"
             final.description += f"\nFile size: **{file_size:.2f} MB**\nServer limit: **{limit} MB**"
+            final.add_field(name="Download Link", value=external_link, inline=False)
             final.color = discord.Color.orange()
             await msg.edit(embed=final)
 
