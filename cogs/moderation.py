@@ -37,18 +37,26 @@ class Moderation(commands.Cog):
     """Moderation commands for the bot"""
     CUSTOM_COLORS = {
             "red": "#ff0000",
-            "blue": "#0044ff",
-            "green": "#0dff00",
-            "yellow": "#ffee00",
-            "purple": "#8800ff",
             "orange": "#ff8800",
-            "teal": "008080",
-            "magenta": "#FF00FF",
-            "gold": "#ffc800",
+            "yellow": "#ffee00",
+            "lime": "#20fc03",
+            "green": "#089c00",
+            "Cyan": "#00ffff",
+            "blue": "#0044ff",
+            "purple": "#8800ff",
+            "pink": "#ff00bb",
             "darkred": "#8c0000",
+            "darkorange": "#cc6600",
+            "darkyellow": "#756c00",
+            "darklime": "#2e9623",
+            "darkgreen": "#044f00",
+            "darkcyan": "#008080",
             "darkblue": "#001e8c",
-            "darkgreen": "#008c05",
-            "darkorange": "#cc6600"
+            "darkpurple": "#300057",
+            "darkpink": "#570047",
+            "white": "#ffffff",
+            "black": "#030000",
+            "brown": "#874b20"
     }
             
     
