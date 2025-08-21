@@ -729,6 +729,48 @@ class General(commands.Cog):
         embed.set_image(url=gif)
         await interaction.response.send_message(embed=embed)
 
+        # ===============================
+    # PREFIX COMMAND
+    # ===============================
+    @commands.command(name="banner")
+    async def banner_prefix(self, ctx: commands.Context, member: discord.Member = None):
+        member = member or ctx.author
+
+        # fetch full user to get banner
+        user = await self.bot.fetch_user(member.id)
+        if not user.banner:
+            return await ctx.send("❌ This user has no banner set.")
+
+        embed = discord.Embed(
+            title=f"🖼️ {user.name}'s Banner",
+            color=discord.Color.blurple()
+        )
+        embed.set_image(url=user.banner.url)
+        embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.display_avatar.url)
+
+        await ctx.send(embed=embed)
+
+    # ===============================
+    # SLASH COMMAND
+    # ===============================
+    @app_commands.command(name="banner", description="Show the banner of a user")
+    async def banner_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
+
+        user = await self.bot.fetch_user(member.id)
+        if not user.banner:
+            return await interaction.response.send_message("❌ This user has no banner set.", ephemeral=True)
+
+        embed = discord.Embed(
+            title=f"🖼️ {user.name}'s Banner",
+            color=discord.Color.blurple()
+        )
+        embed.set_image(url=user.banner.url)
+        embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.display_avatar.url)
+
+        await interaction.response.send_message(embed=embed)
+
+
     # Info command (Prefix)
     @commands.command(name="info", aliases=["about"])
     async def info_prefix(self, ctx: commands.Context):
