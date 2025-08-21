@@ -353,6 +353,49 @@ class Moderation(commands.Cog):
             color=discord.Color.blurple()
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+        # ===============================
+    # PREFIX COMMAND
+    # ===============================
+    @commands.command(name="slowmode")
+    @commands.has_permissions(manage_channels=True)
+    async def slowmode_prefix(self, ctx: commands.Context, seconds: int = 0):
+        """Set slowmode in the current channel"""
+        await ctx.channel.edit(slowmode_delay=seconds)
+
+        embed = discord.Embed(
+            title="🐢 Slowmode Updated",
+            description=f"Slowmode set to **{seconds} seconds** in {ctx.channel.mention}",
+            color=discord.Color.blurple(),
+            timestamp=datetime.utcnow()
+        )
+        embed.set_footer(text=f"Updated by {ctx.author}", icon_url=ctx.author.display_avatar.url)
+
+        await ctx.send(embed=embed)
+
+    # ===============================
+    # SLASH COMMAND
+    # ===============================
+    @app_commands.command(name="slowmode", description="Set the slowmode for this channel")
+    @app_commands.checks.has_permissions(manage_channels=True)
+    async def slowmode_slash(self, interaction: discord.Interaction, seconds: int = 0):
+        await interaction.channel.edit(slowmode_delay=seconds)
+
+        embed = discord.Embed(
+            title="🐢 Slowmode Updated",
+            description=f"Slowmode set to **{seconds} seconds** in {interaction.channel.mention}",
+            color=discord.Color.blurple(),
+            timestamp=datetime.utcnow()
+        )
+        embed.set_footer(text=f"Updated by {interaction.user}", icon_url=interaction.user.display_avatar.url)
+
+        await interaction.response.send_message(embed=embed)
+
+    # sync slash commands on cog load
+    async def cog_load(self):
+        if not self.bot.tree.get_command("slowmode"):
+            self.bot.tree.add_command(self.slowmode_slash)
+
     
     # Clear messages command (Prefix)
     @commands.command(name="purge", aliases=["clear"])
