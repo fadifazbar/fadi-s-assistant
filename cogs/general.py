@@ -315,26 +315,93 @@ class General(commands.Cog):
             timestamp=datetime.utcnow()
         )
 
-        # profile picture
+
+    # =====================================
+    # EMBED BUILDER
+    # =====================================
+    def build_userinfo_embed(self, member: discord.Member, requester: discord.abc.User) -> discord.Embed:
+        # random embed color
+        color = discord.Color.random()
+
+        # status mapping
+        status_map = {
+            discord.Status.online: "🟢 Online",
+            discord.Status.idle: "🌙 Idle",
+            discord.Status.dnd: "⛔ Do Not Disturb",
+            discord.Status.offline: "⚫ Offline"
+        }
+        status_display = status_map.get(member.status, "❓ Unknown")
+
+        # activity
+        if member.activities:
+            activity = None
+            for act in member.activities:
+                if act.type == discord.ActivityType.playing:
+                    activity = f"🎮 Playing **{act.name}**"
+                elif act.type == discord.ActivityType.listening:
+                    activity = f"🎧 Listening to **{act.name}**"
+                elif act.type == discord.ActivityType.watching:
+                    activity = f"📺 Watching **{act.name}**"
+                elif act.type == discord.ActivityType.streaming:
+                    activity = f"📡 Streaming **{act.name}**"
+            activity_display = activity or "❌ None"
+        else:
+            activity_display = "❌ None"
+
+        # build embed
+        embed = discord.Embed(
+            title=f"👤 User Info — {member}",
+            color=color,
+            timestamp=datetime.utcnow()
+        )
         embed.set_thumbnail(url=member.display_avatar.url)
 
-        # fields
-        embed.add_field(name="🆔 User ID", value=member.id, inline=False)
-        embed.add_field(name="🪪 Username", value=member.name, inline=True)
+        embed.add_field(name="🆔 User ID", value=f"`{member.id}`", inline=False)
+        embed.add_field(name="📛 Username", value=member.name, inline=True)
         embed.add_field(name="📛 Display Name", value=member.display_name, inline=True)
-        embed.add_field(name="🏷️ Server Nickname", value=member.nick if member.nick else "None", inline=True)
-
-        embed.add_field(name="📡 Status", value=status_display, inline=True)
-        embed.add_field(name="🎭 Roles", value=f"{len(roles)} roles", inline=True)
-
-        embed.add_field(name="📆 Account Created", value=member.created_at.strftime("%b %d, %Y %H:%M:%S"), inline=False)
-        embed.add_field(name="📥 Joined Server", value=member.joined_at.strftime("%b %d, %Y %H:%M:%S"), inline=False)
-
-        embed.add_field(name="🎭 Role List", value=roles_display, inline=False)
-        embed.add_field(name="⚡ Activities", value=activities_display, inline=False)
+        embed.add_field(name="📥 Joined Discord", value=member.created_at.strftime("%b %d, %Y"), inline=True)
+        embed.add_field(name="📥 Joined Server", value=member.joined_at.strftime("%b %d, %Y") if member.joined_at else "❓ Unknown", inline=True)
+        embed.add_field(name="📶 Status", value=status_display, inline=True)
+        embed.add_field(name="🎯 Activity", value=activity_display, inline=False)
 
         embed.set_footer(text=f"Requested by {requester}", icon_url=requester.display_avatar.url)
+
         return embed
+
+    # =====================================
+    # PREFIX COMMAND
+    # =====================================
+    @commands.command(name="userinfo")
+    async def userinfo_prefix(self, ctx: commands.Context, member: discord.Member = None):
+        member = member or ctx.author
+        embed = self.build_userinfo_embed(member, ctx.author)
+        await ctx.send(embed=embed)
+
+    # =====================================
+    # SLASH COMMAND
+    # =====================================
+    @app_commands.command(name="userinfo", description="Show detailed information about a user")
+    async def userinfo_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        target = member or interaction.user
+
+        # cache check to fix status/activity issue
+        cached = interaction.guild.get_member(target.id)
+        if cached is None:
+            await interaction.guild.chunk()
+            cached = interaction.guild.get_member(target.id)
+
+        member = cached or target
+        embed = self.build_userinfo_embed(member, interaction.user)
+        await interaction.response.send_message(embed=embed)
+
+    # sync slash
+    async def cog_load(self):
+        if not self.bot.tree.get_command("userinfo"):
+            self.bot.tree.add_command(self.userinfo_slash)
+
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(General(bot))
     
     # Ping command (Prefix)
     @commands.command(name="ping")
