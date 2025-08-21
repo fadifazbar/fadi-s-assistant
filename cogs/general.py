@@ -394,12 +394,6 @@ class General(commands.Cog):
         embed = self.build_userinfo_embed(member, interaction.user)
         await interaction.response.send_message(embed=embed)
 
-    # sync slash
-    async def cog_load(self):
-        if not self.bot.tree.get_command("userinfo"):
-            self.bot.tree.add_command(self.userinfo_slash)
-
-
 async def setup(bot: commands.Bot):
     await bot.add_cog(General(bot))
     
