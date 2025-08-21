@@ -197,7 +197,8 @@ class General(commands.Cog):
                     f"`{Config.PREFIX}invite` - Get the bot invite link\n"
                     f"`{Config.PREFIX}kiss` - Kiss a member\n"
                     f"`{Config.PREFIX}tictactoe` - Challenge another user to TicTacToe (XO)\n"
-                    f"`{Config.PREFIX}serverinfo` - View the whole server info. like members/bots/boosts/etc."
+                    f"`{Config.PREFIX}serverinfo` - View the whole server info. like members/bots/boosts/etc.\n"
+                    f"`{Config.PREFIX}coinflip` - Flip a coin to get heads or tails"
                 ),
                 inline=True
             )
