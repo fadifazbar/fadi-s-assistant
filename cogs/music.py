@@ -77,9 +77,7 @@ async def _extract(query: str, *, flat: bool = False):
     return await asyncio.to_thread(lambda: ydl.extract_info(query, download=False))
 
 async def _fresh_stream_url(webpage_url: str, *, max_tries: int = 2) -> Optional[str]:
-    """Re-extract the stream URL right before playback to avoid expiry/cutoffs.
-    Retries once if needed.
-    """
+    """Re-extract the stream URL right before playback to avoid expiry/cutoffs."""
     last_error = None
     for _ in range(max_tries):
         try:
@@ -91,6 +89,7 @@ async def _fresh_stream_url(webpage_url: str, *, max_tries: int = 2) -> Optional
             url = info.get("url")
             if url:
                 return url
+            # Fallback: pick first audio-capable format
             for fmt in (info.get("formats") or []):
                 if fmt.get("acodec") not in (None, "none") and fmt.get("url"):
                     return fmt["url"]
@@ -103,29 +102,24 @@ async def _fresh_stream_url(webpage_url: str, *, max_tries: int = 2) -> Optional
 # URL detection
 # ==============
 _URL_RE = re.compile(r"^https?://", re.I)
-
 def _looks_like_url(s: str) -> bool:
     return bool(_URL_RE.match(s or ""))
-
 
 def _is_youtube_playlist_url(url: str) -> bool:
     if not _looks_like_url(url):
         return False
     return ("youtube.com" in url or "youtu.be" in url) and ("list=" in url)
 
-
 # ==============
 # Helpers
 # ==============
 LoopMode = Literal["off", "one", "all"]
-
 
 def _progress_bar(elapsed: int, total: Optional[int], width: int = 18) -> str:
     if not total or total <= 0:
         return "▬" * width
     filled = int(width * min(elapsed / total, 1.0))
     return ("▬" * max(filled - 1, 0)) + "🔘" + ("▬" * (width - filled))
-
 
 def _entry_to_track(entry: dict, requester) -> Optional[Track]:
     if not entry:
@@ -155,15 +149,14 @@ def _entry_to_track(entry: dict, requester) -> Optional[Track]:
         duration=entry.get("duration"),
         thumbnail=entry.get("thumbnail"),
         requester=requester,
-        uploader=entry.get("uploader") or entry.get("channel")
+        uploader=entry.get("uploader") or entry.get("channel"),
     )
-
 
 # ==============
 # Queue View (buttons)
 # ==============
 class QueueView(discord.ui.View):
-    def __init__(self, cog: "Music", guild_id: int, user: discord.abc.User, per_page: int = 10):
+    def __init__(self, cog: "Music", guild_id: int, user: discord.User | discord.Member, per_page: int = 10):
         super().__init__(timeout=120)
         self.cog = cog
         self.guild_id = guild_id
@@ -217,7 +210,6 @@ class QueueView(discord.ui.View):
             self.page += 1
         await interaction.response.edit_message(embed=self.format_page(), view=self)
 
-
 # ==========
 # Music Cog
 # ==========
@@ -259,13 +251,10 @@ class Music(commands.Cog):
         self.currents[guild_id] = None
         self.shuffle_enabled[guild_id] = False
         self.loop_mode[guild_id] = "off"
-        lock = self.locks.pop(guild_id, None)
-        if lock and lock.locked():
-            # no direct unlock, just drop; future calls will recreate
-            pass
         task = self.idle_tasks.pop(guild_id, None)
         if task:
             task.cancel()
+        # Lock objects will be recreated lazily.
 
     def _dequeue_next(self, guild_id: int) -> Optional[Track]:
         q = self._queue(guild_id)
@@ -295,32 +284,31 @@ class Music(commands.Cog):
                     self._reset_state(guild.id)
             except asyncio.CancelledError:
                 pass
-        # cancel old and schedule new
+
         old = self.idle_tasks.get(guild.id)
         if old:
             old.cancel()
         self.idle_tasks[guild.id] = self.bot.loop.create_task(_idle_task())
 
     # ------------- embeds -------------
-async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
-    dur = track.pretty_duration()
-    bar = _progress_bar(0, track.duration)
-    embed = discord.Embed(
-        title="🎶 Now Playing",
-        description=f"[{track.title}]({track.webpage_url})\n{bar}\n`0:00 / {dur}`",
-        color=discord.Color.green(),
-    )
-
-    if track.thumbnail:
-        embed.set_thumbnail(url=track.thumbnail)
-    if track.uploader:
-        embed.add_field(name="Channel", value=track.uploader, inline=True)
-    embed.add_field(
-        name="Requested by",
-        value=getattr(track.requester, "mention", str(track.requester)),
-        inline=True,
-    )
-    await channel.send(embed=embed)
+    async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
+        dur = track.pretty_duration()
+        bar = _progress_bar(0, track.duration)
+        embed = discord.Embed(
+            title="🎶 Now Playing",
+            description=f"[{track.title}]({track.webpage_url})\n{bar}\n`0:00 / {dur}`",
+            color=discord.Color.green(),
+        )
+        if track.thumbnail:
+            embed.set_thumbnail(url=track.thumbnail)
+        if track.uploader:
+            embed.add_field(name="Channel", value=track.uploader, inline=True)
+        embed.add_field(
+            name="Requested by",
+            value=getattr(track.requester, "mention", str(track.requester)),
+            inline=True,
+        )
+        await channel.send(embed=embed)
 
     async def _announce_added(self, channel: discord.abc.Messageable, track: Track, pos: int):
         embed = discord.Embed(
@@ -366,11 +354,10 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
     async def _after_track(self, guild: discord.Guild, channel: discord.abc.Messageable, played: Optional[Track], err):
         if err:
             await channel.send(f"⚠️ Playback error: {err}")
-        # loop behavior
         mode = self._get_loop(guild.id)
         if played:
             if mode == "one":
-                self._queue(guild.id).insert(0, played)  # play again immediately
+                self._queue(guild.id).insert(0, played)  # replay immediately
             elif mode == "all":
                 self._queue(guild.id).append(played)
         self.currents[guild.id] = None
@@ -577,12 +564,12 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
         else:
             await interaction.response.send_message("❌ Not connected.", ephemeral=True)
 
+    @app_commands.command(name="loop", description="Set loop mode: off | one | all")
     @app_commands.choices(mode=[
         app_commands.Choice(name="off", value="off"),
         app_commands.Choice(name="one", value="one"),
         app_commands.Choice(name="all", value="all"),
     ])
-    @app_commands.command(name="loop", description="Set loop mode: off | one | all")
     async def loop_slash(self, interaction: discord.Interaction, mode: app_commands.Choice[str]):
         self._set_loop(interaction.guild.id, mode.value)  # type: ignore
         await interaction.response.send_message(f"🔁 Loop set to **{mode.value}**.")
@@ -600,9 +587,7 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
         if member.id != getattr(self.bot.user, "id", None):
             return
         if before.channel and (after.channel is None or after.channel != before.channel):
-            guild_id = before.channel.guild.id
-            self._reset_state(guild_id)
-
+            self._reset_state(before.channel.guild.id)
 
 # ===========
 # Cog loader
