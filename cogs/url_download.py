@@ -6,9 +6,10 @@ import aiohttp
 import os
 import time
 import asyncio
+import math
 
 # ---------- CONFIG ----------
-EXTERNAL_HOST = "https://files.example.com/upload"  # Replace with your hosting API
+EXTERNAL_HOST = "https://your-railway-app.up.railway.app/upload"  # Replace with your FastAPI host
 MAX_DISCORD_FILESIZE = 8 * 1024 * 1024  # 8MB
 # ----------------------------
 
@@ -28,23 +29,35 @@ async def upload_external(file_path: str):
             async with session.post(EXTERNAL_HOST, data=data) as resp:
                 if resp.status == 200:
                     res = await resp.json()
-                    return res.get("url", None)
+                    return f"{EXTERNAL_HOST.replace('/upload','')}{res.get('file_url')}"
                 return None
 
 class ProgressHook:
-    """Handles yt-dlp progress reporting."""
+    """Handles yt-dlp progress reporting with bar + %."""
     def __init__(self, message: discord.Message):
         self.message = message
         self.last_update = 0
+        self.last_bar_step = -1
 
     async def hook(self, d):
         if d['status'] == 'downloading':
-            percent = d.get("_percent_str", "").strip()
+            percent = d.get("_percent_str", "").strip().replace("%", "")
+            try:
+                percent_float = float(percent)
+            except:
+                return
+
+            # Bar updates only every 10% but percent shows exact
+            bar_step = math.floor(percent_float / 10)
+            bar = "🟥" * bar_step + "⬛" * (10 - bar_step)
+
             now = time.time()
-            # Update every 2 seconds to prevent rate limits
-            if now - self.last_update > 2:
+            if now - self.last_update > 1:  # limit updates
                 self.last_update = now
-                await self.message.edit(content=f"⬇️ Downloading... {percent}")
+                await self.message.edit(
+                    content=f"⬇️ Downloading... {percent_float:.1f}%/100%\n{bar}"
+                )
+
         elif d['status'] == 'finished':
             await self.message.edit(content="📦 Merging & Finalizing...")
 
@@ -73,7 +86,7 @@ class URLDownload(commands.Cog):
                 info = ydl.extract_info(url, download=False)
                 title = info.get("title", "Unknown")
                 duration = info.get("duration", 0)
-                duration_str = time.strftime("%M:%S", time.gmtime(duration))
+                duration_str = time.strftime("%H:%M:%S", time.gmtime(duration))
                 quality = info.get("format_note", "unknown")
                 filename = ydl.prepare_filename(info)
 
@@ -81,7 +94,7 @@ class URLDownload(commands.Cog):
             progress = ProgressHook(status_msg)
             ydl_opts["progress_hooks"] = [lambda d: asyncio.create_task(progress.hook(d))]
 
-            await status_msg.edit(content="⬇️ Downloading...")
+            await status_msg.edit(content="⬇️ Downloading... 0.0%/100%\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛")
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
 
