@@ -256,17 +256,18 @@ class General(commands.Cog):
     # ===============================
     # SLASH COMMAND
     # ===============================
-    @app_commands.command(name="userinfo", description="Show detailed information about a user")
-    async def userinfo_slash(self, interaction: discord.Interaction, member: discord.Member = None):
-        # Always resolve to a full Member
-        if member is None:
-            try:
-                member = await interaction.guild.fetch_member(interaction.user.id)
-            except Exception:
-                member = interaction.guild.get_member(interaction.user.id)
+@app_commands.command(name="userinfo", description="Show detailed information about a user")
+async def userinfo_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    # Always resolve to a full Member
+    if member is None:
+        try:
+            member = await interaction.guild.fetch_member(interaction.user.id)
+        except Exception:
+            member = interaction.guild.get_member(interaction.user.id)
 
     embed = self.build_userinfo_embed(member, interaction.user)
-    await interaction.response.send_message(embed=embed)
+    await interaction.response.send_message(embed=embed)   # ✅ inside the async def
+
 
     # ===============================
     # EMBED BUILDER
