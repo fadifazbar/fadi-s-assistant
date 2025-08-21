@@ -1,192 +1,107 @@
+import discord
+from discord.ext import commands
+import yt_dlp
+import aiohttp
 import os
 import time
-import math
-import asyncio
-import discord
-import yt_dlp as youtube_dl
-import subprocess
-import uuid
 
-# ───────────────────────────────────────────────
-# Progress Hook Class
-# ───────────────────────────────────────────────
-class YTDLLogger:
-    def __init__(self, message):
-        self.message = message
-        self.start_time = time.time()
-        self.last_update = 0
-        self.embed = discord.Embed(
-            title="🔄 Fetching Video Info...",
-            description="Please wait...",
-            color=discord.Color.blurple()
-        )
+# ---------- CONFIG ----------
+EXTERNAL_HOST = "https://files.example.com/upload"  # Replace with your hosting API
+MAX_DISCORD_FILESIZE = 8 * 1024 * 1024  # 8MB
+# ----------------------------
 
-    async def update_message(self, ctx):
+def sizeof_fmt(num, suffix="B"):
+    """Convert bytes → human-readable format."""
+    for unit in ["", "K", "M", "G"]:
+        if abs(num) < 1024.0:
+            return f"{num:.1f}{unit}{suffix}"
+        num /= 1024.0
+    return f"{num:.1f}T{suffix}"
+
+async def upload_external(file_path: str):
+    """Upload file to external hosting and return link."""
+    async with aiohttp.ClientSession() as session:
+        with open(file_path, "rb") as f:
+            data = {"file": f}
+            async with session.post(EXTERNAL_HOST, data=data) as resp:
+                if resp.status == 200:
+                    res = await resp.json()
+                    return res.get("url", None)
+                return None
+
+class URLDownload(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.command(name="urldownload")
+    async def urldownload(self, ctx, url: str):
+        start_time = time.time()
+
+        status_msg = await ctx.send("🔄 Fetching video...")
+
+        ydl_opts = {
+            "format": "best[ext=mp4]/best",
+            "outtmpl": "downloads/%(title).200s.%(ext)s",
+            "noplaylist": True,
+            "quiet": True,
+            "no_warnings": True,
+        }
+
         try:
-            await self.message.edit(embed=self.embed)
-        except Exception:
-            pass
+            # --- Fetch info ---
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                title = info.get("title", "Unknown")
+                duration = info.get("duration", 0)
+                duration_str = time.strftime("%M:%S", time.gmtime(duration))
+                quality = info.get("format_note", "unknown")
+                filename = ydl.prepare_filename(info)
 
-    async def hook(self, d):
-        status = d['status']
-        now = time.time()
+                await status_msg.edit(content="⬇️ Downloading...")
+                ydl.download([url])
 
-        if now - self.last_update < 2 and status == "downloading":
-            return
-        self.last_update = now
+            file_size = os.path.getsize(filename)
+            elapsed = time.time() - start_time
 
-        if status == 'downloading':
-            percent = d.get('_percent_str', '0.0%').strip()
-            speed = d.get('_speed_str', 'N/A')
-            eta = d.get('_eta_str', 'N/A')
+            # --- Build embed ---
+            embed = discord.Embed(
+                title="✅ Download Complete",
+                color=discord.Color.green()
+            )
+            embed.add_field(name="📹 Title", value=title, inline=False)
+            embed.add_field(name="⏱️ Length", value=duration_str, inline=True)
+            embed.add_field(name="📺 Quality", value=quality, inline=True)
+            embed.add_field(name="📦 Size", value=sizeof_fmt(file_size), inline=True)
+            embed.add_field(name="⏳ Time taken", value=f"{elapsed:.2f}s", inline=True)
 
-            try:
-                p = float(percent.replace('%', ''))
-            except:
-                p = 0.0
+            # --- If ≤ 8MB: upload to Discord ---
+            if file_size <= MAX_DISCORD_FILESIZE:
+                await status_msg.edit(content="📤 Uploading to Discord...")
+                await ctx.send(embed=embed, file=discord.File(filename))
 
-            blocks = int(p // 10)
-            bar = "🟩" * blocks + "⬛" * (10 - blocks)
+            # --- If > 8MB: external hosting ---
+            else:
+                await status_msg.edit(
+                    content=f"⚠️ File too large to fit Discord limits ({sizeof_fmt(file_size)}).\n"
+                            f"Auto-compression not possible for this size.\n"
+                            f"Using external hosting to download your video"
+                )
 
-            self.embed.title = "⬇️ Downloading Video..."
-            self.embed.description = f"""
-**Progress:** {percent}/100%
-{bar}
+                link = await upload_external(filename)
 
-**Speed:** {speed}
-**ETA:** {eta}
-            """
+                if link:
+                    embed.add_field(name="🔗 External Link", value=link, inline=False)
+                    await ctx.send(embed=embed)
+                else:
+                    await ctx.send("❌ Upload failed. Please try again later.")
 
-        elif status == 'finished':
-            self.embed.title = "📦 Finalizing..."
-            self.embed.description = "Merging audio + video..."
+        except Exception as e:
+            await status_msg.edit(content=f"❌ Download Failed\nError: `{e}`")
 
-        await self.update_message(d['ctx'])
+        finally:
+            if "filename" in locals() and os.path.exists(filename):
+                os.remove(filename)
 
-# ───────────────────────────────────────────────
-# Helper Functions
-# ───────────────────────────────────────────────
-def get_discord_limit(guild):
-    if guild.premium_tier == 0:
-        return 8
-    elif guild.premium_tier == 1:
-        return 50
-    elif guild.premium_tier == 2:
-        return 100
-    else:
-        return 500
-
-def compress_video(input_path, output_path, target_mb):
-    """Compress with ffmpeg to fit under target size (MB)."""
-    try:
-        size_bytes = os.path.getsize(input_path)
-        target_bitrate = (target_mb * 8 * 1024 * 1024) / (os.path.getsize(input_path) / (1024 * 1024))
-
-        command = [
-            "ffmpeg",
-            "-y",
-            "-i", input_path,
-            "-b:v", f"{int(target_bitrate)}k",
-            "-bufsize", f"{int(target_bitrate)}k",
-            "-maxrate", f"{int(target_bitrate)}k",
-            output_path
-        ]
-
-        subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return os.path.exists(output_path)
-    except Exception as e:
-        print(f"[Compression Error] {e}")
-        return False
-
-# Placeholder external upload (replace with your file host logic)
-def upload_external(file_path):
-    fake_url = f"https://files.example.com/{uuid.uuid4().hex}.mp4"
-    return fake_url
-
-# ───────────────────────────────────────────────
-# Main download function
-# ───────────────────────────────────────────────
-async def download_video(ctx, url, output_path):
-    start_time = time.time()
-
-    embed = discord.Embed(
-        title="🔄 Fetching Video Info...",
-        description="Please wait...",
-        color=discord.Color.blurple()
-    )
-    msg = await ctx.send(embed=embed)
-
-    logger = YTDLLogger(msg)
-
-    ydl_opts = {
-        "outtmpl": output_path,
-        "format": "bestvideo+bestaudio/best",
-        "merge_output_format": "mp4",
-        "progress_hooks": [logger.hook],
-        "noplaylist": True,
-        "quiet": True,
-        "no_warnings": True,
-    }
-
-    try:
-        def _download():
-            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                return info
-
-        loop = asyncio.get_event_loop()
-        info = await loop.run_in_executor(None, _download)
-        duration = info.get("duration", 0)
-        quality = info.get("format", "unknown")
-        title = info.get("title", "Unknown Title")
-
-        file_path = ydl_opts["outtmpl"]
-        file_size = os.path.getsize(file_path) / (1024 * 1024)
-        elapsed = time.time() - start_time
-
-        guild = ctx.guild
-        limit = get_discord_limit(guild)
-
-        final = discord.Embed(
-            title="✅ Download Complete",
-            description=f"**{title}**",
-            color=discord.Color.green()
-        )
-        final.add_field(name="Video Length", value=f"{math.floor(duration/60)}m {duration%60:.0f}s", inline=True)
-        final.add_field(name="Quality", value=quality, inline=True)
-        final.add_field(name="Download Time", value=f"{elapsed:.1f} sec", inline=True)
-
-        # If fits within Discord limit
-        if file_size <= limit:
-            final.set_footer(text=f"File Size: {file_size:.2f} MB (Under {limit} MB limit)")
-            await msg.edit(embed=final)
-            await ctx.send(file=discord.File(file_path))
-        else:
-            # Try compression
-            compressed_path = output_path.replace(".mp4", "_compressed.mp4")
-            success = compress_video(file_path, compressed_path, limit)
-
-            if success:
-                compressed_size = os.path.getsize(compressed_path) / (1024 * 1024)
-                if compressed_size <= limit:
-                    final.title = "✅ Download Compressed & Complete"
-                    final.set_footer(text=f"Compressed File Size: {compressed_size:.2f} MB (Under {limit} MB limit)")
-                    await msg.edit(embed=final)
-                    await ctx.send(file=discord.File(compressed_path))
-                    return
-
-            # Upload to external if still too big
-            external_link = upload_external(file_path)
-            final.title = "⚠️ File Too Large for Discord"
-            final.description += f"\nFile size: **{file_size:.2f} MB**\nServer limit: **{limit} MB**"
-            final.add_field(name="Download Link", value=external_link, inline=False)
-            final.color = discord.Color.orange()
-            await msg.edit(embed=final)
-
-    except Exception as e:
-        error = discord.Embed(
-            title="❌ Download Failed",
-            description=f"Error: {str(e)}",
-            color=discord.Color.red()
-        )
-        await msg.edit(embed=error)
+# ---------- Setup ----------
+async def setup(bot):
+    await bot.add_cog(URLDownload(bot))
