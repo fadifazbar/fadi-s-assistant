@@ -9,8 +9,8 @@ import asyncio
 import math
 
 # ---------- CONFIG ----------
-# ✅ Update this with your Railway app domain
-EXTERNAL_HOST = "https://fadi-s-assistant-production.up.railway.app/upload" 
+# ✅ Use ONLY your Railway app base domain here
+EXTERNAL_HOST = "https://fadi-s-assistant-production.up.railway.app"
 MAX_DISCORD_FILESIZE = 8 * 1024 * 1024  # 8MB
 # ----------------------------
 
@@ -24,14 +24,15 @@ def sizeof_fmt(num, suffix="B"):
 
 async def upload_external(file_path: str):
     """Upload file to external hosting and return link."""
-    upload_url = f"{EXTERNAL_HOST}/upload"  # always POST here
+    upload_url = f"{EXTERNAL_HOST}/upload"
     async with aiohttp.ClientSession() as session:
         with open(file_path, "rb") as f:
-            data = {"file": f}
+            data = aiohttp.FormData()
+            data.add_field("file", f, filename=os.path.basename(file_path))
             async with session.post(upload_url, data=data) as resp:
                 if resp.status == 200:
                     res = await resp.json()
-                    return res.get("file_url")  # already contains full public link
+                    return res.get("file_url")
                 return None
 
 class ProgressHook:
@@ -49,12 +50,11 @@ class ProgressHook:
             except:
                 return
 
-            # Bar updates only every 10% but percent shows exact
             bar_step = math.floor(percent_float / 10)
             bar = "🟩" * bar_step + "⬛" * (10 - bar_step)
 
             now = time.time()
-            if now - self.last_update > 1:  # limit updates
+            if now - self.last_update > 1:
                 self.last_update = now
                 await self.message.edit(
                     content=f"⬇️ Downloading... {percent_float:.1f}%/100%\n{bar}"
@@ -83,7 +83,6 @@ class URLDownload(commands.Cog):
         }
 
         try:
-            # --- Fetch info ---
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
                 title = info.get("title", "Unknown")
@@ -92,7 +91,6 @@ class URLDownload(commands.Cog):
                 quality = info.get("format_note", "unknown")
                 filename = ydl.prepare_filename(info)
 
-            # Add progress hook
             progress = ProgressHook(status_msg)
             ydl_opts["progress_hooks"] = [lambda d: asyncio.create_task(progress.hook(d))]
 
@@ -103,7 +101,6 @@ class URLDownload(commands.Cog):
             file_size = os.path.getsize(filename)
             elapsed = time.time() - start_time
 
-            # --- Build embed ---
             embed = discord.Embed(
                 title="✅ Download Complete",
                 color=discord.Color.green()
@@ -114,18 +111,14 @@ class URLDownload(commands.Cog):
             embed.add_field(name="📦 Size", value=sizeof_fmt(file_size), inline=True)
             embed.add_field(name="⏳ Time taken", value=f"{elapsed:.2f}s", inline=True)
 
-            # --- If ≤ 8MB: upload to Discord ---
             if file_size <= MAX_DISCORD_FILESIZE:
                 await status_msg.edit(content="📤 Uploading to Discord...")
                 await interaction.followup.send(embed=embed, file=discord.File(filename))
-
-            # --- If > 8MB: external hosting ---
             else:
                 await status_msg.edit(
-                    content=f"⚠️ File too large to fit Discord limits ({sizeof_fmt(file_size)}).\n"
-                            f"📁 Auto-compression not possible for this size.\n"
-                            f"🔗 Using external hosting to download your video.\n"
-                            f"🗑️ This file will be removed from the external hosting after __**48 Hours**__."
+                    content=f"⚠️ File too large for Discord ({sizeof_fmt(file_size)}).\n"
+                            f"🔗 Uploading to external hosting...\n"
+                            f"🗑️ File auto-deletes after __**48 hours**__."
                 )
 
                 link = await upload_external(filename)
@@ -143,6 +136,5 @@ class URLDownload(commands.Cog):
             if "filename" in locals() and os.path.exists(filename):
                 os.remove(filename)
 
-# ---------- Setup ----------
 async def setup(bot):
     await bot.add_cog(URLDownload(bot))
