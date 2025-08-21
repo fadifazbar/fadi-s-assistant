@@ -244,7 +244,7 @@ class General(commands.Cog):
             else:
                 await ctx_or_interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
-        # ===============================
+    # ===============================
     # PREFIX COMMAND
     # ===============================
     @commands.command(name="userinfo", aliases=["user", "whois"])
@@ -266,19 +266,21 @@ class General(commands.Cog):
     # EMBED BUILDER
     # ===============================
     def build_userinfo_embed(self, member: discord.Member, requester: discord.Member) -> discord.Embed:
-        # random embed color
         color = discord.Color.random()
 
-        # roles (excluding @everyone)
         roles = [role.mention for role in member.roles if role != member.guild.default_role]
         roles_display = ", ".join(roles) if roles else "None"
 
-        # check Nitro / boosting
+        # Nitro / Boost check
         premium = []
         if member.premium_since:  # boosting this server
             premium.append("🚀 Server Booster")
-        if member.public_flags.nitro:  # nitro badge check (Discord flags)
-            premium.append("✨ Nitro")
+        # ⚠️ public_flags.nitro is unreliable, may return False even if Nitro
+        try:
+            if member.public_flags.nitro:
+                premium.append("✨ Nitro")
+        except AttributeError:
+            pass
         premium_display = ", ".join(premium) if premium else "None"
 
         embed = discord.Embed(
@@ -287,13 +289,10 @@ class General(commands.Cog):
             color=color,
             timestamp=datetime.utcnow()
         )
-
-        # big profile picture
         embed.set_thumbnail(url=member.display_avatar.url)
 
-        # fields
         embed.add_field(name="🆔 User ID", value=member.id, inline=False)
-        embed.add_field(name="📛 Nickname", value=member.nick if member.nick else "None", inline=False)
+        embed.add_field(name="📛 Nickname", value=member.nick or "None", inline=False)
         embed.add_field(name="🤖 Bot?", value="Yes 🤖" if member.bot else "No 🙎", inline=True)
 
         embed.add_field(name="📆 Account Created", value=member.created_at.strftime("%b %d, %Y %H:%M:%S"), inline=False)
@@ -304,11 +303,6 @@ class General(commands.Cog):
 
         embed.set_footer(text=f"Requested by {requester}", icon_url=requester.display_avatar.url)
         return embed
-
-    # sync slash commands on cog load
-    async def cog_load(self):
-        if not self.bot.tree.get_command("userinfo"):
-            self.bot.tree.add_command(self.userinfo_slash)
 
 
     
