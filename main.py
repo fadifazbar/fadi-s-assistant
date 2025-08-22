@@ -33,7 +33,7 @@ class ModBot(commands.Bot):
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
-                name=f"🤩 Use {Config.PREFIX}help | Moderation And Fun Bot :p"
+                name=f"Use {Config.PREFIX}help | Moderation And Fun Bot :p"
             ),
             status=discord.Status.online
         )
