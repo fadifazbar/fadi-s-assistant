@@ -157,7 +157,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
             for br in bitrates:
                 ydl_opts = {
                     "format": "bestaudio/best",
-                    "outtmpl": filename,
+                    "outtmpl": os.path.join(DOWNLOADS_DIR, "%(title)s.%(ext)s"),
                     "noplaylist": True,
                     "quiet": True,
                     "no_warnings": True,
@@ -169,28 +169,32 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
                     }]
                 }
 
-                if os.path.exists(filename):
-                    os.remove(filename)
-
                 def download_audio():
                     try:
                         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                             ydl.download([url])
-                    except Exception:
-                        pass  # if one bitrate fails, try the next
+                    except Exception as e:
+                        print(f"[MP3 ERROR] bitrate {br} failed: {e}")
 
                 await asyncio.to_thread(download_audio)
 
-                if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                    file_size = os.path.getsize(filename)
-                    final_size = file_size   # ✅ always update, even if too large
+                # yt-dlp renames after conversion, so search for output
+                mp3_file = None
+                for ext in (".mp3", ".m4a", ".webm"):
+                    candidate = os.path.join(DOWNLOADS_DIR, clean_filename(title) + ext)
+                    if os.path.exists(candidate):
+                        mp3_file = candidate
+                        break
+
+                if mp3_file and os.path.getsize(mp3_file) > 0:
+                    file_size = os.path.getsize(mp3_file)
+                    final_size = file_size   # ✅ always update
                     final_quality = f"Audio MP3 ({br}kbps)"
+                    filename = mp3_file
 
                     if file_size <= MAX_DISCORD_FILESIZE:
                         downloaded = True
                         break
-
-
 
         elapsed = time.time() - start_time
 
