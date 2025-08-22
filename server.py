@@ -17,10 +17,14 @@ SERVICE_JSON = os.environ.get("SERVICE_JSON")
 if not SERVICE_JSON:
     raise ValueError("SERVICE_JSON environment variable is not set!")
 
+try:
+    service_account_info = json.loads(SERVICE_JSON)
+except json.JSONDecodeError as e:
+    raise ValueError("SERVICE_JSON is not valid JSON. Did you escape newlines in private_key as \\\\n ?") from e
+
 # =========================
 # Google Drive client (Service Account)
 # =========================
-service_account_info = json.loads(SERVICE_JSON)
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 creds = service_account.Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
 drive_service = build("drive", "v3", credentials=creds)
