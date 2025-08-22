@@ -152,7 +152,8 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
                         final_quality = fmt
 
         else:  # mp3
-            bitrates = ["192", "128", "96"]
+            # Try progressively lower bitrates until it fits under 10MB
+            bitrates = ["192", "128", "96", "64", "32"]
             for br in bitrates:
                 ydl_opts = {
                     "format": "bestaudio/best",
@@ -161,7 +162,11 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
                     "quiet": True,
                     "no_warnings": True,
                     "progress_hooks": [ProgressHook(status_msg, loop).update],
-                    "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": br}]
+                    "postprocessors": [{
+                        "key": "FFmpegExtractAudio",
+                        "preferredcodec": "mp3",
+                        "preferredquality": br
+                    }]
                 }
 
                 if os.path.exists(filename):
@@ -178,14 +183,13 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
 
                 if os.path.exists(filename) and os.path.getsize(filename) > 0:
                     file_size = os.path.getsize(filename)
+                    final_size = file_size   # ✅ always update, even if too large
+                    final_quality = f"Audio MP3 ({br}kbps)"
+
                     if file_size <= MAX_DISCORD_FILESIZE:
                         downloaded = True
-                        final_size = file_size
-                        final_quality = f"Audio MP3 ({br}kbps)"
                         break
-                    else:
-                        final_size = file_size
-                        final_quality = f"Audio MP3 ({br}kbps)"
+
 
 
         elapsed = time.time() - start_time
