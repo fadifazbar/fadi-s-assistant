@@ -425,7 +425,7 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
         await self._start_if_idle(guild, channel)
 
     # ------------- play/queue logic -------------
-    
+
     async def _handle_play_or_unplay(
     self,
     guild: discord.Guild,
@@ -434,9 +434,9 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
     query: str,
     action: str = "play"
 ):
-    # """Handles both play and unplay actions."""
+    """Handles both play and unplay actions."""
     if action == "play":
-        # --- Play logic unchanged ---
+        # --- Play logic ---
         try_single_search = not _looks_like_url(query)
         use_flat_playlist = _is_youtube_playlist_url(query)
 
@@ -488,17 +488,21 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
         await self._start_if_idle(guild, text_channel)
 
     elif action == "unplay":
-        # Use your currents and queue instead of get_player
+        # Use currents and queue
         current_track = self.currents.get(guild.id)
         q = self._queue(guild.id)
 
         if not current_track and not q:
-            return await text_channel.send("❌ Nothing is playing or queued.")
+            await text_channel.send("❌ Nothing is playing or queued.")
+            return
 
         removed = None
 
         # Check current playing track first
-        if current_track and (query.lower() in current_track.title.lower() or query in getattr(current_track, "webpage_url", "")):
+        if current_track and (
+            query.lower() in current_track.title.lower() or
+            query in getattr(current_track, "webpage_url", "")
+        ):
             removed = current_track
             vc = guild.voice_client
             if vc and vc.is_playing():
