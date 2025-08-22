@@ -12,6 +12,7 @@ app = FastAPI()
 DOWNLOADS_DIR = "downloads"
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
+
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     """Save file into downloads/ and return its public URL"""
@@ -19,19 +20,28 @@ async def upload_file(file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Build public URL for file
-    base_url = os.environ.get("RAILWAY_STATIC_URL", "localhost:8080")
+    # Use Railway's provided public domain (fallback to localhost)
+    base_url = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "localhost:8080")
+
     return {
-        "file_url": f"https://{base_url}/files/{file.filename}"
+        "file_url": f"https://{base_url}/download/{file.filename}"
     }
 
-@app.get("/files/{filename}")
-async def get_file(filename: str):
-    """Serve files that were uploaded"""
+
+@app.get("/download/{filename}")
+async def download_file(filename: str):
+    """Force file download instead of inline preview"""
     file_path = os.path.join(DOWNLOADS_DIR, filename)
     if not os.path.exists(file_path):
         return {"detail": "File not found"}
-    return FileResponse(file_path, filename=filename)
+
+    return FileResponse(
+        file_path,
+        filename=filename,
+        media_type="application/octet-stream",  # forces download
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
 
 async def start_fastapi():
     """Run FastAPI inside asyncio"""
@@ -39,12 +49,14 @@ async def start_fastapi():
     server = uvicorn.Server(config)
     await server.serve()
 
+
 async def main():
     """Run Discord bot and FastAPI at same time"""
     await asyncio.gather(
         bot_main(),       # your Discord bot
         start_fastapi()   # FastAPI server
     )
+
 
 if __name__ == "__main__":
     try:
