@@ -195,7 +195,3 @@ class URLDownload(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(URLDownload(bot))
-
-
-    async def on_ready():
-            await bot.tree.sync()
