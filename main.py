@@ -58,26 +58,48 @@ class ModBot(commands.Bot):
     # ----------------------------
     # SYNC COMMAND (owner only)
     # ----------------------------
-    @commands.command(name="sync", help="Sync slash commands. Usage: !sync [here|all]")
+    @commands.command(name="sync", help="Sync slash commands. Usage: !sync [here|all|clear]")
     @commands.is_owner()
     async def sync_prefix(self, ctx: commands.Context, scope: str = None):
         try:
-            if scope == "here":
-                synced = await self.tree.sync(guild=ctx.guild)
-                msg = f"✅ Synced **{len(synced)}** commands to **{ctx.guild.name}**."
-            elif scope == "all":
-                synced = await self.tree.sync()
-                msg = f"🌍 Synced **{len(synced)}** commands globally."
-            else:
-                return await ctx.send("❌ Usage: `!sync here` (this server) or `!sync all` (globally)")
+            if scope is None:
+                return await ctx.send("❌ Usage: `!sync here` (this server), `!sync all` (global), or `!sync clear` (remove guild overrides).")
 
-            # Send in channel, DM, and log
+            scope = scope.lower()
+
+            if scope == "here":
+                if ctx.guild is None:
+                    return await ctx.send("❌ This must be used in a server.")
+                # Copy global commands into THIS guild, then sync for instant availability
+                self.tree.copy_global_to(guild=ctx.guild)
+                synced = await self.tree.sync(guild=ctx.guild)
+                msg = f"✅ Synced **{len(synced)}** commands to **{ctx.guild.name}** ({ctx.guild.id})."
+
+            elif scope == "all":
+                # Clear local cache of global cmds (avoids dupes), then sync globally
+                self.tree.clear_commands(guild=None)
+                synced = await self.tree.sync()
+                msg = f"🌍 Globally synced **{len(synced)}** commands to all guilds."
+
+            elif scope == "clear":
+                if ctx.guild is None:
+                    return await ctx.send("❌ This must be used in a server.")
+                # Remove per-guild overrides, effectively leaving only global set
+                self.tree.clear_commands(guild=ctx.guild)
+                await self.tree.sync(guild=ctx.guild)
+                msg = f"🧹 Cleared per-guild commands for **{ctx.guild.name}** ({ctx.guild.id})."
+
+            else:
+                return await ctx.send("❌ Usage: `!sync here`, `!sync all`, or `!sync clear`.")
+
+            # Send in channel
             await ctx.send(msg)
+            # DM the invoker (owner)
             try:
                 await ctx.author.send(msg)
             except discord.Forbidden:
                 await ctx.send("⚠️ Could not DM you the result.")
-
+            # Log it
             logger.info(msg)
 
         except Exception as e:
@@ -87,25 +109,8 @@ class ModBot(commands.Bot):
                 await ctx.author.send(error_msg)
             except discord.Forbidden:
                 pass
-            logger.error(error_msg)
+            logger.exception("Sync failed")
 
-    async def on_command_error(self, ctx, error):
-        """Global error handler for prefix commands"""
-        if isinstance(error, commands.CommandNotFound):
-            return
-        elif isinstance(error, commands.MissingPermissions):
-            await ctx.send("❌ You don't have permission to use this command!")
-        elif isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(f"❌ Missing required argument: `{error.param}`")
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send("❌ Invalid argument provided!")
-        elif isinstance(error, commands.CommandOnCooldown):
-            await ctx.send(
-                f"⏰ Command on cooldown. Try again in {error.retry_after:.2f} seconds."
-            )
-        else:
-            logger.error(f"⚠️ Unhandled command error: {error}")
-            await ctx.send("❌ An error occurred while processing the command.")
 
     async def on_app_command_error(self, interaction, error):
         """Global error handler for slash commands"""
