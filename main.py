@@ -15,7 +15,7 @@ class ModBot(commands.Bot):
         intents.members = True
         intents.moderation = True
         intents.presences = True
-        
+
         super().__init__(
             command_prefix=Config.PREFIX,
             intents=intents,
@@ -23,7 +23,7 @@ class ModBot(commands.Bot):
             case_insensitive=True
         )
 
-async def on_ready(self):
+    async def on_ready(self):
         """Called when the bot is ready"""
         logger.info(f"Bot is ready! Logged in as {self.user}")
         logger.info(f"Bot ID: {self.user.id}")
@@ -38,13 +38,12 @@ async def on_ready(self):
             status=discord.Status.online
         )
 
-        # ✅ Sync slash commands here (inside the class method)
+        # ✅ Slash command sync
         try:
             synced = await self.tree.sync()
             logger.info(f"✅ Synced {len(synced)} slash commands")
         except Exception as e:
             logger.error(f"❌ Failed to sync commands: {e}")
-        
 
     async def on_command_error(self, ctx, error):
         """Global error handler for prefix commands"""
@@ -86,11 +85,11 @@ async def on_ready(self):
 
     async def on_guild_join(self, guild):
         """Called when bot joins a guild"""
-        logger.info(f"✅ Joined guild: {guild.name} ({guild.id})")
+        logger.info(f"Joined guild: {guild.name} ({guild.id})")
 
     async def on_guild_remove(self, guild):
         """Called when bot leaves a guild"""
-        logger.info(f"❌ Left guild: {guild.name} ({guild.id})")
+        logger.info(f"Left guild: {guild.name} ({guild.id})")
 
 
 async def main():
@@ -113,6 +112,7 @@ async def main():
 
     # Start bot
     await bot.start(Config.BOT_TOKEN)
+
 
 # ⚠️ Do not auto-run here — server.py controls it
 if __name__ == "__main__":
