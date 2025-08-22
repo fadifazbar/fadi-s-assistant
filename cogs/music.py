@@ -494,6 +494,22 @@ class Music(commands.Cog):
         self._set_loop(ctx.guild.id, mode)  # type: ignore
         await ctx.send(f"🔁 Loop set to **{mode}**.")
 
+    @commands.command(name="unplay", help="Remove a song from the queue")
+    async def unplay_prefix(self, ctx, index: int):
+        guild_id = ctx.guild.id
+
+        if guild_id not in self.music_queue or not self.music_queue[guild_id]:
+            await ctx.send("📭 Queue is empty.")
+            return
+
+        if index < 1 or index > len(self.music_queue[guild_id]):
+            await ctx.send("❌ Invalid index.")
+            return
+
+        removed = self.music_queue[guild_id].pop(index - 1)
+        await ctx.send(f"🗑️ Removed **{removed['title']}** from the queue.")
+
+
     # =====================
     # SLASH COMMANDS (/) 🎯
     # =====================
@@ -574,11 +590,30 @@ class Music(commands.Cog):
         self._set_loop(interaction.guild.id, mode.value)  # type: ignore
         await interaction.response.send_message(f"🔁 Loop set to **{mode.value}**.")
 
+    @app_commands.command(name="unplay", description="Remove a song from the queue")
+    @app_commands.describe(index="Position of the song in the queue (check with /queue)")
+    async def unplay_slash(self, interaction: discord.Interaction, index: int):
+        guild_id = interaction.guild_id
+
+        if guild_id not in self.music_queue or not self.music_queue[guild_id]:
+            await interaction.response.send_message("📭 Queue is empty.", ephemeral=True)
+            return
+
+        if index < 1 or index > len(self.music_queue[guild_id]):
+            await interaction.response.send_message("❌ Invalid index.", ephemeral=True)
+            return
+
+        removed = self.music_queue[guild_id].pop(index - 1)
+        await interaction.response.send_message(f"🗑️ Removed **{removed['title']}** from the queue.")
+
+
     @app_commands.command(name="shuffle", description="Toggle shuffle mode.")
     async def shuffle_slash(self, interaction: discord.Interaction):
         state = not self._is_shuffle(interaction.guild.id)
         self.shuffle_enabled[interaction.guild.id] = state
         await interaction.response.send_message("🔀 Shuffle enabled." if state else "➡️ Shuffle disabled.")
+
+    
 
     # ------------- listeners -------------
     @commands.Cog.listener()
