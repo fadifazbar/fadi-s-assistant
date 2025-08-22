@@ -71,7 +71,7 @@ class ProgressHook:
             )
 
 
-async def handle_download(interaction_or_ctx, url: str, is_slash: bool):
+async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
     """Shared logic for both slash + prefix command."""
     start_time = time.time()
 
@@ -99,9 +99,9 @@ async def handle_download(interaction_or_ctx, url: str, is_slash: bool):
             quality = info.get("format_note", "unknown")
             filename = ydl.prepare_filename(info)
 
-        # Progress
-        progress = ProgressHook(status_msg, self.bot)
-        ydl_opts["progress_hooks"] = [lambda d: asyncio.create_task(progress.hook(d))]
+        # Progress hook (now gets `bot` properly)
+        progress = ProgressHook(status_msg, bot)
+        ydl_opts["progress_hooks"] = [progress.hook]
 
         await status_msg.edit(content="⬇️ Downloading... 0.0%\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛")
 
@@ -162,12 +162,12 @@ class URLDownload(commands.Cog):
     # Slash command
     @app_commands.command(name="urldownload", description="Download a video from a URL")
     async def urldownload(self, interaction: discord.Interaction, url: str):
-        await handle_download(interaction, url, is_slash=True)
+        await handle_download(self.bot, interaction, url, is_slash=True)
 
     # Prefix command
     @commands.command(name="urldownload")
     async def urldownload_prefix(self, ctx: commands.Context, url: str):
-        await handle_download(ctx, url, is_slash=False)
+        await handle_download(self.bot, ctx, url, is_slash=False)
 
 async def setup(bot):
     await bot.add_cog(URLDownload(bot))
