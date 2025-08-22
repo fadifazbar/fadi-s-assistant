@@ -72,16 +72,7 @@ class ProgressHook:
             )
 
 
-async def handle_download(bot, interaction_or_ctx, url: str, download_type: str, is_slash: bool):
-    if not download_type:
-        msg = "📝 Please Choose A Type. Mp3 Or Mp4"
-        if is_slash:
-            await interaction_or_ctx.response.send_message(msg, ephemeral=True)
-        else:
-            await interaction_or_ctx.send(msg)
-        return
-
-    download_type = download_type.lower()
+async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
     start_time = time.time()
 
     if is_slash:
@@ -92,7 +83,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
 
     try:
         loop = asyncio.get_running_loop()
-        probe_opts = {"format": "bestaudio/best" if download_type == "mp3" else "bestvideo+bestaudio/best",
+        probe_opts = {"format": "bestvideo+bestaudio/best",
                       "quiet": True, "no_warnings": True, "noplaylist": True}
         with yt_dlp.YoutubeDL(probe_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -100,93 +91,54 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
             duration = info.get("duration", 0)
             duration_str = time.strftime("%H:%M:%S", time.gmtime(duration))
 
-        ext = "mp3" if download_type == "mp3" else "mp4"
-        safe_name = clean_filename(title) + f".{ext}"
+        safe_name = clean_filename(title) + ".mp4"
         filename = os.path.join(DOWNLOADS_DIR, safe_name)
 
         downloaded = False
         final_size = 0
         final_quality = ""
 
-        if download_type == "mp4":
-            # HD -> 4K fallback
-            quality_options = [
-                "bestvideo[height<=2160]+bestaudio/best",
-                "bestvideo[height<=1440]+bestaudio/best",
-                "bestvideo[height<=1080]+bestaudio/best",
-                "bestvideo[height<=720]+bestaudio/best",
-                "bestvideo[height<=480]+bestaudio/best",
-                "bestvideo[height<=360]+bestaudio/best",
-                "bestvideo[height<=240]+bestaudio/best",
-                "worstvideo+bestaudio/worst"
-            ]
-            for fmt in quality_options:
-                ydl_opts = {
-                    "format": fmt,
-                    "merge_output_format": "mp4",
-                    "outtmpl": filename,
-                    "noplaylist": True,
-                    "quiet": True,
-                    "no_warnings": True,
-                    "progress_hooks": [ProgressHook(status_msg, loop).update]
-                }
+        # HD -> lower quality fallback
+        quality_options = [
+            "bestvideo[height<=2160]+bestaudio/best",
+            "bestvideo[height<=1440]+bestaudio/best",
+            "bestvideo[height<=1080]+bestaudio/best",
+            "bestvideo[height<=720]+bestaudio/best",
+            "bestvideo[height<=480]+bestaudio/best",
+            "bestvideo[height<=360]+bestaudio/best",
+            "bestvideo[height<=240]+bestaudio/best",
+            "worstvideo+bestaudio/worst"
+        ]
+        for fmt in quality_options:
+            ydl_opts = {
+                "format": fmt,
+                "merge_output_format": "mp4",
+                "outtmpl": filename,
+                "noplaylist": True,
+                "quiet": True,
+                "no_warnings": True,
+                "progress_hooks": [ProgressHook(status_msg, loop).update]
+            }
 
-                if os.path.exists(filename):
-                    os.remove(filename)
+            if os.path.exists(filename):
+                os.remove(filename)
 
-                def download_video():
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                        ydl.download([url])
+            def download_video():
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([url])
 
-                await asyncio.to_thread(download_video)
+            await asyncio.to_thread(download_video)
 
-                if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                    file_size = os.path.getsize(filename)
-                    if file_size <= MAX_DISCORD_FILESIZE:
-                        downloaded = True
-                        final_size = file_size
-                        final_quality = fmt
-                        break
-                    else:
-                        final_size = file_size
-                        final_quality = fmt
-
-        else:  # mp3
-            # Try progressively lower bitrates until it fits under 10MB
-            bitrates = ["192", "128", "96", "64", "32"]
-            for br in bitrates:
-                ydl_opts = {
-                    "format": "bestaudio/best",
-                    "outtmpl": filename,
-                    "noplaylist": True,
-                    "quiet": True,
-                    "no_warnings": True,
-                    "progress_hooks": [ProgressHook(status_msg, loop).update],
-                    "postprocessors": [{
-                        "key": "FFmpegExtractAudio",
-                        "preferredcodec": "mp3",
-                        "preferredquality": br
-                    }]
-                }
-
-                if os.path.exists(filename):
-                    os.remove(filename)
-
-                def download_audio():
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                        ydl.download([url])
-
-                await asyncio.to_thread(download_audio)
-
-                if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                    file_size = os.path.getsize(filename)
+            if os.path.exists(filename) and os.path.getsize(filename) > 0:
+                file_size = os.path.getsize(filename)
+                if file_size <= MAX_DISCORD_FILESIZE:
+                    downloaded = True
                     final_size = file_size
-                    final_quality = f"Audio MP3 ({br}kbps)"
-
-                    if file_size <= MAX_DISCORD_FILESIZE:
-                        downloaded = True
-                        break
-
+                    final_quality = fmt
+                    break
+                else:
+                    final_size = file_size
+                    final_quality = fmt
 
         if not downloaded:
             await status_msg.edit(embed=discord.Embed(
@@ -197,6 +149,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
             ))
             return
 
+        elapsed = time.time() - start_time
         embed = discord.Embed(title="✅ Download Complete", color=discord.Color.green())
         embed.add_field(name="📹 Title", value=title, inline=False)
         embed.add_field(name="⏱️ Length", value=duration_str, inline=True)
@@ -225,22 +178,14 @@ class URLDownload(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="urldownload", description="Download a video or audio from a URL")
-    @app_commands.describe(url="Video/Audio link", type="Choose MP3 or MP4")
-    @app_commands.choices(type=[
-        app_commands.Choice(name="MP3", value="mp3"),
-        app_commands.Choice(name="MP4", value="mp4")
-    ])
-    async def urldownload_slash(self, interaction: discord.Interaction, url: str, type: app_commands.Choice[str] = None):
-        download_type = type.value if type else None
-        await handle_download(self.bot, interaction, url, download_type, is_slash=True)
+    @app_commands.command(name="urldownload", description="Download a video from a URL (MP4 only)")
+    @app_commands.describe(url="Video link")
+    async def urldownload_slash(self, interaction: discord.Interaction, url: str):
+        await handle_download(self.bot, interaction, url, is_slash=True)
 
     @commands.command(name="urldownload")
-    async def urldownload_prefix(self, ctx: commands.Context, url: str, download_type: str = None):
-        if not download_type or download_type.lower() not in ["mp3", "mp4"]:
-            await ctx.send("📝 Please Choose A Type. Mp3 Or Mp4")
-            return
-        await handle_download(self.bot, ctx, url, download_type.lower(), is_slash=False)
+    async def urldownload_prefix(self, ctx: commands.Context, url: str):
+        await handle_download(self.bot, ctx, url, is_slash=False)
 
 
 async def setup(bot):
