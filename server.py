@@ -1,12 +1,12 @@
 import os
 import json
-import base64
 import threading
 import subprocess
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
@@ -14,34 +14,29 @@ from googleapiclient.http import MediaFileUpload
 # Config / Env
 # =========================
 FOLDER_ID = os.environ.get("FOLDER_ID")
-SERVICE_JSON_ENV = os.environ.get("SERVICE_JSON")
-if not SERVICE_JSON_ENV:
-    raise ValueError("SERVICE_JSON environment variable is not set!")
+CLIENT_SECRET_FILE = os.environ.get("CLIENT_SECRET_FILE")  # Path to downloaded OAuth JSON
+TOKEN_FILE = os.environ.get("TOKEN_FILE", "token.json")  # Will store OAuth token
 
-def _load_service_json(value: str) -> dict:
-    data = None
-    try:
-        data = json.loads(value)
-    except Exception:
-        try:
-            decoded = base64.b64decode(value).decode("utf-8")
-            data = json.loads(decoded)
-        except Exception as e:
-            raise ValueError(f"SERVICE_JSON is neither valid JSON nor valid base64 JSON: {e}")
-
-    pk = data.get("private_key")
-    if isinstance(pk, str):
-        if "\\n" in pk and "-----BEGIN" in pk and "-----END" in pk:
-            data["private_key"] = pk.replace("\\n", "\n")
-    return data
-
-service_account_info = _load_service_json(SERVICE_JSON_ENV)
+if not CLIENT_SECRET_FILE:
+    raise ValueError("CLIENT_SECRET_FILE environment variable is not set!")
 
 # =========================
-# Google Drive client
+# Google Drive client (OAuth)
 # =========================
-credentials = service_account.Credentials.from_service_account_info(service_account_info)
-drive_service = build("drive", "v3", credentials=credentials)
+SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+
+creds = None
+if os.path.exists(TOKEN_FILE):
+    creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+
+if not creds or not creds.valid:
+    flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRET_FILE, SCOPES)
+    creds = flow.run_local_server(port=0)
+    # Save the credentials for next run
+    with open(TOKEN_FILE, "w") as f:
+        f.write(creds.to_json())
+
+drive_service = build("drive", "v3", credentials=creds)
 
 # =========================
 # Upload / Delete functions
