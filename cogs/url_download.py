@@ -201,6 +201,3 @@ async def setup(bot):
     async def on_ready():
         try:
             await bot.tree.sync()
-            print(f"✅ Synced slash commands. Logged in as {bot.user}")
-        except Exception as e:
-            print(f"❌ Failed to sync commands: {e}")
