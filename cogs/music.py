@@ -115,24 +115,18 @@ def _is_youtube_playlist_url(url: str) -> bool:
 # ==============
 LoopMode = Literal["off", "one", "all"]
 
-def _progress_bar(elapsed: int, total: Optional[int], width: int = 18) -> str:
-    if not total or total <= 0:
-        return "▬" * width
-    filled = int(width * min(elapsed / total, 1.0))
-    return ("▬" * max(filled - 1, 0)) + "🔘" + ("▬" * (width - filled))
-
 def _entry_to_track(entry: dict, requester) -> Optional[Track]:
+    """Converts a YouTube (or other) entry dict into a playable Track object."""
     if not entry:
         return None
-    title = entry.get("title")
-    if title in (None, "[Deleted video]", "[Private video]"):
-        return None
-    if entry.get("availability") in ("private", "needs_auth"):
-        return None
-    live_status = entry.get("live_status")
-    if live_status in ("is_live", "is_upcoming"):
+
+    title = entry.get("title") or "Unknown Title"
+
+    # Only skip if title is deleted/private
+    if title in ("[Deleted video]", "[Private video]"):
         return None
 
+    # Attempt to get a playable URL
     webpage_url = entry.get("webpage_url")
     if not webpage_url:
         vid_id = entry.get("id")
@@ -141,15 +135,25 @@ def _entry_to_track(entry: dict, requester) -> Optional[Track]:
         else:
             webpage_url = entry.get("url")
     if not webpage_url:
+        # If no URL is available, we can’t play it
         return None
 
+    # Duration (may be None for live)
+    duration = entry.get("duration")
+
+    # Thumbnail fallback
+    thumbnail = entry.get("thumbnail")
+
+    # Uploader or channel
+    uploader = entry.get("uploader") or entry.get("channel")
+
     return Track(
-        title=title or "Unknown Title",
+        title=title,
         webpage_url=webpage_url,
-        duration=entry.get("duration"),
-        thumbnail=entry.get("thumbnail"),
+        duration=duration,
+        thumbnail=thumbnail,
         requester=requester,
-        uploader=entry.get("uploader") or entry.get("channel"),
+        uploader=uploader
     )
 
 # ==============
@@ -373,6 +377,7 @@ class Music(commands.Cog):
         await self._start_if_idle(guild, channel)
 
     # ------------- play/queue logic -------------
+    
     async def _handle_play_or_unplay(
         self,
         guild: discord.Guild,
