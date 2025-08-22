@@ -3,7 +3,7 @@ import os
 import shutil
 import uvicorn
 from fastapi import FastAPI, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse
 from main import main as bot_main
 
 app = FastAPI()
@@ -35,11 +35,16 @@ async def download_file(filename: str):
     if not os.path.exists(file_path):
         return {"detail": "File not found"}
 
-    return FileResponse(
-        file_path,
-        filename=filename,
-        media_type="application/octet-stream",  # forces download
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    def file_iterator():
+        with open(file_path, "rb") as f:
+            yield from f
+
+    return StreamingResponse(
+        file_iterator(),
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
     )
 
 
