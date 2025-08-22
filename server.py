@@ -1,6 +1,5 @@
 import os
 import json
-import base64
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -9,14 +8,16 @@ from googleapiclient.http import MediaFileUpload
 # Folder ID on Google Drive where files will be uploaded
 FOLDER_ID = os.environ.get("FOLDER_ID")  # e.g., '17P1q50Wp-2NzXJEiBQOA0HZxuoC4Vpei'
 
-# SERVICE_JSON should be the base64-encoded JSON content of your service account
-SERVICE_JSON_B64 = os.environ.get("SERVICE_JSON")
-if not SERVICE_JSON_B64:
+# SERVICE_JSON should be the raw JSON content of your service account
+SERVICE_JSON_RAW = os.environ.get("SERVICE_JSON")
+if not SERVICE_JSON_RAW:
     raise ValueError("SERVICE_JSON environment variable is not set!")
 
-# Decode the base64 string and parse JSON
-SERVICE_JSON = base64.b64decode(SERVICE_JSON_B64).decode("utf-8")
-service_account_info = json.loads(SERVICE_JSON)
+# Parse JSON directly
+try:
+    service_account_info = json.loads(SERVICE_JSON_RAW)
+except Exception as e:
+    raise ValueError(f"Invalid SERVICE_JSON (not valid JSON): {e}")
 
 # Authenticate
 credentials = service_account.Credentials.from_service_account_info(service_account_info)
