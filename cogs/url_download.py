@@ -8,8 +8,7 @@ import asyncio
 import math
 import re
 
-# ✅ Import uploader + deleter from server.py
-from server import upload_to_drive, delete_from_drive  
+from server import upload_to_drive, delete_after_48h
 
 MAX_DISCORD_FILESIZE = 8 * 1024 * 1024  # 8MB
 DOWNLOADS_DIR = "downloads"
@@ -18,7 +17,7 @@ os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 def clean_filename(name: str) -> str:
     """Remove emojis + special chars from filename"""
-    name = re.sub(r'[^\w\s.-]', '', name)
+    name = re.sub(r'[^\w\s.-]', '', name)  # keep only safe chars
     name = re.sub(r'\s+', '_', name).strip('_')
     return name or "video"
 
@@ -47,9 +46,11 @@ class ProgressHook:
             except:
                 return
 
+            # progress bar with 🟩⬛
             bar_step = math.floor(percent_float / 10)
             bar = "🟩" * bar_step + "⬛" * (10 - bar_step)
 
+            # status message
             if percent_float < 25:
                 msg = "Starting download..."
             elif percent_float < 50:
@@ -62,7 +63,7 @@ class ProgressHook:
                 msg = "Finalizing..."
 
             now = time.time()
-            if now - self.last_update > 1:
+            if now - self.last_update > 1:  # update once per second
                 self.last_update = now
                 asyncio.run_coroutine_threadsafe(
                     self.message.edit(
@@ -76,15 +77,6 @@ class ProgressHook:
                 self.message.edit(content="📦 Merging & Finalizing..."),
                 self.loop
             )
-
-
-async def delete_after_48h(file_id: str):
-    """Wait 48 hours then delete file from Google Drive"""
-    await asyncio.sleep(48 * 3600)
-    try:
-        delete_from_drive(file_id)
-    except Exception as e:
-        print(f"[!] Failed to delete file {file_id}: {e}")
 
 
 async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
@@ -106,6 +98,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             "no_warnings": True,
         }
 
+        # Extract video info first
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             title = info.get("title", "Unknown")
@@ -117,6 +110,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             safe_name = clean_filename(title) + ".mp4"
             filename = os.path.join(DOWNLOADS_DIR, safe_name)
 
+        # Progress hook
         loop = asyncio.get_running_loop()
         hook = ProgressHook(status_msg, loop)
         ydl_opts["progress_hooks"] = [hook.update]
@@ -144,7 +138,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
         embed.add_field(name="📦 Size", value=sizeof_fmt(file_size), inline=True)
         embed.add_field(name="⏳ Time taken", value=f"{elapsed:.2f}s", inline=True)
 
-        # Upload to Discord if small
+        # If file small enough, upload to Discord
         if file_size <= MAX_DISCORD_FILESIZE:
             await status_msg.edit(content="📤 Uploading to Discord...")
             if is_slash:
@@ -160,13 +154,14 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             )
             link, file_id = upload_to_drive(filename)
             if link:
-                embed.add_field(name="🔗 Direct Download", value=f"[Click to Download]({link})", inline=False)
+                embed.add_field(name="🔗 Direct Download", value=f"[Click here]({link})", inline=False)
                 embed.add_field(name="🗑️ Note", value="This file will be deleted after __**48 Hours**__", inline=False)
                 if is_slash:
                     await interaction_or_ctx.followup.send(embed=embed)
                 else:
                     await interaction_or_ctx.send(embed=embed)
 
+                # schedule deletion after 48h
                 asyncio.create_task(delete_after_48h(file_id))
             else:
                 await status_msg.edit(content="❌ Upload failed. Please try again later.")
