@@ -196,8 +196,6 @@ class URLDownload(commands.Cog):
 async def setup(bot):
     await bot.add_cog(URLDownload(bot))
 
-    # ✅ Auto-sync slash commands when cog loads
-    @bot.event
+
     async def on_ready():
-        try:
             await bot.tree.sync()
