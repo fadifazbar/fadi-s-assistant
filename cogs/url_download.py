@@ -24,7 +24,7 @@ def sizeof_fmt(num, suffix="B"):
     return f"{num:.1f}T{suffix}"
 
 async def upload_external(file_path: str):
-    """Upload file to external hosting and return link."""
+    """Upload file to external hosting and return direct-download link."""
     upload_url = f"{EXTERNAL_HOST}/upload"
     async with aiohttp.ClientSession() as session:
         with open(file_path, "rb") as f:
@@ -33,7 +33,9 @@ async def upload_external(file_path: str):
             async with session.post(upload_url, data=data) as resp:
                 if resp.status == 200:
                     res = await resp.json()
-                    return res.get("file_url")
+                    filename = os.path.basename(file_path)
+                    # 🔽 Force auto-download link instead of preview
+                    return f"{EXTERNAL_HOST}/download/{filename}"
                 return None
 
 class ProgressHook:
@@ -51,16 +53,15 @@ class ProgressHook:
             except:
                 return
 
-            # progress bar
             bar_step = math.floor(percent_float / 10)
             bar = "🟩" * bar_step + "⬛" * (10 - bar_step)
 
             now = time.time()
-            if now - self.last_update > 0.5:  # update every 0.5s
+            if now - self.last_update > 1:
                 self.last_update = now
                 asyncio.run_coroutine_threadsafe(
                     self.message.edit(
-                        content=f"⬇️ Downloading... {percent_float:.1f}%\n{bar}"
+                        content=f"⬇️ Downloading... {percent_float:.1f}%/100%\n{bar}"
                     ),
                     self.bot.loop
                 )
@@ -70,6 +71,7 @@ class ProgressHook:
                 self.message.edit(content="📦 Merging & Finalizing..."),
                 self.bot.loop
             )
+
 
 async def handle_download(interaction_or_ctx, url: str, is_slash: bool, bot: commands.Bot):
     """Shared logic for both slash + prefix command."""
@@ -85,7 +87,6 @@ async def handle_download(interaction_or_ctx, url: str, is_slash: bool, bot: com
     ydl_opts = {
         "format": "bv*+ba/bestvideo+bestaudio/best",
         "outtmpl": os.path.join(DOWNLOADS_DIR, "%(title).200s.%(ext)s"),
-        "restrictfilenames": True,  # 👈 ensures safe filenames
         "noplaylist": True,
         "quiet": True,
         "no_warnings": True,
@@ -99,8 +100,6 @@ async def handle_download(interaction_or_ctx, url: str, is_slash: bool, bot: com
             duration_str = time.strftime("%H:%M:%S", time.gmtime(duration))
             quality = info.get("format_note", "unknown")
             filename = ydl.prepare_filename(info)
-
-            filename = os.path.abspath(filename)  # normalize path
 
         # Progress
         progress = ProgressHook(status_msg, bot)
@@ -140,8 +139,7 @@ async def handle_download(interaction_or_ctx, url: str, is_slash: bool, bot: com
             link = await upload_external(filename)
 
             if link:
-                direct_link = link + "?download=1"  # force download
-                embed.add_field(name="🔗 External Link", value=f"[Click here to download]({direct_link})", inline=False)
+                embed.add_field(name="🔗 Direct Download Link", value=link, inline=False)
                 if is_slash:
                     await interaction_or_ctx.followup.send(embed=embed)
                 else:
