@@ -427,101 +427,101 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
     # ------------- play/queue logic -------------
 
     async def _handle_play_or_unplay(
-    self,
-    guild: discord.Guild,
-    text_channel: discord.abc.Messageable,
-    requester,
-    query: str,
-    action: str = "play"
-):
-    # """Handles both play and unplay actions."""
-    
-    if action == "play":
-        # --- Play logic ---
-        try_single_search = not _looks_like_url(query)
-        use_flat_playlist = _is_youtube_playlist_url(query)
+        self,
+        guild: discord.Guild,
+        text_channel: discord.abc.Messageable,
+        requester,
+        query: str,
+        action: str = "play"
+    ):
+        # """Handles both play and unplay actions."""
 
-        try:
-            if try_single_search:
-                info = await _extract(f"ytsearch1:{query}", flat=False)
+        if action == "play":
+            # --- Play logic ---
+            try_single_search = not _looks_like_url(query)
+            use_flat_playlist = _is_youtube_playlist_url(query)
+
+            try:
+                if try_single_search:
+                    info = await _extract(f"ytsearch1:{query}", flat=False)
+                else:
+                    info = await _extract(query, flat=use_flat_playlist)
+            except Exception as e:
+                await text_channel.send(f"❌ Error: `{e}`")
+                return
+
+            if not info:
+                await text_channel.send("❌ No results.")
+                return
+
+            tracks_to_add: list[Track] = []
+
+            if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist" and "search" in (info.get("extractor_key", "")).lower():
+                entries = (info.get("entries") or [])[:1]
+                for entry in entries:
+                    t = _entry_to_track(entry, requester)
+                    if t:
+                        tracks_to_add.append(t)
+            elif "entries" in info:
+                for entry in info.get("entries") or []:
+                    t = _entry_to_track(entry, requester)
+                    if t:
+                        tracks_to_add.append(t)
             else:
-                info = await _extract(query, flat=use_flat_playlist)
-        except Exception as e:
-            await text_channel.send(f"❌ Error: `{e}`")
-            return
-
-        if not info:
-            await text_channel.send("❌ No results.")
-            return
-
-        tracks_to_add: list[Track] = []
-
-        if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist" and "search" in (info.get("extractor_key", "")).lower():
-            entries = (info.get("entries") or [])[:1]
-            for entry in entries:
-                t = _entry_to_track(entry, requester)
+                t = _entry_to_track(info, requester)
                 if t:
                     tracks_to_add.append(t)
-        elif "entries" in info:
-            for entry in info.get("entries") or []:
-                t = _entry_to_track(entry, requester)
-                if t:
-                    tracks_to_add.append(t)
-        else:
-            t = _entry_to_track(info, requester)
-            if t:
-                tracks_to_add.append(t)
 
-        if not tracks_to_add:
-            await text_channel.send("⚠️ No playable videos found (deleted/private/unavailable).")
-            return
+            if not tracks_to_add:
+                await text_channel.send("⚠️ No playable videos found (deleted/private/unavailable).")
+                return
 
-        q = self._queue(guild.id)
-        start_len = len(q)
-        q.extend(tracks_to_add)
+            q = self._queue(guild.id)
+            start_len = len(q)
+            q.extend(tracks_to_add)
 
-        if len(tracks_to_add) == 1:
-            await self._announce_added(text_channel, tracks_to_add[0], start_len + 1)
-        else:
-            title = info.get("title") or "playlist"
-            await text_channel.send(f"📑 Added **{len(tracks_to_add)}** tracks from **{title}**.")
-
-        await self._start_if_idle(guild, text_channel)
-
-    elif action == "unplay":
-        # Use your currents and queue instead of get_player
-        current_track = self.currents.get(guild.id)
-        q = self._queue(guild.id)
-
-        if not current_track and not q:
-            await text_channel.send("❌ Nothing is playing or queued.")
-            return
-
-        removed = None
-
-        # Check current playing track first
-        if current_track and (query.lower() in current_track.title.lower() or query in getattr(current_track, "webpage_url", "")):
-            removed = current_track
-            vc = guild.voice_client
-            if vc and vc.is_playing():
-                vc.stop()  # stop current playback to remove it
-            self.currents[guild.id] = None
-
-        else:
-            # Otherwise search the queue
-            for track in list(q):
-                if query.lower() in track.title.lower() or query in getattr(track, "webpage_url", ""):
-                    q.remove(track)
-                    removed = track
-                    break
-
-        if removed:
-            if removed == current_track:
-                await text_channel.send(f"🛑 Stopped and removed currently playing track: **{removed.title}**.")
+            if len(tracks_to_add) == 1:
+                await self._announce_added(text_channel, tracks_to_add[0], start_len + 1)
             else:
-                await text_channel.send(f"🗑️ Removed **{removed.title}** from the queue.")
-        else:
-            await text_channel.send("❌ Could not find a matching track in the queue or currently playing.")
+                title = info.get("title") or "playlist"
+                await text_channel.send(f"📑 Added **{len(tracks_to_add)}** tracks from **{title}**.")
+
+            await self._start_if_idle(guild, text_channel)
+
+        elif action == "unplay":
+            # Use currents and queue instead of get_player
+            current_track = self.currents.get(guild.id)
+            q = self._queue(guild.id)
+
+            if not current_track and not q:
+                await text_channel.send("❌ Nothing is playing or queued.")
+                return
+
+            removed = None
+
+            # Check current playing track first
+            if current_track and (query.lower() in current_track.title.lower() or query in getattr(current_track, "webpage_url", "")):
+                removed = current_track
+                vc = guild.voice_client
+                if vc and vc.is_playing():
+                    vc.stop()  # stop current playback to remove it
+                self.currents[guild.id] = None
+
+            else:
+                # Otherwise search the queue
+                for track in list(q):
+                    if query.lower() in track.title.lower() or query in getattr(track, "webpage_url", ""):
+                        q.remove(track)
+                        removed = track
+                        break
+
+            if removed:
+                if removed == current_track:
+                    await text_channel.send(f"🛑 Stopped and removed currently playing track: **{removed.title}**.")
+                else:
+                    await text_channel.send(f"🗑️ Removed **{removed.title}** from the queue.")
+            else:
+                await text_channel.send("❌ Could not find a matching track in the queue or currently playing.")
 
 
     # =========================
