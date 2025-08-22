@@ -21,15 +21,14 @@ credentials = service_account.Credentials.from_service_account_file(
 )
 drive_service = build("drive", "v3", credentials=credentials)
 
-# Private uploads folder (keep hidden)
-FOLDER_ID = "17P1q50Wp-2NzXJEiBQOA0HZxuoC4Vpei"  # Replace with your BotUploads folder ID
+# Your private uploads folder in Google Drive
+FOLDER_ID = "17P1q50Wp-2NzXJEiBQOA0HZxuoC4Vpei"  # replace with actual folder ID
 
 
 def upload_to_drive(filepath: str):
     """
-    Upload file to Google Drive and return:
-      1) direct download link
-      2) file ID for future deletion
+    Upload a file to Google Drive.
+    Returns: (direct_download_link, file_id)
     """
     file_metadata = {
         "name": os.path.basename(filepath),
@@ -42,32 +41,30 @@ def upload_to_drive(filepath: str):
 
     file_id = uploaded_file.get("id")
 
-    # Make only this file shareable
+    # Make file shareable with anyone who has the link
     drive_service.permissions().create(
         fileId=file_id,
         body={"role": "reader", "type": "anyone"},
     ).execute()
 
     # Direct download link
-    link = f"https://drive.google.com/uc?export=download&id={file_id}"
-    return link, file_id
+    direct_link = f"https://drive.google.com/uc?export=download&id={file_id}"
+    return direct_link, file_id
 
 
 def delete_from_drive(file_id: str):
-    """Delete file from Google Drive"""
+    """Delete a file from Google Drive"""
     drive_service.files().delete(fileId=file_id).execute()
+    print(f"[+] Deleted file from Drive: {file_id}")
 
 
-# -------------------------------
-# FastAPI endpoints
-# -------------------------------
 @app.get("/")
 async def home():
     return {"status": "Bot + Google Drive uploader running!"}
 
 
 # -------------------------------
-# Run Discord bot + FastAPI together
+# Run FastAPI + Discord bot
 # -------------------------------
 async def start_fastapi():
     config = uvicorn.Config(app=app, host="0.0.0.0", port=8080, log_level="info")
@@ -76,7 +73,6 @@ async def start_fastapi():
 
 
 async def main():
-    """Run Discord bot and FastAPI at the same time"""
     await asyncio.gather(
         bot_main(),       # your Discord bot
         start_fastapi()   # FastAPI server
