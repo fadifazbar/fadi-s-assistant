@@ -305,7 +305,7 @@ class Music(commands.Cog):
 
     # ------------- embeds -------------
 
-    async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
+async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
     """Send a now playing embed that updates with elapsed time and progress bar."""
     if track.duration is None:
         # For live or unknown-duration tracks
