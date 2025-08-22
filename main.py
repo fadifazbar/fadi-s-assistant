@@ -30,16 +30,15 @@ class ModBot(commands.Bot):
         """Called when the bot is starting up"""
         logger.info("Setting up bot...")
 
-        # Load cogs (same as before)
+        # Load cogs
         await self.load_extension("cogs.moderation")
         await self.load_extension("cogs.general")
         await self.load_extension("cogs.serverinfo")
         await self.load_extension("cogs.reactionrole")
         await self.load_extension("cogs.snipeeditsnipe")
         await self.load_extension("cogs.music")
-        await self.load_extension("cogs.url_download")
+        await self.load_extension("cogs.url_download")  # this one no longer uses server.py
 
-        # ⚠️ Removed auto-sync to avoid rate limits
         logger.info("✅ Loaded cogs (skipping slash command sync)")
 
     async def on_ready(self):
@@ -108,7 +107,7 @@ bot = ModBot()
 
 async def main():
     """Main function to run the bot"""
-    # Load extra cogs (same as your original)
+    # Load extra cogs
     await bot.load_extension("messagelogger")
     await bot.load_extension("invite")
     await bot.load_extension("xoxo")
