@@ -67,14 +67,14 @@ class ProgressHook:
                 )
         elif d['status'] == 'finished':
             asyncio.run_coroutine_threadsafe(
-                self.message.edit(content="📦 Finalizing..."),
+                self.message.edit(content="📦 Finalizing...", embed=None),
                 self.loop
             )
 
 
 async def handle_download(bot, interaction_or_ctx, url: str, download_type: str, is_slash: bool):
     if not download_type:
-        msg = "Please Choose A Type. Mp3 Or Mp4"
+        msg = "📝 Please Choose A Type. Mp3 Or Mp4"
         if is_slash:
             await interaction_or_ctx.response.send_message(msg, ephemeral=True)
         else:
@@ -109,12 +109,12 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
         final_quality = ""
 
         if download_type == "mp4":
-            # Try HD and 4K first
+            # HD -> 4K fallback
             quality_options = [
-                "bestvideo[height<=2160]+bestaudio/best",  # up to 4K
-                "bestvideo[height<=1440]+bestaudio/best",  # 2K
-                "bestvideo[height<=1080]+bestaudio/best",  # 1080p
-                "bestvideo[height<=720]+bestaudio/best",   # 720p
+                "bestvideo[height<=2160]+bestaudio/best",
+                "bestvideo[height<=1440]+bestaudio/best",
+                "bestvideo[height<=1080]+bestaudio/best",
+                "bestvideo[height<=720]+bestaudio/best",
                 "bestvideo[height<=480]+bestaudio/best",
                 "bestvideo[height<=360]+bestaudio/best",
                 "bestvideo[height<=240]+bestaudio/best",
@@ -152,29 +152,37 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
                         final_quality = fmt
 
         else:  # mp3
-            ydl_opts = {
-                "format": "bestaudio/best",
-                "outtmpl": filename,
-                "noplaylist": True,
-                "quiet": True,
-                "no_warnings": True,
-                "progress_hooks": [ProgressHook(status_msg, loop).update],
-                "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}]
-            }
+            bitrates = ["192", "128", "96"]
+            for br in bitrates:
+                ydl_opts = {
+                    "format": "bestaudio/best",
+                    "outtmpl": filename,
+                    "noplaylist": True,
+                    "quiet": True,
+                    "no_warnings": True,
+                    "progress_hooks": [ProgressHook(status_msg, loop).update],
+                    "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": br}]
+                }
 
-            if os.path.exists(filename):
-                os.remove(filename)
+                if os.path.exists(filename):
+                    os.remove(filename)
 
-            def download_audio():
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([url])
+                def download_audio():
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        ydl.download([url])
 
-            await asyncio.to_thread(download_audio)
+                await asyncio.to_thread(download_audio)
 
-            if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                downloaded = True
-                final_size = os.path.getsize(filename)
-                final_quality = "Audio (MP3)"
+                if os.path.exists(filename) and os.path.getsize(filename) > 0:
+                    file_size = os.path.getsize(filename)
+                    if file_size <= MAX_DISCORD_FILESIZE:
+                        downloaded = True
+                        final_size = file_size
+                        final_quality = f"Audio MP3 ({br}kbps)"
+                        break
+                    else:
+                        final_size = file_size
+                        final_quality = f"Audio MP3 ({br}kbps)"
 
         elapsed = time.time() - start_time
 
@@ -182,7 +190,6 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
             await status_msg.edit(embed=discord.Embed(
                 title="❌ File Too Large",
                 description=f"⛔ Cannot download. File size: {sizeof_fmt(final_size)}\n"
-                            "# **✨ Solution (If You Want):\n**"
                             "🤩 You can download it manually: https://www.ytmp3.as/",
                 color=discord.Color.red()
             ))
