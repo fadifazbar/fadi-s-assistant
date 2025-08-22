@@ -17,10 +17,13 @@ SERVICE_JSON = os.environ.get("SERVICE_JSON")
 if not SERVICE_JSON:
     raise ValueError("SERVICE_JSON environment variable is not set!")
 
+# Replace escaped newlines with actual newlines
+fixed_json = SERVICE_JSON.replace("\\n", "\n")
+
 try:
-    service_account_info = json.loads(SERVICE_JSON)
+    service_account_info = json.loads(fixed_json)
 except json.JSONDecodeError as e:
-    raise ValueError("SERVICE_JSON is not valid JSON. Did you escape newlines in private_key as \\\\n ?") from e
+    raise ValueError("SERVICE_JSON is not valid JSON. Did you escape newlines in private_key as \\n ?") from e
 
 # =========================
 # Google Drive client (Service Account)
@@ -28,7 +31,6 @@ except json.JSONDecodeError as e:
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 creds = service_account.Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
 drive_service = build("drive", "v3", credentials=creds)
-
 # =========================
 # Upload / Delete functions
 # =========================
