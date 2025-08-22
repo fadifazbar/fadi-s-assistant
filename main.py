@@ -38,8 +38,7 @@ class ModBot(commands.Bot):
         await self.load_extension("cogs.snipeeditsnipe")
         await self.load_extension("cogs.music")
         await self.load_extension("cogs.url_download")
-
-        # ⚠️ Removed auto-sync to prevent 429 errors
+        # ⚠️ Removed auto-sync to avoid rate limits
 
     async def on_ready(self):
         """Called when the bot is ready"""
@@ -47,7 +46,6 @@ class ModBot(commands.Bot):
         logger.info(f"🆔 Bot ID: {self.user.id}")
         logger.info(f"📊 Serving {len(self.guilds)} guilds")
 
-        # Set bot status
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
@@ -95,11 +93,9 @@ class ModBot(commands.Bot):
                 )
 
     async def on_guild_join(self, guild):
-        """Called when bot joins a guild"""
         logger.info(f"📥 Joined guild: {guild.name} ({guild.id})")
 
     async def on_guild_remove(self, guild):
-        """Called when bot leaves a guild"""
         logger.info(f"📤 Left guild: {guild.name} ({guild.id})")
 
 
@@ -110,10 +106,19 @@ bot = ModBot()
 
 @bot.command(name="sync")
 @commands.is_owner()
-async def sync_commands(ctx):
-    """Manually sync slash commands to Discord."""
-    synced = await bot.tree.sync()
-    await ctx.send(f"✅ Synced {len(synced)} slash commands!")
+async def sync_commands(ctx, scope: str = None):
+    """
+    Sync slash commands manually.
+    Usage:
+      .sync globally -> sync only this server
+      .sync          -> sync all servers
+    """
+    if scope == "globally":
+        synced = await bot.tree.sync(guild=ctx.guild)
+        await ctx.reply("✅ Successfully synced all commands to this server")
+    else:
+        synced = await bot.tree.sync()
+        await ctx.reply("✅ Successfully synced all commands to all servers")
 
 
 async def main():
@@ -123,7 +128,6 @@ async def main():
     await bot.load_extension("invite")
     await bot.load_extension("xoxo")
 
-    # Check if token exists
     if not Config.BOT_TOKEN:
         logger.error("❌ BOT_TOKEN is not set in config!")
         return
@@ -136,7 +140,6 @@ async def main():
         logger.error(f"❌ Error starting bot: {e}")
 
 
-# Entry point
 if __name__ == "__main__":
     try:
         asyncio.run(main())
