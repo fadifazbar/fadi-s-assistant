@@ -39,12 +39,7 @@ class ModBot(commands.Bot):
         await self.load_extension("cogs.music")
         await self.load_extension("cogs.url_download")
 
-        # Sync slash commands
-        try:
-            synced = await self.tree.sync()
-            logger.info(f"✅ Synced {len(synced)} slash commands")
-        except Exception as e:
-            logger.error(f"❌ Failed to sync commands: {e}")
+        # ⚠️ Removed auto-sync to prevent 429 errors
 
     async def on_ready(self):
         """Called when the bot is ready"""
@@ -108,10 +103,21 @@ class ModBot(commands.Bot):
         logger.info(f"📤 Left guild: {guild.name} ({guild.id})")
 
 
+# ----------------------------
+# Manual sync command
+# ----------------------------
+bot = ModBot()
+
+@bot.command(name="sync")
+@commands.is_owner()
+async def sync_commands(ctx):
+    """Manually sync slash commands to Discord."""
+    synced = await bot.tree.sync()
+    await ctx.send(f"✅ Synced {len(synced)} slash commands!")
+
+
 async def main():
     """Main function to run the bot"""
-    bot = ModBot()
-
     # Load extra cogs
     await bot.load_extension("messagelogger")
     await bot.load_extension("invite")
