@@ -560,6 +560,7 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
     # =====================
     # SLASH COMMANDS (/) 🎯
     # =====================
+
     @app_commands.command(name="play", description="Play a song or playlist (YouTube URL or search).")
     @app_commands.describe(query="YouTube URL or search terms")
     async def play_slash(self, interaction: discord.Interaction, query: str):
@@ -572,8 +573,6 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
             await interaction.followup.send("✅ Done.")
         except discord.HTTPException:
             pass
-
-
 
     @app_commands.command(name="skip", description="Skip the current song.")
     async def skip_slash(self, interaction: discord.Interaction):
@@ -639,6 +638,12 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
         state = not self._is_shuffle(interaction.guild.id)
         self.shuffle_enabled[interaction.guild.id] = state
         await interaction.response.send_message("🔀 Shuffle enabled." if state else "➡️ Shuffle disabled.")
+
+    @app_commands.command(name="queue", description="Show the current queue with buttons.")
+    async def queue_slash(self, interaction: discord.Interaction):
+        view = QueueView(self, interaction.guild.id, interaction.user)
+        await interaction.response.send_message(embed=view.format_page(), view=view, ephemeral=True)
+
 
     
 
