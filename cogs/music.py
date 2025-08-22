@@ -333,6 +333,8 @@ class Music(commands.Cog):
             next_track = self._dequeue_next(guild.id)
             if not next_track:
                 self.currents[guild.id] = None
+                # ✅ Let users know nothing is left
+                await channel.send("🎵 No Music Is Playing RightNow. Queue is empty.")
                 self._schedule_idle_disconnect(guild, channel)
                 return
 
@@ -354,17 +356,23 @@ class Music(commands.Cog):
     async def _after_track(self, guild: discord.Guild, channel: discord.abc.Messageable, played: Optional[Track], err):
         if err:
             await channel.send(f"⚠️ Playback error: {err}")
+
         mode = self._get_loop(guild.id)
         if played:
             if mode == "one":
                 self._queue(guild.id).insert(0, played)  # replay immediately
             elif mode == "all":
                 self._queue(guild.id).append(played)
+
         self.currents[guild.id] = None
+
+        # ✅ Before starting the next track, check if queue is empty
+        if not self._queue(guild.id):
+            await channel.send("✅ Finished playing all tracks. No Music Is Playing RightNow.")
+
         await self._start_if_idle(guild, channel)
 
     # ------------- play/queue logic -------------
-
     async def _handle_play_or_unplay(
         self,
         guild: discord.Guild,
@@ -373,82 +381,88 @@ class Music(commands.Cog):
         query: str,
         action: str = "play"
     ):
-        """
-        Handle both play and unplay.
-        action = "play" -> add tracks
-        action = "unplay" -> remove tracks
-        """
+        """Handles both play and unplay actions."""
+        if action == "play":
+            # existing play logic unchanged
+            try_single_search = not _looks_like_url(query)
+            use_flat_playlist = _is_youtube_playlist_url(query)
 
-        q = self._queue(guild.id)
+            try:
+                if try_single_search:
+                    info = await _extract(f"ytsearch1:{query}", flat=False)
+                else:
+                    info = await _extract(query, flat=use_flat_playlist)
+            except Exception as e:
+                await text_channel.send(f"❌ Error: `{e}`")
+                return
 
-        if action == "unplay":
-            if not q:
-                return await text_channel.send("❌ The queue is empty.")
+            if not info:
+                await text_channel.send("❌ No results.")
+                return
+
+            tracks_to_add: List[Track] = []
+
+            if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist" and "search" in (info.get("extractor_key", "")).lower():
+                entries = (info.get("entries") or [])[:1]
+                for entry in entries:
+                    t = _entry_to_track(entry, requester)
+                    if t:
+                        tracks_to_add.append(t)
+            elif "entries" in info:
+                for entry in info.get("entries") or []:
+                    t = _entry_to_track(entry, requester)
+                    if t:
+                        tracks_to_add.append(t)
+            else:
+                t = _entry_to_track(info, requester)
+                if t:
+                    tracks_to_add.append(t)
+
+            if not tracks_to_add:
+                await text_channel.send("⚠️ No playable videos found (deleted/private/unavailable).")
+                return
+
+            q = self._queue(guild.id)
+            start_len = len(q)
+            q.extend(tracks_to_add)
+
+            if len(tracks_to_add) == 1:
+                await self._announce_added(text_channel, tracks_to_add[0], start_len + 1)
+            else:
+                title = info.get("title") or "playlist"
+                await text_channel.send(f"📑 Added **{len(tracks_to_add)}** tracks from **{title}**.")
+
+            await self._start_if_idle(guild, text_channel)
+
+        elif action == "unplay":
+            player = self.get_player(guild.id)
+            if not player or (not player.queue and not player.current):
+                return await text_channel.send("❌ Nothing is playing or queued.")
 
             removed = None
-            for track in list(q):
-                if query.lower() in track.title.lower() or query in getattr(track, "url", ""):
-                    q.remove(track)
-                    removed = track
-                    break
+
+            # Check current playing track first
+            if player.current and (
+                query.lower() in player.current.title.lower()
+                or query in getattr(player.current, "url", "")
+            ):
+                removed = player.current
+                player.stop()  # this will trigger it to move on
+            else:
+                # Otherwise search the queue
+                for track in list(player.queue):
+                    if query.lower() in track.title.lower() or query in getattr(track, "url", ""):
+                        player.queue.remove(track)
+                        removed = track
+                        break
 
             if removed:
-                return await text_channel.send(f"🗑️ Removed **{removed.title}** from the queue.")
+                if removed == player.current:
+                    await text_channel.send(f"🛑 Stopped and removed currently playing track: **{removed.title}**.")
+                else:
+                    await text_channel.send(f"🗑️ Removed **{removed.title}** from the queue.")
             else:
-                return await text_channel.send("❌ Could not find a matching track in the queue.")
-
-        # ----------------------
-        # PLAY MODE (your old _handle_play)
-        # ----------------------
-        try_single_search = not _looks_like_url(query)
-        use_flat_playlist = _is_youtube_playlist_url(query)
-
-        try:
-            if try_single_search:
-                info = await _extract(f"ytsearch1:{query}", flat=False)
-            else:
-                info = await _extract(query, flat=use_flat_playlist)
-        except Exception as e:
-            await text_channel.send(f"❌ Error: `{e}`")
-            return
-
-        if not info:
-            return await text_channel.send("❌ No results.")
-
-        tracks_to_add: List[Track] = []
-
-        if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist" and "search" in (info.get("extractor_key", "")).lower():
-            entries = (info.get("entries") or [])[:1]
-            for entry in entries:
-                t = _entry_to_track(entry, requester)
-                if t:
-                    tracks_to_add.append(t)
-        elif "entries" in info:
-            for entry in info.get("entries") or []:
-                t = _entry_to_track(entry, requester)
-                if t:
-                    tracks_to_add.append(t)
-        else:
-            t = _entry_to_track(info, requester)
-            if t:
-                tracks_to_add.append(t)
-
-        if not tracks_to_add:
-            return await text_channel.send("⚠️ No playable videos found (deleted/private/unavailable).")
-
-        start_len = len(q)
-        q.extend(tracks_to_add)
-
-        if len(tracks_to_add) == 1:
-            await self._announce_added(text_channel, tracks_to_add[0], start_len + 1)
-        else:
-            title = info.get("title") or "playlist"
-            await text_channel.send(f"📑 Added **{len(tracks_to_add)}** tracks from **{title}**.")
-
-        await self._start_if_idle(guild, text_channel)
-
-    
-
+                await text_channel.send("❌ Could not find a matching track in the queue or currently playing.")
 
     # =========================
     # PREFIX COMMANDS (classic)
