@@ -38,11 +38,12 @@ async def upload_external(file_path: str):
 
 class ProgressHook:
     """Handles yt-dlp progress reporting with bar + %."""
-    def __init__(self, message: discord.Message):
+    def __init__(self, message: discord.Message, bot: commands.Bot):
         self.message = message
+        self.bot = bot
         self.last_update = 0
 
-    async def hook(self, d):
+    def hook(self, d):
         if d['status'] == 'downloading':
             percent = d.get("_percent_str", "").strip().replace("%", "")
             try:
@@ -56,12 +57,19 @@ class ProgressHook:
             now = time.time()
             if now - self.last_update > 1:
                 self.last_update = now
-                await self.message.edit(
-                    content=f"⬇️ Downloading... {percent_float:.1f}%\n{bar}"
+                asyncio.run_coroutine_threadsafe(
+                    self.message.edit(
+                        content=f"⬇️ Downloading... {percent_float:.1f}%/100%\n{bar}"
+                    ),
+                    self.bot.loop
                 )
 
         elif d['status'] == 'finished':
-            await self.message.edit(content="📦 Merging & Finalizing...")
+            asyncio.run_coroutine_threadsafe(
+                self.message.edit(content="📦 Merging & Finalizing..."),
+                self.bot.loop
+            )
+
 
 async def handle_download(interaction_or_ctx, url: str, is_slash: bool):
     """Shared logic for both slash + prefix command."""
@@ -92,7 +100,7 @@ async def handle_download(interaction_or_ctx, url: str, is_slash: bool):
             filename = ydl.prepare_filename(info)
 
         # Progress
-        progress = ProgressHook(status_msg)
+        progress = ProgressHook(status_msg, self.bot)
         ydl_opts["progress_hooks"] = [lambda d: asyncio.create_task(progress.hook(d))]
 
         await status_msg.edit(content="⬇️ Downloading... 0.0%\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛")
