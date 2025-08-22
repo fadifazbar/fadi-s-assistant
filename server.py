@@ -10,7 +10,9 @@ from googleapiclient.http import MediaFileUpload
 
 app = FastAPI()
 
+# -------------------------------
 # Google Drive setup
+# -------------------------------
 SERVICE_ACCOUNT_FILE = "angelic-cat-469803-c8-7ec9cc0a6674.json"
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 
@@ -19,12 +21,16 @@ credentials = service_account.Credentials.from_service_account_file(
 )
 drive_service = build("drive", "v3", credentials=credentials)
 
-# Your uploads folder in Google Drive (you created it already)
-FOLDER_ID = "YOUR_FOLDER_ID_HERE"  # <-- replace with actual BotUploads folder ID
+# Private uploads folder (keep hidden)
+FOLDER_ID = "17P1q50Wp-2NzXJEiBQOA0HZxuoC4Vpei"  # Replace with your BotUploads folder ID
 
 
-def upload_to_drive(filepath: str) -> str:
-    """Upload file to Google Drive and return direct download link"""
+def upload_to_drive(filepath: str):
+    """
+    Upload file to Google Drive and return:
+      1) direct download link
+      2) file ID for future deletion
+    """
     file_metadata = {
         "name": os.path.basename(filepath),
         "parents": [FOLDER_ID],
@@ -36,23 +42,34 @@ def upload_to_drive(filepath: str) -> str:
 
     file_id = uploaded_file.get("id")
 
-    # Make file shareable
+    # Make only this file shareable
     drive_service.permissions().create(
         fileId=file_id,
         body={"role": "reader", "type": "anyone"},
     ).execute()
 
-    # Return direct download link
-    return f"https://drive.google.com/uc?export=download&id={file_id}"
+    # Direct download link
+    link = f"https://drive.google.com/uc?export=download&id={file_id}"
+    return link, file_id
 
 
+def delete_from_drive(file_id: str):
+    """Delete file from Google Drive"""
+    drive_service.files().delete(fileId=file_id).execute()
+
+
+# -------------------------------
+# FastAPI endpoints
+# -------------------------------
 @app.get("/")
 async def home():
     return {"status": "Bot + Google Drive uploader running!"}
 
 
+# -------------------------------
+# Run Discord bot + FastAPI together
+# -------------------------------
 async def start_fastapi():
-    """Run FastAPI inside asyncio"""
     config = uvicorn.Config(app=app, host="0.0.0.0", port=8080, log_level="info")
     server = uvicorn.Server(config)
     await server.serve()
