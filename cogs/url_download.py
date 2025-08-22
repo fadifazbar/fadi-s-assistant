@@ -24,6 +24,7 @@ def clean_filename(name: str) -> str:
 
 
 def sizeof_fmt(num, suffix="B"):
+    """Pretty format file sizes"""
     for unit in ["", "K", "M", "G"]:
         if abs(num) < 1024.0:
             return f"{num:.1f}{unit}{suffix}"
@@ -32,13 +33,13 @@ def sizeof_fmt(num, suffix="B"):
 
 
 class ProgressHook:
+    """Handles yt-dlp progress updates"""
     def __init__(self, message: discord.Message, loop: asyncio.AbstractEventLoop):
         self.message = message
         self.loop = loop
         self.last_update = 0
 
     def update(self, d):
-        """This gets called from yt-dlp's thread. We schedule onto bot's loop."""
         if d['status'] == 'downloading':
             percent = d.get("_percent_str", "").strip().replace("%", "")
             try:
@@ -50,7 +51,7 @@ class ProgressHook:
             bar_step = math.floor(percent_float / 10)
             bar = "🟩" * bar_step + "⬛" * (10 - bar_step)
 
-            # progress messages
+            # status message
             if percent_float < 25:
                 msg = "Starting download..."
             elif percent_float < 50:
@@ -107,6 +108,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             "no_warnings": True,
         }
 
+        # 🔍 Extract video info first
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             title = info.get("title", "Unknown")
@@ -118,7 +120,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             safe_name = clean_filename(title) + ".mp4"
             filename = os.path.join(DOWNLOADS_DIR, safe_name)
 
-        # Progress hook with event loop reference
+        # Progress hook
         loop = asyncio.get_running_loop()
         hook = ProgressHook(status_msg, loop)
         ydl_opts["progress_hooks"] = [hook.update]
@@ -146,18 +148,21 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
         embed.add_field(name="📦 Size", value=sizeof_fmt(file_size), inline=True)
         embed.add_field(name="⏳ Time taken", value=f"{elapsed:.2f}s", inline=True)
 
+        # ✅ If file small enough, upload directly
         if file_size <= MAX_DISCORD_FILESIZE:
             await status_msg.edit(content="📤 Uploading to Discord...")
             if is_slash:
                 await interaction_or_ctx.followup.send(embed=embed, file=discord.File(filename))
             else:
                 await interaction_or_ctx.send(embed=embed, file=discord.File(filename))
+
+        # 🚀 Else upload to Google Drive
         else:
             await status_msg.edit(
                 content=f"⚠️ File too large for Discord ({sizeof_fmt(file_size)}).\n"
                         f"🔗 Uploading to Google Drive..."
             )
-            link, file_id = upload_to_drive(filename)  # ✅ upload + return link + file_id
+            link, file_id = upload_to_drive(filename)
             if link:
                 embed.add_field(name="🔗 Direct Download", value=f"[Click here]({link})", inline=False)
                 embed.add_field(name="🗑️ Note", value="This file will be deleted after __**48 Hours**__", inline=False)
