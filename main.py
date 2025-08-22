@@ -38,12 +38,13 @@ class ModBot(commands.Bot):
             status=discord.Status.online
         )
 
-        # Sync slash commands
+        # ✅ Sync slash commands here (inside the class method)
         try:
             synced = await self.tree.sync()
             logger.info(f"✅ Synced {len(synced)} slash commands")
         except Exception as e:
             logger.error(f"❌ Failed to sync commands: {e}")
+
         
 
     async def on_command_error(self, ctx, error):
