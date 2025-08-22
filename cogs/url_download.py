@@ -58,14 +58,27 @@ class ProgressHook:
             except:
                 return
 
+            # progress bar with 🟩⬛
             bar_step = math.floor(percent_float / 10)
-            bar = "█" * bar_step + "░" * (10 - bar_step)
+            bar = "🟩" * bar_step + "⬛" * (10 - bar_step)
+
+            # progress messages
+            if percent_float < 25:
+                msg = "Starting download..."
+            elif percent_float < 50:
+                msg = "Still downloading..."
+            elif percent_float < 75:
+                msg = "More than halfway!"
+            elif percent_float < 100:
+                msg = "Almost done..."
+            else:
+                msg = "Finalizing..."
 
             now = time.time()
             if now - self.last_update > 1:
                 self.last_update = now
                 await self.message.edit(
-                    content=f"⬇️ Downloading... {percent_float:.1f}%\n`{bar}`"
+                    content=f"⬇️ {msg}\n{percent_float:.1f}%\n`{bar}`"
                 )
 
         elif d['status'] == 'finished':
@@ -83,7 +96,8 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
 
     try:
         ydl_opts = {
-            "format": "mp4/bv*+ba/bestvideo+bestaudio/best",
+            "format": "bestvideo+bestaudio/best",
+            "merge_output_format": "mp4",
             "outtmpl": os.path.join(DOWNLOADS_DIR, "%(title).200s.%(ext)s"),
             "noplaylist": True,
             "quiet": True,
@@ -107,7 +121,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             lambda d: asyncio.run_coroutine_threadsafe(hook.update(d), bot.loop)
         ]
 
-        await status_msg.edit(content="⬇️ Downloading... 0.0%\n`░░░░░░░░░░`")
+        await status_msg.edit(content="⬇️ Starting download...\n0.0%\n`⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛`")
 
         def run_download():
             with yt_dlp.YoutubeDL(ydl_opts) as y:
@@ -143,7 +157,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             )
             link = await upload_external(filename)
             if link:
-                embed.add_field(name="🔗 External Link", value=link, inline=False)
+                embed.add_field(name="🔗 Direct Download", value=f"[Click here]({link})", inline=False)
                 if is_slash:
                     await interaction_or_ctx.followup.send(embed=embed)
                 else:
@@ -174,3 +188,10 @@ class URLDownload(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(URLDownload(bot))
+
+
+# ✅ Auto-sync slash commands
+@commands.Cog.listener()
+async def on_ready(self):
+    await self.bot.tree.sync()
+    print(f"✅ Synced slash commands. Logged in as {self.bot.user}")
