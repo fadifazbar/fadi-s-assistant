@@ -1,5 +1,6 @@
 import os
 import json
+import base64
 import threading
 import subprocess
 import time
@@ -13,35 +14,31 @@ from googleapiclient.http import MediaFileUpload
 # Config / Env
 # =========================
 FOLDER_ID = os.environ.get("FOLDER_ID")
-SERVICE_JSON = os.environ.get("SERVICE_JSON")  # Your service account JSON as base64 or raw JSON
+SERVICE_JSON = os.environ.get("SERVICE_JSON")  # Base64 encoded service account JSON
 
 if not SERVICE_JSON:
     raise ValueError("SERVICE_JSON environment variable is not set!")
 
-def _load_service_json(value: str) -> dict:
-    data = None
-    try:
-        data = json.loads(value)
-    except Exception:
-        import base64
-        try:
-            decoded = base64.b64decode(value).decode("utf-8")
-            data = json.loads(decoded)
-        except Exception as e:
-            raise ValueError(f"SERVICE_JSON is neither valid JSON nor valid base64 JSON: {e}")
-    # fix escaped newlines
-    pk = data.get("private_key")
-    if isinstance(pk, str) and "\\n" in pk:
-        data["private_key"] = pk.replace("\\n", "\n")
-    return data
-
-service_account_info = _load_service_json(SERVICE_JSON)
-
 # =========================
 # Google Drive client (Service Account)
 # =========================
-credentials = service_account.Credentials.from_service_account_info(service_account_info)
-drive_service = build("drive", "v3", credentials=credentials)
+SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+
+def load_service_account_info(value: str):
+    try:
+        # Try parsing raw JSON first
+        return json.loads(value)
+    except json.JSONDecodeError:
+        # If fails, try base64 decode
+        try:
+            decoded = base64.b64decode(value).decode("utf-8")
+            return json.loads(decoded)
+        except Exception as e:
+            raise ValueError(f"SERVICE_JSON is neither valid JSON nor valid base64 JSON: {e}")
+
+service_account_info = load_service_account_info(SERVICE_JSON)
+creds = service_account.Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+drive_service = build("drive", "v3", credentials=creds)
 
 # =========================
 # Upload / Delete functions
@@ -68,14 +65,18 @@ def delete_from_drive(file_id: str):
     drive_service.files().delete(fileId=file_id).execute()
 
 def delete_after_48h(file_id: str):
+    """
+    Schedules a Google Drive file to be deleted after 48 hours.
+    """
     def _worker():
         print(f"[server] ⏳ File {file_id} scheduled for deletion in 48h")
-        time.sleep(48 * 3600)
+        time.sleep(48 * 3600)  # wait 48 hours
         try:
             delete_from_drive(file_id)
             print(f"[server] ✅ File {file_id} deleted after 48h")
         except Exception as e:
             print(f"[server] ❌ Failed to delete {file_id}: {e}")
+
     threading.Thread(target=_worker, daemon=True).start()
 
 # =========================
@@ -109,10 +110,15 @@ def _start_bot():
     proc = subprocess.Popen(["python", "main.py"])
     return proc
 
+# =========================
+# Main
+# =========================
 if __name__ == "__main__":
+    # Start health server
     t = threading.Thread(target=_start_health_server, daemon=True)
     t.start()
 
+    # Start bot
     bot_proc = _start_bot()
     exit_code = bot_proc.wait()
     print(f"[server] main.py exited with code {exit_code}")
