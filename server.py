@@ -14,14 +14,15 @@ os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
-    """Save file into downloads/ and return its public URL"""
+    """Save file into downloads/ and return its direct download URL"""
     file_path = os.path.join(DOWNLOADS_DIR, file.filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
     base_url = os.environ.get("RAILWAY_STATIC_URL", "localhost:8080")
     return {
-        "file_url": f"https://{base_url}/files/{file.filename}"
+        # ✅ return /download instead of /files
+        "file_url": f"https://{base_url}/download/{file.filename}"
     }
 
 @app.get("/download/{filename}")
@@ -33,7 +34,7 @@ async def download_file(filename: str):
     return FileResponse(
         file_path,
         filename=filename,
-        media_type="application/octet-stream",  # forces "Save As"
+        media_type="application/octet-stream",  # forces browser download
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
