@@ -3,6 +3,7 @@ import json
 import threading
 import subprocess
 import time
+import base64
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -12,44 +13,27 @@ from googleapiclient.http import MediaFileUpload
 # Config / Env
 # =========================
 FOLDER_ID = os.environ.get("FOLDER_ID")
-SERVICE_JSON = os.environ.get("SERVICE_JSON")
+SERVICE_JSON_B64 = os.environ.get("SERVICE_JSON_B64")
 
-if not SERVICE_JSON:
-    raise ValueError("SERVICE_JSON environment variable is not set!")
-
-print("[debug] SERVICE_JSON first 100 chars:\n", SERVICE_JSON[:100])
-
-# Replace escaped \n with actual newlines
-fixed_json = SERVICE_JSON.replace("\\n", "\n")
+if not SERVICE_JSON_B64:
+    raise ValueError("SERVICE_JSON_B64 environment variable is not set!")
 
 try:
-    service_account_info = json.loads(fixed_json)
-    print("[debug] ✅ JSON parsed successfully")
+    decoded_json = base64.b64decode(SERVICE_JSON_B64).decode("utf-8")
+    service_account_info = json.loads(decoded_json)
+    print("[debug] ✅ Service account JSON decoded & parsed")
 except Exception as e:
-    print("[error] ❌ JSON parse failed:", e)
+    print("[error] ❌ Failed to decode/parse service account JSON:", e)
     raise
 
 # =========================
 # Google Drive client (Service Account)
 # =========================
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
-
-try:
-    creds = service_account.Credentials.from_service_account_info(
-        service_account_info, scopes=SCOPES
-    )
-    print("[debug] ✅ Credentials created")
-except Exception as e:
-    print("[error] ❌ Credential creation failed:", e)
-    raise
-
-try:
-    drive_service = build("drive", "v3", credentials=creds)
-    print("[debug] ✅ Drive service created")
-except Exception as e:
-    print("[error] ❌ Drive service creation failed:", e)
-    raise
-
+creds = service_account.Credentials.from_service_account_info(
+    service_account_info, scopes=SCOPES
+)
+drive_service = build("drive", "v3", credentials=creds)
 
 # Upload / Delete functions
 # =========================
@@ -60,7 +44,6 @@ def upload_to_drive(file_path: str):
     if FOLDER_ID:
         metadata["parents"] = [FOLDER_ID]
 
-    print(f"[upload] Uploading {file_name} ...")
     file = drive_service.files().create(body=metadata, media_body=media, fields="id").execute()
     file_id = file.get("id")
 
@@ -70,7 +53,6 @@ def upload_to_drive(file_path: str):
     ).execute()
 
     link = f"https://drive.google.com/uc?export=download&id={file_id}"
-    print(f"[upload] ✅ Uploaded {file_name}, id={file_id}")
     return link, file_id
 
 def delete_from_drive(file_id: str):
