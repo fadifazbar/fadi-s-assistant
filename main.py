@@ -39,12 +39,8 @@ class ModBot(commands.Bot):
         await self.load_extension("cogs.music")
         await self.load_extension("cogs.url_download")
 
-        # 🔄 Auto-sync slash commands globally
-        try:
-            synced = await self.tree.sync()
-            logger.info(f"✅ Synced {len(synced)} commands globally")
-        except Exception as e:
-            logger.error(f"❌ Failed to sync commands: {e}")
+        # ⚠️ Removed auto-sync to avoid rate limits
+        logger.info("✅ Loaded cogs (skipping slash command sync)")
 
     async def on_ready(self):
         """Called when the bot is ready"""
