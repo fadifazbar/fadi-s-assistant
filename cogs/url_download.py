@@ -85,6 +85,7 @@ async def handle_download(interaction_or_ctx, url: str, is_slash: bool, bot: com
     ydl_opts = {
         "format": "bv*+ba/bestvideo+bestaudio/best",
         "outtmpl": os.path.join(DOWNLOADS_DIR, "%(title).200s.%(ext)s"),
+        "restrictfilenames": True,  # 👈 ensures safe filenames
         "noplaylist": True,
         "quiet": True,
         "no_warnings": True,
@@ -98,6 +99,8 @@ async def handle_download(interaction_or_ctx, url: str, is_slash: bool, bot: com
             duration_str = time.strftime("%H:%M:%S", time.gmtime(duration))
             quality = info.get("format_note", "unknown")
             filename = ydl.prepare_filename(info)
+
+            filename = os.path.abspath(filename)  # normalize path
 
         # Progress
         progress = ProgressHook(status_msg, bot)
