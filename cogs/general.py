@@ -144,7 +144,14 @@ class General(commands.Cog):
             "saychecklogs": ("💬 SayCheckLogs", f"`{Config.PREFIX}saychecklogs` or `/saychecklogs`\nChecks which channel have the say command logs"),
             "serverinfo": ("❓ ServerInfo", f"`{Config.PREFIX}serverinfo` or `/serverinfo`\nCheck info about the server"),
             "coinflip": ("💲 CoinFlip", f"`{Config.PREFIX}coinflip` or `/coinflip`\nFlips a coin and gives a head or tails!\n"),
-            "userinfo": ("🎭 UserInfo", f"`{Config.PREFIX}userinfo <member>` or `/userinfo`\nShows some information about a user\n")
+            "userinfo": ("🎭 UserInfo", f"`{Config.PREFIX}userinfo <member>` or `/userinfo`\nShows some information about a user\n"),
+            "banner": ("🖼 Banner", f"`{Config.PREFIX}banner <member>` or `/banner`\nShows a user's Banner\n"),
+            "urldownload": ("🔗 UrlDownload", f"`{Config.PREFIX}urldownload <url>` or `/urldownload`\nDownloads a video with a link\n"),
+            "nick": ("🎨 Nick", f"`{Config.PREFIX}nick <member>` or `/nick`\nChanges a user's nickname\n"),
+            "resetnick": ("🎨 ResetNick", f"`{Config.PREFIX}resetnick <member>` or `/resetnick`\nResets a user's nickname\n"),
+            "slowmode": ("🐌 Slowmode", f"`{Config.PREFIX}slowmode <seconds>` or `/slowmode`\nSet's a channel's slowmode\n"),
+            "lock": ("🔒 Lock", f"`{Config.PREFIX}lock <channel>` or `/lock`\nLocks a channel\n"),
+            "unlock": ("🔒 Unlock", f"`{Config.PREFIX}unlock <channel>` or `/unlock`\nUnlocks a channel")
         }
 
         # --- Show specific command help ---
@@ -178,7 +185,12 @@ class General(commands.Cog):
                     f"`{Config.PREFIX}rolecolor` - Change a color of a role with hex or color name\n"
                     f"`{Config.PREFIX}rolecolors` - Shows you a list of all the available colors\n"
                     f"`{Config.PREFIX}reactionrole` - Adds a reaction role to a message\n"
-                    f"`{Config.PREFIX}saychecklogs` - Checks for the say command logging channel"
+                    f"`{Config.PREFIX}saychecklogs` - Checks for the say command logging channel\n"
+                    f"`{Config.PREFIX}nick` - Changes a user's nickname\n"
+                    f"`{Config.PREFIX}resetnick` - Resets a user's nick to default\n"
+                    f"`{Config.PREFIX}slowmode` - Set a slowmode for a channel\n"
+                    f"`{Config.PREFIX}lock` - Locks a channel\n"
+                    f"`{Config.PREFIX}unlock` - Unlocks a channel"
                 ),
                 inline=True
             )
@@ -200,8 +212,10 @@ class General(commands.Cog):
                     f"`{Config.PREFIX}kiss` - Kiss a member\n"
                     f"`{Config.PREFIX}tictactoe` - Challenge another user to TicTacToe (XO)\n"
                     f"`{Config.PREFIX}serverinfo` - View the whole server info. like members/bots/boosts/etc.\n"
-                    f"`{Config.PREFIX}coinflip` - Flip a coin to get heads or tails"
-                    f"`{Config.PREFIX}userinfo` - Check some information about a user"
+                    f"`{Config.PREFIX}coinflip` - Flip a coin to get heads or tails\n"
+                    f"`{Config.PREFIX}userinfo` - Check some information about a user\n"
+                    f"`{Config.PREFIX}banner` - Check a user's banner\n"
+                    f"`{Config.PREFIX}urldownload` - Download a video using a url"
                 ),
                 inline=True
             )
