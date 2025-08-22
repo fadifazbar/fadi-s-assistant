@@ -166,27 +166,17 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
                         "key": "FFmpegExtractAudio",
                         "preferredcodec": "mp3",
                         "preferredquality": br
-                    }],
-                    "postprocessor_hooks": [lambda d: print(f"POST: {d}")]
+                    }]
                 }
 
                 if os.path.exists(filename):
                     os.remove(filename)
 
                 def download_audio():
-                    try:
-                        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                            ydl.download([url])
-                    except Exception:
-                        pass
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        ydl.download([url])
 
                 await asyncio.to_thread(download_audio)
-
-                # 🔹 Wait for FFmpeg to finish and file to be written
-                for _ in range(20):  # up to ~10 seconds
-                    if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                        break
-                    await asyncio.sleep(0.5)
 
                 if os.path.exists(filename) and os.path.getsize(filename) > 0:
                     file_size = os.path.getsize(filename)
@@ -196,8 +186,6 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
                     if file_size <= MAX_DISCORD_FILESIZE:
                         downloaded = True
                         break
-
-        elapsed = time.time() - start_time
 
 
         if not downloaded:
