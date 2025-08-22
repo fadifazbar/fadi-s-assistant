@@ -417,7 +417,7 @@ class Music(commands.Cog):
 
 
 
-        async def _handle_unplay(self, guild: discord.Guild, channel: discord.TextChannel, user: discord.Member, query: str):
+    async def _handle_unplay(self, guild: discord.Guild, channel: discord.TextChannel, user: discord.Member, query: str):
         """Remove a track from the queue (by search or URL)."""
         player = self.get_player(guild.id)
         if not player or not player.queue:
