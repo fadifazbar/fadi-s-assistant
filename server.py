@@ -1,65 +1,40 @@
-import os
-import time
-from fastapi import FastAPI, UploadFile, File, Request
-from fastapi.responses import FileResponse, JSONResponse
-from pathlib import Path
-import shutil
 import asyncio
+import os
+import shutil
 import uvicorn
-from contextlib import asynccontextmanager
+from fastapi import FastAPI, UploadFile, File
+from main import main as bot_main
 
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
+app = FastAPI()
 
-MAX_FILE_AGE = 48 * 3600  # 48 hours in seconds
-
-
-async def cleanup_old_files():
-    """Delete files older than 48 hours."""
-    while True:
-        now = time.time()
-        for file in UPLOAD_DIR.iterdir():
-            if file.is_file():
-                if now - file.stat().st_mtime > MAX_FILE_AGE:
-                    try:
-                        file.unlink()
-                        print(f"🗑️ Deleted old file: {file}")
-                    except Exception as e:
-                        print(f"⚠️ Error deleting {file}: {e}")
-        await asyncio.sleep(3600)  # Run cleanup every 1 hour
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    asyncio.create_task(cleanup_old_files())
-    yield
-    # Shutdown (nothing needed here, but you could cancel tasks if wanted)
-
-
-app = FastAPI(lifespan=lifespan)
-
+# Make sure downloads folder exists
+os.makedirs("downloads", exist_ok=True)
 
 @app.post("/upload")
-async def upload_file(request: Request, file: UploadFile = File(...)):
-    """Save uploaded file and return public URL."""
-    file_path = UPLOAD_DIR / file.filename
-    with open(file_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+async def upload_file(file: UploadFile = File(...)):
+    """Save file into downloads/ and return its public URL"""
+    file_path = os.path.join("downloads", file.filename)
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return {
+        "file_url": f"https://{os.environ.get('RAILWAY_STATIC_URL')}/downloads/{file.filename}"
+    }
 
-    base_url = str(request.base_url).rstrip("/")
-    return {"file_url": f"{base_url}/files/{file.filename}"}
+async def start_fastapi():
+    """Run FastAPI inside asyncio"""
+    config = uvicorn.Config(app=app, host="0.0.0.0", port=8080, log_level="info")
+    server = uvicorn.Server(config)
+    await server.serve()
 
-
-@app.get("/files/{filename}")
-async def get_file(filename: str):
-    """Serve uploaded file."""
-    file_path = UPLOAD_DIR / filename
-    if not file_path.exists():
-        return JSONResponse({"error": "File not found"}, status_code=404)
-    return FileResponse(file_path)
-
+async def main():
+    """Run Discord bot and FastAPI at same time"""
+    await asyncio.gather(
+        bot_main(),       # your Discord bot
+        start_fastapi()   # FastAPI server
+    )
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("server:app", host="0.0.0.0", port=port, reload=False)
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Shutting down...")
