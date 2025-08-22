@@ -182,7 +182,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
             await status_msg.edit(embed=discord.Embed(
                 title="❌ File Too Large",
                 description=f"⛔ Cannot download. File size: {sizeof_fmt(final_size)}\n"
-                            "**✨ Solution (If You Want):\n**"
+                            "# **✨ Solution (If You Want):\n**"
                             "🤩 You can download it manually: https://www.ytmp3.as/",
                 color=discord.Color.red()
             ))
