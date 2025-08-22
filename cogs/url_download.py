@@ -51,15 +51,16 @@ class ProgressHook:
             except:
                 return
 
+            # progress bar
             bar_step = math.floor(percent_float / 10)
             bar = "🟩" * bar_step + "⬛" * (10 - bar_step)
 
             now = time.time()
-            if now - self.last_update > 1:
+            if now - self.last_update > 0.5:  # update every 0.5s
                 self.last_update = now
                 asyncio.run_coroutine_threadsafe(
                     self.message.edit(
-                        content=f"⬇️ Downloading... {percent_float:.1f}%/100%\n{bar}"
+                        content=f"⬇️ Downloading... {percent_float:.1f}%\n{bar}"
                     ),
                     self.bot.loop
                 )
@@ -70,8 +71,7 @@ class ProgressHook:
                 self.bot.loop
             )
 
-
-async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
+async def handle_download(interaction_or_ctx, url: str, is_slash: bool, bot: commands.Bot):
     """Shared logic for both slash + prefix command."""
     start_time = time.time()
 
@@ -99,7 +99,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             quality = info.get("format_note", "unknown")
             filename = ydl.prepare_filename(info)
 
-        # Progress hook (now gets `bot` properly)
+        # Progress
         progress = ProgressHook(status_msg, bot)
         ydl_opts["progress_hooks"] = [progress.hook]
 
@@ -137,7 +137,8 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             link = await upload_external(filename)
 
             if link:
-                embed.add_field(name="🔗 External Link", value=link, inline=False)
+                direct_link = link + "?download=1"  # force download
+                embed.add_field(name="🔗 External Link", value=f"[Click here to download]({direct_link})", inline=False)
                 if is_slash:
                     await interaction_or_ctx.followup.send(embed=embed)
                 else:
@@ -162,12 +163,12 @@ class URLDownload(commands.Cog):
     # Slash command
     @app_commands.command(name="urldownload", description="Download a video from a URL")
     async def urldownload(self, interaction: discord.Interaction, url: str):
-        await handle_download(self.bot, interaction, url, is_slash=True)
+        await handle_download(interaction, url, is_slash=True, bot=self.bot)
 
     # Prefix command
     @commands.command(name="urldownload")
     async def urldownload_prefix(self, ctx: commands.Context, url: str):
-        await handle_download(self.bot, ctx, url, is_slash=False)
+        await handle_download(ctx, url, is_slash=False, bot=self.bot)
 
 async def setup(bot):
     await bot.add_cog(URLDownload(bot))
