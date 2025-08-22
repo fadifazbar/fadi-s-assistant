@@ -415,6 +415,28 @@ class Music(commands.Cog):
 
         await self._start_if_idle(guild, text_channel)
 
+
+
+        async def _handle_unplay(self, guild: discord.Guild, channel: discord.TextChannel, user: discord.Member, query: str):
+        """Remove a track from the queue (by search or URL)."""
+        player = self.get_player(guild.id)
+        if not player or not player.queue:
+            return await channel.send("❌ The queue is empty.")
+
+        # Try to match by URL or search terms
+        removed = None
+        for track in list(player.queue):  # make a copy so we can remove
+            if query.lower() in track.title.lower() or query in getattr(track, "url", ""):
+                player.queue.remove(track)
+                removed = track
+                break
+
+        if removed:
+            await channel.send(f"🗑️ Removed **{removed.title}** from the queue.")
+        else:
+            await channel.send("❌ Could not find a matching track in the queue.")
+
+
     # =========================
     # PREFIX COMMANDS (classic)
     # =========================
@@ -427,14 +449,9 @@ class Music(commands.Cog):
 
     @commands.command(name="unplay", help="Remove a song from the queue by name or URL")
     async def unplay_prefix(self, ctx: commands.Context, *, query: str):
-        if not query:
-            return await ctx.send("❌ You must provide the name or URL of the song to remove.")
-        removed = await self._handle_unplay(ctx.guild, query)
-        if removed:
-            await ctx.send(f"🗑️ Removed **{removed}** from the queue.")
-        else:
-            await ctx.send("⚠️ Song not found in the queue.")
-
+        if not ctx.author.voice or not ctx.author.voice.channel:
+            return await ctx.send("❌ You must be in a voice channel.")
+        await self._handle_unplay(ctx.guild, ctx.channel, ctx.author, query)
 
     @commands.command(name="queue", help="Show the current queue (with buttons).")
     async def queue_prefix(self, ctx: commands.Context):
@@ -522,22 +539,16 @@ class Music(commands.Cog):
             pass
 
     @app_commands.command(name="unplay", description="Remove a song from the queue by name or URL")
-    @app_commands.describe(query="Name or URL of the song to remove")
+    @app_commands.describe(query="The song name or URL to remove from the queue")
     async def unplay_slash(self, interaction: discord.Interaction, query: str):
-        if not query:
-            return await interaction.response.send_message("❌ You must provide the name or URL of the song to remove.", ephemeral=True)
+        if not interaction.user or not isinstance(interaction.user, discord.Member) or not interaction.user.voice:
+            return await interaction.response.send_message("❌ You must be in a voice channel.", ephemeral=True)
         await interaction.response.defer(thinking=True)
-        removed = await self._handle_unplay(interaction.guild, query)
-        if removed:
-            await interaction.followup.send(f"🗑️ Removed **{removed}** from the queue.")
-        else:
-            await interaction.followup.send("⚠️ Song not found in the queue.")
-
-
-    @app_commands.command(name="queue", description="Show the current queue (with buttons).")
-    async def queue_slash(self, interaction: discord.Interaction):
-        view = QueueView(self, interaction.guild.id, interaction.user)
-        await interaction.response.send_message(embed=view.format_page(), view=view)
+        await self._handle_unplay(interaction.guild, interaction.channel, interaction.user, query)
+        try:
+            await interaction.followup.send("✅ Done.")
+        except discord.HTTPException:
+            pass
 
     @app_commands.command(name="skip", description="Skip the current song.")
     async def skip_slash(self, interaction: discord.Interaction):
