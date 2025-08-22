@@ -5,8 +5,7 @@ import subprocess
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
@@ -14,29 +13,35 @@ from googleapiclient.http import MediaFileUpload
 # Config / Env
 # =========================
 FOLDER_ID = os.environ.get("FOLDER_ID")
-CLIENT_SECRET_FILE = os.environ.get("CLIENT_SECRET_FILE")  # Path to downloaded OAuth JSON
-TOKEN_FILE = os.environ.get("TOKEN_FILE", "token.json")  # Will store OAuth token
+SERVICE_JSON = os.environ.get("SERVICE_JSON")  # Your service account JSON as base64 or raw JSON
 
-if not CLIENT_SECRET_FILE:
-    raise ValueError("CLIENT_SECRET_FILE environment variable is not set!")
+if not SERVICE_JSON:
+    raise ValueError("SERVICE_JSON environment variable is not set!")
+
+def _load_service_json(value: str) -> dict:
+    data = None
+    try:
+        data = json.loads(value)
+    except Exception:
+        import base64
+        try:
+            decoded = base64.b64decode(value).decode("utf-8")
+            data = json.loads(decoded)
+        except Exception as e:
+            raise ValueError(f"SERVICE_JSON is neither valid JSON nor valid base64 JSON: {e}")
+    # fix escaped newlines
+    pk = data.get("private_key")
+    if isinstance(pk, str) and "\\n" in pk:
+        data["private_key"] = pk.replace("\\n", "\n")
+    return data
+
+service_account_info = _load_service_json(SERVICE_JSON)
 
 # =========================
-# Google Drive client (OAuth)
+# Google Drive client (Service Account)
 # =========================
-SCOPES = ["https://www.googleapis.com/auth/drive.file"]
-
-creds = None
-if os.path.exists(TOKEN_FILE):
-    creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
-
-if not creds or not creds.valid:
-    flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRET_FILE, SCOPES)
-    creds = flow.run_local_server(port=0)
-    # Save the credentials for next run
-    with open(TOKEN_FILE, "w") as f:
-        f.write(creds.to_json())
-
-drive_service = build("drive", "v3", credentials=creds)
+credentials = service_account.Credentials.from_service_account_info(service_account_info)
+drive_service = build("drive", "v3", credentials=credentials)
 
 # =========================
 # Upload / Delete functions
@@ -63,18 +68,14 @@ def delete_from_drive(file_id: str):
     drive_service.files().delete(fileId=file_id).execute()
 
 def delete_after_48h(file_id: str):
-    """
-    Schedules a Google Drive file to be deleted after 48 hours.
-    """
     def _worker():
         print(f"[server] ⏳ File {file_id} scheduled for deletion in 48h")
-        time.sleep(48 * 3600)  # wait 48 hours
+        time.sleep(48 * 3600)
         try:
             delete_from_drive(file_id)
             print(f"[server] ✅ File {file_id} deleted after 48h")
         except Exception as e:
             print(f"[server] ❌ Failed to delete {file_id}: {e}")
-
     threading.Thread(target=_worker, daemon=True).start()
 
 # =========================
