@@ -168,8 +168,11 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
                     os.remove(filename)
 
                 def download_audio():
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                        ydl.download([url])
+                    try:
+                        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                            ydl.download([url])
+                    except Exception:
+                        pass  # if one bitrate fails, try the next
 
                 await asyncio.to_thread(download_audio)
 
@@ -183,6 +186,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, download_type: str,
                     else:
                         final_size = file_size
                         final_quality = f"Audio MP3 ({br}kbps)"
+
 
         elapsed = time.time() - start_time
 
