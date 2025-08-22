@@ -45,12 +45,13 @@ async def upload_external(file_path: str):
 
 
 class ProgressHook:
-    def __init__(self, message: discord.Message, bot: commands.Bot):
+    def __init__(self, message: discord.Message, loop: asyncio.AbstractEventLoop):
         self.message = message
-        self.bot = bot
+        self.loop = loop
         self.last_update = 0
 
-    async def update(self, d):
+    def update(self, d):
+        """This gets called from yt-dlp's thread. We schedule onto bot's loop."""
         if d['status'] == 'downloading':
             percent = d.get("_percent_str", "").strip().replace("%", "")
             try:
@@ -75,14 +76,20 @@ class ProgressHook:
                 msg = "Finalizing..."
 
             now = time.time()
-            if now - self.last_update > 1:
+            if now - self.last_update > 1:  # update once per second
                 self.last_update = now
-                await self.message.edit(
-                    content=f"⬇️ {msg}\n{percent_float:.1f}%\n`{bar}`"
+                asyncio.run_coroutine_threadsafe(
+                    self.message.edit(
+                        content=f"⬇️ {msg}\n{percent_float:.1f}%\n`{bar}`"
+                    ),
+                    self.loop
                 )
 
         elif d['status'] == 'finished':
-            await self.message.edit(content="📦 Merging & Finalizing...")
+            asyncio.run_coroutine_threadsafe(
+                self.message.edit(content="📦 Merging & Finalizing..."),
+                self.loop
+            )
 
 
 async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
@@ -116,10 +123,10 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             safe_name = clean_filename(title) + ".mp4"
             filename = os.path.join(DOWNLOADS_DIR, safe_name)
 
-        hook = ProgressHook(status_msg, bot)
-        ydl_opts["progress_hooks"] = [
-            lambda d: asyncio.run_coroutine_threadsafe(hook.update(d), bot.loop)
-        ]
+        # Progress hook with event loop reference
+        loop = asyncio.get_running_loop()
+        hook = ProgressHook(status_msg, loop)
+        ydl_opts["progress_hooks"] = [hook.update]
 
         await status_msg.edit(content="⬇️ Starting download...\n0.0%\n`⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛`")
 
@@ -189,9 +196,11 @@ class URLDownload(commands.Cog):
 async def setup(bot):
     await bot.add_cog(URLDownload(bot))
 
-
-# ✅ Auto-sync slash commands
-@commands.Cog.listener()
-async def on_ready(self):
-    await self.bot.tree.sync()
-    print(f"✅ Synced slash commands. Logged in as {self.bot.user}")
+    # ✅ Auto-sync slash commands when cog loads
+    @bot.event
+    async def on_ready():
+        try:
+            await bot.tree.sync()
+            print(f"✅ Synced slash commands. Logged in as {bot.user}")
+        except Exception as e:
+            print(f"❌ Failed to sync commands: {e}")
