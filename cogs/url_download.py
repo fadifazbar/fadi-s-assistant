@@ -2,14 +2,15 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import yt_dlp
-import aiohttp
 import os
 import time
 import asyncio
 import math
 import re
 
-EXTERNAL_HOST = "https://fadi-s-assistant-production.up.railway.app"
+# ✅ Import uploader + deleter from server.py
+from server import upload_to_drive, delete_from_drive  
+
 MAX_DISCORD_FILESIZE = 8 * 1024 * 1024  # 8MB
 DOWNLOADS_DIR = "downloads"
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
@@ -28,20 +29,6 @@ def sizeof_fmt(num, suffix="B"):
             return f"{num:.1f}{unit}{suffix}"
         num /= 1024.0
     return f"{num:.1f}T{suffix}"
-
-
-async def upload_external(file_path: str):
-    """Upload file to external hosting and return link."""
-    upload_url = f"{EXTERNAL_HOST}/upload"
-    async with aiohttp.ClientSession() as session:
-        with open(file_path, "rb") as f:
-            data = aiohttp.FormData()
-            data.add_field("file", f, filename=os.path.basename(file_path))
-            async with session.post(upload_url, data=data) as resp:
-                if resp.status == 200:
-                    res = await resp.json()
-                    return res.get("file_url")
-                return None
 
 
 class ProgressHook:
@@ -92,6 +79,15 @@ class ProgressHook:
             )
 
 
+async def delete_after_48h(file_id: str):
+    """Wait 48 hours then delete file from Google Drive"""
+    await asyncio.sleep(48 * 3600)  # 48h in seconds
+    try:
+        delete_from_drive(file_id)
+    except Exception as e:
+        print(f"[!] Failed to delete file {file_id}: {e}")
+
+
 async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
     start_time = time.time()
 
@@ -119,7 +115,6 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             quality = info.get("format_note", "unknown")
 
             raw_filename = ydl.prepare_filename(info)
-            base, ext = os.path.splitext(raw_filename)
             safe_name = clean_filename(title) + ".mp4"
             filename = os.path.join(DOWNLOADS_DIR, safe_name)
 
@@ -160,15 +155,19 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
         else:
             await status_msg.edit(
                 content=f"⚠️ File too large for Discord ({sizeof_fmt(file_size)}).\n"
-                        f"🔗 Uploading to external hosting..."
+                        f"🔗 Uploading to Google Drive..."
             )
-            link = await upload_external(filename)
+            link, file_id = upload_to_drive(filename)  # ✅ upload + return link + file_id
             if link:
                 embed.add_field(name="🔗 Direct Download", value=f"[Click here]({link})", inline=False)
+                embed.add_field(name="🗑️ Note", value="This file will be deleted after __**48 Hours**__", inline=False)
                 if is_slash:
                     await interaction_or_ctx.followup.send(embed=embed)
                 else:
                     await interaction_or_ctx.send(embed=embed)
+
+                # schedule deletion after 48h
+                asyncio.create_task(delete_after_48h(file_id))
             else:
                 await status_msg.edit(content="❌ Upload failed. Please try again later.")
 
