@@ -115,6 +115,15 @@ def _is_youtube_playlist_url(url: str) -> bool:
 # ==============
 LoopMode = Literal["off", "one", "all"]
 
+def _progress_bar_emoji(current: int, total: Optional[int], length: int = 20) -> str:
+    """Returns a progress bar using red and black squares."""
+    if total is None or total == 0:
+        return "🟥 LIVE"
+    current = max(0, min(current, total))
+    filled_length = int(length * current / total)
+    bar = "🟥" * filled_length + "⬛" * (length - filled_length)
+    return bar
+
 def _entry_to_track(entry: dict, requester) -> Optional[Track]:
     """Converts a YouTube (or other) entry dict into a playable Track object."""
     if not entry:
@@ -295,13 +304,15 @@ class Music(commands.Cog):
         self.idle_tasks[guild.id] = self.bot.loop.create_task(_idle_task())
 
     # ------------- embeds -------------
+
     async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
-        dur = track.pretty_duration()
-        bar = _progress_bar(0, track.duration)
+    """Send a now playing embed that updates with elapsed time and progress bar."""
+    if track.duration is None:
+        # For live or unknown-duration tracks
         embed = discord.Embed(
             title="🎶 Now Playing",
-            description=f"[{track.title}]({track.webpage_url})\n{bar}\n`0:00 / {dur}`",
-            color=discord.Color.green(),
+            description=f"[{track.title}]({track.webpage_url})\n🟥 LIVE",
+            color=discord.Color.green()
         )
         if track.thumbnail:
             embed.set_thumbnail(url=track.thumbnail)
@@ -310,22 +321,59 @@ class Music(commands.Cog):
         embed.add_field(
             name="Requested by",
             value=getattr(track.requester, "mention", str(track.requester)),
-            inline=True,
+            inline=True
         )
         await channel.send(embed=embed)
+        return
 
-    async def _announce_added(self, channel: discord.abc.Messageable, track: Track, pos: int):
-        embed = discord.Embed(
-            title="➕ Added to queue",
-            description=f"[{track.title}]({track.webpage_url})",
-            color=discord.Color.blurple(),
+    # Send initial embed
+    elapsed = 0
+    bar = _progress_bar_emoji(elapsed, track.duration)
+    embed = discord.Embed(
+        title="🎶 Now Playing",
+        description=f"[{track.title}]({track.webpage_url})\n{bar}\n`0:00 / {track.pretty_duration()}`",
+        color=discord.Color.green(),
+    )
+    if track.thumbnail:
+        embed.set_thumbnail(url=track.thumbnail)
+    if track.uploader:
+        embed.add_field(name="Channel", value=track.uploader, inline=True)
+    embed.add_field(
+        name="Requested by",
+        value=getattr(track.requester, "mention", str(track.requester)),
+        inline=True,
+    )
+
+    message = await channel.send(embed=embed)
+
+    # Live update loop
+    while elapsed < track.duration:
+        await asyncio.sleep(5)  # update every 5 seconds
+        elapsed += 5
+        if elapsed > track.duration:
+            elapsed = track.duration
+        bar = _progress_bar_emoji(elapsed, track.duration)
+        new_embed = discord.Embed(
+            title="🎶 Now Playing",
+            description=f"[{track.title}]({track.webpage_url})\n{bar}\n`{self._format_time(elapsed)} / {track.pretty_duration()}`",
+            color=discord.Color.green(),
         )
         if track.thumbnail:
-            embed.set_thumbnail(url=track.thumbnail)
-        if track.duration:
-            embed.add_field(name="Duration", value=track.pretty_duration(), inline=True)
-        embed.add_field(name="Position", value=str(pos), inline=True)
-        await channel.send(embed=embed)
+            new_embed.set_thumbnail(url=track.thumbnail)
+        if track.uploader:
+            new_embed.add_field(name="Channel", value=track.uploader, inline=True)
+        new_embed.add_field(
+            name="Requested by",
+            value=getattr(track.requester, "mention", str(track.requester)),
+            inline=True,
+        )
+        try:
+            await message.edit(embed=new_embed)
+        except discord.NotFound:
+            break  # message deleted
+        except discord.HTTPException:
+            continue  # skip if rate-limited
+
 
     # ------------- playback core -------------
     async def _start_if_idle(self, guild: discord.Guild, channel: discord.abc.Messageable):
@@ -379,95 +427,100 @@ class Music(commands.Cog):
     # ------------- play/queue logic -------------
     
     async def _handle_play_or_unplay(
-        self,
-        guild: discord.Guild,
-        text_channel: discord.abc.Messageable,
-        requester,
-        query: str,
-        action: str = "play"
-    ):
-        """Handles both play and unplay actions."""
-        if action == "play":
-            # existing play logic unchanged
-            try_single_search = not _looks_like_url(query)
-            use_flat_playlist = _is_youtube_playlist_url(query)
+    self,
+    guild: discord.Guild,
+    text_channel: discord.abc.Messageable,
+    requester,
+    query: str,
+    action: str = "play"
+):
+    """Handles both play and unplay actions."""
+    if action == "play":
+        # --- Play logic unchanged ---
+        try_single_search = not _looks_like_url(query)
+        use_flat_playlist = _is_youtube_playlist_url(query)
 
-            try:
-                if try_single_search:
-                    info = await _extract(f"ytsearch1:{query}", flat=False)
-                else:
-                    info = await _extract(query, flat=use_flat_playlist)
-            except Exception as e:
-                await text_channel.send(f"❌ Error: `{e}`")
-                return
-
-            if not info:
-                await text_channel.send("❌ No results.")
-                return
-
-            tracks_to_add: List[Track] = []
-
-            if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist" and "search" in (info.get("extractor_key", "")).lower():
-                entries = (info.get("entries") or [])[:1]
-                for entry in entries:
-                    t = _entry_to_track(entry, requester)
-                    if t:
-                        tracks_to_add.append(t)
-            elif "entries" in info:
-                for entry in info.get("entries") or []:
-                    t = _entry_to_track(entry, requester)
-                    if t:
-                        tracks_to_add.append(t)
+        try:
+            if try_single_search:
+                info = await _extract(f"ytsearch1:{query}", flat=False)
             else:
-                t = _entry_to_track(info, requester)
+                info = await _extract(query, flat=use_flat_playlist)
+        except Exception as e:
+            await text_channel.send(f"❌ Error: `{e}`")
+            return
+
+        if not info:
+            await text_channel.send("❌ No results.")
+            return
+
+        tracks_to_add: list[Track] = []
+
+        if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist" and "search" in (info.get("extractor_key", "")).lower():
+            entries = (info.get("entries") or [])[:1]
+            for entry in entries:
+                t = _entry_to_track(entry, requester)
                 if t:
                     tracks_to_add.append(t)
+        elif "entries" in info:
+            for entry in info.get("entries") or []:
+                t = _entry_to_track(entry, requester)
+                if t:
+                    tracks_to_add.append(t)
+        else:
+            t = _entry_to_track(info, requester)
+            if t:
+                tracks_to_add.append(t)
 
-            if not tracks_to_add:
-                await text_channel.send("⚠️ No playable videos found (deleted/private/unavailable).")
-                return
+        if not tracks_to_add:
+            await text_channel.send("⚠️ No playable videos found (deleted/private/unavailable).")
+            return
 
-            q = self._queue(guild.id)
-            start_len = len(q)
-            q.extend(tracks_to_add)
+        q = self._queue(guild.id)
+        start_len = len(q)
+        q.extend(tracks_to_add)
 
-            if len(tracks_to_add) == 1:
-                await self._announce_added(text_channel, tracks_to_add[0], start_len + 1)
+        if len(tracks_to_add) == 1:
+            await self._announce_added(text_channel, tracks_to_add[0], start_len + 1)
+        else:
+            title = info.get("title") or "playlist"
+            await text_channel.send(f"📑 Added **{len(tracks_to_add)}** tracks from **{title}**.")
+
+        await self._start_if_idle(guild, text_channel)
+
+    elif action == "unplay":
+        # Use your currents and queue instead of get_player
+        current_track = self.currents.get(guild.id)
+        q = self._queue(guild.id)
+
+        if not current_track and not q:
+            return await text_channel.send("❌ Nothing is playing or queued.")
+
+        removed = None
+
+        # Check current playing track first
+        if current_track and (query.lower() in current_track.title.lower() or query in getattr(current_track, "webpage_url", "")):
+            removed = current_track
+            vc = guild.voice_client
+            if vc and vc.is_playing():
+                vc.stop()  # stop current playback to remove it
+            self.currents[guild.id] = None
+
+        else:
+            # Otherwise search the queue
+            for track in list(q):
+                if query.lower() in track.title.lower() or query in getattr(track, "webpage_url", ""):
+                    q.remove(track)
+                    removed = track
+                    break
+
+        if removed:
+            if removed == current_track:
+                await text_channel.send(f"🛑 Stopped and removed currently playing track: **{removed.title}**.")
             else:
-                title = info.get("title") or "playlist"
-                await text_channel.send(f"📑 Added **{len(tracks_to_add)}** tracks from **{title}**.")
+                await text_channel.send(f"🗑️ Removed **{removed.title}** from the queue.")
+        else:
+            await text_channel.send("❌ Could not find a matching track in the queue or currently playing.")
 
-            await self._start_if_idle(guild, text_channel)
-
-        elif action == "unplay":
-            player = self.get_player(guild.id)
-            if not player or (not player.queue and not player.current):
-                return await text_channel.send("❌ Nothing is playing or queued.")
-
-            removed = None
-
-            # Check current playing track first
-            if player.current and (
-                query.lower() in player.current.title.lower()
-                or query in getattr(player.current, "url", "")
-            ):
-                removed = player.current
-                player.stop()  # this will trigger it to move on
-            else:
-                # Otherwise search the queue
-                for track in list(player.queue):
-                    if query.lower() in track.title.lower() or query in getattr(track, "url", ""):
-                        player.queue.remove(track)
-                        removed = track
-                        break
-
-            if removed:
-                if removed == player.current:
-                    await text_channel.send(f"🛑 Stopped and removed currently playing track: **{removed.title}**.")
-                else:
-                    await text_channel.send(f"🗑️ Removed **{removed.title}** from the queue.")
-            else:
-                await text_channel.send("❌ Could not find a matching track in the queue or currently playing.")
 
     # =========================
     # PREFIX COMMANDS (classic)
