@@ -29,7 +29,6 @@ def sizeof_fmt(num, suffix="B"):
 
 
 class ProgressHook:
-    """Handles yt-dlp progress updates"""
     def __init__(self, message: discord.Message, loop: asyncio.AbstractEventLoop):
         self.message = message
         self.loop = loop
@@ -42,16 +41,13 @@ class ProgressHook:
                 percent_float = float(percent)
             except:
                 return
-
             bar_step = math.floor(percent_float / 10)
             bar = "🟩" * bar_step + "⬛" * (10 - bar_step)
-
             msg = "Starting download..." if percent_float < 25 else \
                   "Still downloading..." if percent_float < 50 else \
                   "More than halfway!" if percent_float < 75 else \
                   "Almost done..." if percent_float < 100 else \
                   "Finalizing..."
-
             now = time.time()
             if now - self.last_update > 1:
                 self.last_update = now
@@ -68,71 +64,96 @@ class ProgressHook:
             )
 
 
-async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
+async def handle_download(bot, interaction_or_ctx, url: str, download_type: str, is_slash: bool):
     start_time = time.time()
     if is_slash:
         await interaction_or_ctx.response.defer(thinking=True)
-        status_msg = await interaction_or_ctx.followup.send("🔄 Fetching video...", wait=True)
+        status_msg = await interaction_or_ctx.followup.send("🔄 Fetching media...", wait=True)
     else:
-        status_msg = await interaction_or_ctx.reply("🔄 Fetching video...")
+        status_msg = await interaction_or_ctx.reply("🔄 Fetching media...")
 
     try:
         loop = asyncio.get_running_loop()
+        download_type = download_type.lower()
 
-        # Step 1: Probe video info
-        probe_opts = {"format": "bestvideo+bestaudio/best", "quiet": True, "no_warnings": True, "noplaylist": True}
+        # Step 1: Probe info
+        probe_opts = {"format": "bestaudio/best" if download_type == "mp3" else "bestvideo+bestaudio/best",
+                      "quiet": True, "no_warnings": True, "noplaylist": True}
         with yt_dlp.YoutubeDL(probe_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             title = info.get("title", "Unknown")
             duration = info.get("duration", 0)
             duration_str = time.strftime("%H:%M:%S", time.gmtime(duration))
 
-        safe_name = clean_filename(title) + ".mp4"
+        ext = "mp3" if download_type == "mp3" else "mp4"
+        safe_name = clean_filename(title) + f".{ext}"
         filename = os.path.join(DOWNLOADS_DIR, safe_name)
 
-        # Step 2: Try multiple qualities to fit 8MB
-        quality_options = [
-            "bestvideo+bestaudio/best",
-            "480p/best",
-            "360p/best",
-            "240p/best",
-            "worstvideo+bestaudio/worst"
-        ]
-        downloaded = False
-        final_size = 0
-        final_quality = ""
-
-        for fmt in quality_options:
+        # Step 2: Format options
+        if download_type == "mp3":
             ydl_opts = {
-                "format": fmt,
-                "merge_output_format": "mp4",
+                "format": "bestaudio/best",
                 "outtmpl": filename,
                 "noplaylist": True,
                 "quiet": True,
                 "no_warnings": True,
-                "progress_hooks": [ProgressHook(status_msg, loop).update]
+                "progress_hooks": [ProgressHook(status_msg, loop).update],
+                "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3"}]
             }
+        else:
+            quality_options = [
+                "bestvideo+bestaudio/best",
+                "480p/best",
+                "360p/best",
+                "240p/best",
+                "worstvideo+bestaudio/worst"
+            ]
+            downloaded = False
+            final_size = 0
+            final_quality = ""
+            for fmt in quality_options:
+                ydl_opts = {
+                    "format": fmt,
+                    "merge_output_format": "mp4",
+                    "outtmpl": filename,
+                    "noplaylist": True,
+                    "quiet": True,
+                    "no_warnings": True,
+                    "progress_hooks": [ProgressHook(status_msg, loop).update]
+                }
+                if os.path.exists(filename):
+                    os.remove(filename)
+                await status_msg.edit(content=f"⬇️ Trying quality: {fmt} ...")
+                def download_video():
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        ydl.download([url])
+                await asyncio.to_thread(download_video)
+                if os.path.exists(filename):
+                    file_size = os.path.getsize(filename)
+                    if file_size <= MAX_DISCORD_FILESIZE:
+                        downloaded = True
+                        final_size = file_size
+                        final_quality = fmt
+                        break
+                    else:
+                        final_size = file_size
+                        final_quality = fmt
+            if not downloaded:
+                await status_msg.edit(content=(
+                    f"❌ I cannot download this file. It's too large ({sizeof_fmt(final_size)})\n"
+                    "You can download this video by using https://www.ytmp3.as to download it either using mp3 or mp4!"
+                ))
+                return
 
-            # Remove file if exists
-            if os.path.exists(filename):
-                os.remove(filename)
-
-            await status_msg.edit(content=f"⬇️ Trying quality: {fmt} ...")
-            def download_video():
+        # Step 3: Download for MP3 type
+        if download_type == "mp3":
+            await status_msg.edit(content="⬇️ Downloading audio as MP3...")
+            def download_audio():
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([url])
-            await asyncio.to_thread(download_video)
-
-            if os.path.exists(filename):
-                file_size = os.path.getsize(filename)
-                if file_size <= MAX_DISCORD_FILESIZE:
-                    downloaded = True
-                    final_size = file_size
-                    final_quality = fmt
-                    break  # success, stop trying
-                else:
-                    final_size = file_size  # keep last attempt
-                    final_quality = fmt
+            await asyncio.to_thread(download_audio)
+            final_size = os.path.getsize(filename)
+            final_quality = "Audio (MP3)"
 
         elapsed = time.time() - start_time
 
@@ -143,19 +164,11 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
         embed.add_field(name="📦 Size", value=sizeof_fmt(final_size), inline=True)
         embed.add_field(name="⏳ Time taken", value=f"{elapsed:.2f}s", inline=True)
 
-        # Step 3: Send or fail
-        if downloaded:
-            await status_msg.edit(content="📤 Uploading to Discord...")
-            if is_slash:
-                await interaction_or_ctx.followup.send(embed=embed, file=discord.File(filename))
-            else:
-                await interaction_or_ctx.send(embed=embed, file=discord.File(filename))
+        await status_msg.edit(content="📤 Uploading to Discord...")
+        if is_slash:
+            await interaction_or_ctx.followup.send(embed=embed, file=discord.File(filename))
         else:
-            await status_msg.edit(content=(
-                f"❌ I cannot download this file. It's too large for the server's boost level "
-                f"({sizeof_fmt(final_size)})\n"
-                "You can download this video by using https://www.ytmp3.as to download it either using mp3 or mp4!"
-            ))
+            await interaction_or_ctx.send(embed=embed, file=discord.File(filename))
 
     except Exception as e:
         await status_msg.edit(content=f"❌ Download Failed\nError: `{e}`")
@@ -168,13 +181,21 @@ class URLDownload(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="urldownload", description="Download a video from a URL")
-    async def urldownload_slash(self, interaction: discord.Interaction, url: str):
-        await handle_download(self.bot, interaction, url, is_slash=True)
+    @app_commands.command(name="urldownload", description="Download a video or audio from a URL")
+    @app_commands.describe(url="Video/Audio link", type="Choose MP3 or MP4")
+    @app_commands.choices(type=[
+        app_commands.Choice(name="MP3", value="mp3"),
+        app_commands.Choice(name="MP4", value="mp4")
+    ])
+    async def urldownload_slash(self, interaction: discord.Interaction, url: str, type: app_commands.Choice[str]):
+        await handle_download(self.bot, interaction, url, type.value, is_slash=True)
 
     @commands.command(name="urldownload")
-    async def urldownload_prefix(self, ctx: commands.Context, url: str):
-        await handle_download(self.bot, ctx, url, is_slash=False)
+    async def urldownload_prefix(self, ctx: commands.Context, url: str, download_type: str):
+        if download_type.lower() not in ["mp3", "mp4"]:
+            await ctx.send("❌ Invalid type! Use `mp3` or `mp4`")
+            return
+        await handle_download(self.bot, ctx, url, download_type.lower(), is_slash=False)
 
 
 async def setup(bot):
