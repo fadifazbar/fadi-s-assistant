@@ -17,22 +17,39 @@ SERVICE_JSON = os.environ.get("SERVICE_JSON")
 if not SERVICE_JSON:
     raise ValueError("SERVICE_JSON environment variable is not set!")
 
+print("[debug] SERVICE_JSON first 100 chars:\n", SERVICE_JSON[:100])
+
+# Replace escaped \n with actual newlines
+fixed_json = SERVICE_JSON.replace("\\n", "\n")
+
 try:
-    service_account_info = json.loads(SERVICE_JSON)
-except json.JSONDecodeError as e:
-    raise ValueError(
-        "SERVICE_JSON is not valid JSON. "
-        "Make sure you pasted it as one line with \\n inside private_key"
-    ) from e
+    service_account_info = json.loads(fixed_json)
+    print("[debug] ✅ JSON parsed successfully")
+except Exception as e:
+    print("[error] ❌ JSON parse failed:", e)
+    raise
 
 # =========================
 # Google Drive client (Service Account)
 # =========================
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
-creds = service_account.Credentials.from_service_account_info(
-    service_account_info, scopes=SCOPES
-)
-drive_service = build("drive", "v3", credentials=creds)
+
+try:
+    creds = service_account.Credentials.from_service_account_info(
+        service_account_info, scopes=SCOPES
+    )
+    print("[debug] ✅ Credentials created")
+except Exception as e:
+    print("[error] ❌ Credential creation failed:", e)
+    raise
+
+try:
+    drive_service = build("drive", "v3", credentials=creds)
+    print("[debug] ✅ Drive service created")
+except Exception as e:
+    print("[error] ❌ Drive service creation failed:", e)
+    raise
+
 
 # Upload / Delete functions
 # =========================
@@ -43,6 +60,7 @@ def upload_to_drive(file_path: str):
     if FOLDER_ID:
         metadata["parents"] = [FOLDER_ID]
 
+    print(f"[upload] Uploading {file_name} ...")
     file = drive_service.files().create(body=metadata, media_body=media, fields="id").execute()
     file_id = file.get("id")
 
@@ -52,6 +70,7 @@ def upload_to_drive(file_path: str):
     ).execute()
 
     link = f"https://drive.google.com/uc?export=download&id={file_id}"
+    print(f"[upload] ✅ Uploaded {file_name}, id={file_id}")
     return link, file_id
 
 def delete_from_drive(file_id: str):
