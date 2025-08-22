@@ -25,18 +25,26 @@ class ModBot(commands.Bot):
 
     async def on_ready(self):
         """Called when the bot is ready"""
-        logger.info(f"Bot is ready! Logged in as {self.user}")
-        logger.info(f"Bot ID: {self.user.id}")
-        logger.info(f"Serving {len(self.guilds)} guilds")
+        logger.info(f"🤖 Bot is ready! Logged in as {self.user}")
+        logger.info(f"🆔 Bot ID: {self.user.id}")
+        logger.info(f"💥 Serving {len(self.guilds)} guilds")
 
         # Set bot status
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
-                name=f"Use {Config.PREFIX}help | Moderation And Fun Bot :p"
+                name=f"🤩 Use {Config.PREFIX}help | Moderation And Fun Bot :p"
             ),
             status=discord.Status.online
         )
+
+        # Sync slash commands
+        try:
+            synced = await self.tree.sync()
+            logger.info(f"✅ Synced {len(synced)} slash commands")
+        except Exception as e:
+            logger.error(f"❌ Failed to sync commands: {e}")
+        
 
     async def on_command_error(self, ctx, error):
         """Global error handler for prefix commands"""
@@ -78,11 +86,11 @@ class ModBot(commands.Bot):
 
     async def on_guild_join(self, guild):
         """Called when bot joins a guild"""
-        logger.info(f"Joined guild: {guild.name} ({guild.id})")
+        logger.info(f"✅ Joined guild: {guild.name} ({guild.id})")
 
     async def on_guild_remove(self, guild):
         """Called when bot leaves a guild"""
-        logger.info(f"Left guild: {guild.name} ({guild.id})")
+        logger.info(f"❌ Left guild: {guild.name} ({guild.id})")
 
 
 async def main():
