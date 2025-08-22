@@ -434,7 +434,7 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
     query: str,
     action: str = "play"
 ):
-    """Handles both play and unplay actions."""
+    # """Handles both play and unplay actions."""
     if action == "play":
         # --- Play logic unchanged ---
         try_single_search = not _looks_like_url(query)
