@@ -14,9 +14,6 @@ MAX_DISCORD_FILESIZE = 8 * 1024 * 1024  # 8MB
 DOWNLOADS_DIR = "downloads"
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
-# ⚠️ replace this with your actual server ID
-TEST_GUILD_ID = 123456789012345678  
-
 
 def clean_filename(name: str) -> str:
     """Remove emojis + special chars from filename"""
@@ -106,7 +103,9 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             filename = os.path.join(DOWNLOADS_DIR, safe_name)
 
         hook = ProgressHook(status_msg, bot)
-        ydl_opts["progress_hooks"] = [lambda d: asyncio.run_coroutine_threadsafe(hook.update(d), bot.loop)]
+        ydl_opts["progress_hooks"] = [
+            lambda d: asyncio.run_coroutine_threadsafe(hook.update(d), bot.loop)
+        ]
 
         await status_msg.edit(content="⬇️ Downloading... 0.0%\n`░░░░░░░░░░`")
 
@@ -175,15 +174,3 @@ class URLDownload(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(URLDownload(bot))
-
-    # 🔹 Safe sync after ready, so bot never hangs
-    async def sync_commands():
-        await bot.wait_until_ready()
-        try:
-            guild = discord.Object(id=TEST_GUILD_ID)
-            await bot.tree.sync(guild=guild)
-            print(f"✅ Synced /urldownload in guild {TEST_GUILD_ID}")
-        except Exception as e:
-            print(f"⚠️ Failed to sync commands: {e}")
-
-    bot.loop.create_task(sync_commands())
