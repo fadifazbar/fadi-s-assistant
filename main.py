@@ -30,7 +30,7 @@ class ModBot(commands.Bot):
         """Called when the bot is starting up"""
         logger.info("Setting up bot...")
 
-        # Load cogs
+        # Load cogs (kept exactly as before)
         await self.load_extension("cogs.moderation")
         await self.load_extension("cogs.general")
         await self.load_extension("cogs.serverinfo")
@@ -38,7 +38,6 @@ class ModBot(commands.Bot):
         await self.load_extension("cogs.snipeeditsnipe")
         await self.load_extension("cogs.music")
         await self.load_extension("cogs.url_download")
-        # ⚠️ Removed auto-sync to avoid rate limits
 
     async def on_ready(self):
         """Called when the bot is ready"""
@@ -100,30 +99,13 @@ class ModBot(commands.Bot):
 
 
 # ----------------------------
-# Manual sync command
+# Run the bot
 # ----------------------------
 bot = ModBot()
 
-@bot.command(name="sync")
-@commands.is_owner()
-async def sync_commands(ctx, scope: str = None):
-    """
-    Sync slash commands manually.
-    Usage:
-      .sync globally -> sync only this server
-      .sync          -> sync all servers
-    """
-    if scope == "globally":
-        synced = await bot.tree.sync(guild=ctx.guild)
-        await ctx.reply("✅ Successfully synced all commands to this server")
-    else:
-        synced = await bot.tree.sync()
-        await ctx.reply("✅ Successfully synced all commands to all servers")
-
-
 async def main():
     """Main function to run the bot"""
-    # Load extra cogs
+    # Load extra cogs (kept same as your original)
     await bot.load_extension("messagelogger")
     await bot.load_extension("invite")
     await bot.load_extension("xoxo")
