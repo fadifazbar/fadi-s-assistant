@@ -494,21 +494,24 @@ class Music(commands.Cog):
         self._set_loop(ctx.guild.id, mode)  # type: ignore
         await ctx.send(f"🔁 Loop set to **{mode}**.")
 
-    @commands.command(name="unplay", help="Remove a song from the queue")
-    async def unplay_prefix(self, ctx, index: int):
-        guild_id = ctx.guild.id
+    @commands.command(name="unplay", help="Remove a song from the queue by name or URL")
+    async def unplay_prefix(self, ctx: commands.Context, *, query: str):
+        player = self.get_player(ctx.guild.id)
+        if not player or not player.queue:
+            return await ctx.send("❌ The queue is empty.")
 
-        if guild_id not in self.music_queue or not self.music_queue[guild_id]:
-            await ctx.send("📭 Queue is empty.")
-            return
+        # Try to match by URL or substring of title
+        removed = None
+        for track in list(player.queue):
+            if query.lower() in track["title"].lower() or query.strip() == track.get("url", ""):
+                player.queue.remove(track)
+                removed = track
+                break
 
-        if index < 1 or index > len(self.music_queue[guild_id]):
-            await ctx.send("❌ Invalid index.")
-            return
-
-        removed = self.music_queue[guild_id].pop(index - 1)
-        await ctx.send(f"🗑️ Removed **{removed['title']}** from the queue.")
-
+        if removed:
+            await ctx.send(f"🗑️ Removed **{removed['title']}** from the queue.")
+        else:
+            await ctx.send("❌ Could not find that track in the queue.")
 
     # =====================
     # SLASH COMMANDS (/) 🎯
@@ -590,22 +593,24 @@ class Music(commands.Cog):
         self._set_loop(interaction.guild.id, mode.value)  # type: ignore
         await interaction.response.send_message(f"🔁 Loop set to **{mode.value}**.")
 
-    @app_commands.command(name="unplay", description="Remove a song from the queue")
-    @app_commands.describe(index="Position of the song in the queue (check with /queue)")
-    async def unplay_slash(self, interaction: discord.Interaction, index: int):
-        guild_id = interaction.guild_id
+    @app_commands.command(name="unplay", description="Remove a song from the queue by name or URL")
+    @app_commands.describe(query="Name or URL of the track to remove")
+    async def unplay_slash(self, interaction: discord.Interaction, query: str):
+        player = self.get_player(interaction.guild.id)
+        if not player or not player.queue:
+            return await interaction.response.send_message("❌ The queue is empty.", ephemeral=True)
 
-        if guild_id not in self.music_queue or not self.music_queue[guild_id]:
-            await interaction.response.send_message("📭 Queue is empty.", ephemeral=True)
-            return
+        removed = None
+        for track in list(player.queue):
+            if query.lower() in track["title"].lower() or query.strip() == track.get("url", ""):
+                player.queue.remove(track)
+                removed = track
+                break
 
-        if index < 1 or index > len(self.music_queue[guild_id]):
-            await interaction.response.send_message("❌ Invalid index.", ephemeral=True)
-            return
-
-        removed = self.music_queue[guild_id].pop(index - 1)
-        await interaction.response.send_message(f"🗑️ Removed **{removed['title']}** from the queue.")
-
+        if removed:
+            await interaction.response.send_message(f"🗑️ Removed **{removed['title']}** from the queue.")
+        else:
+            await interaction.response.send_message("❌ Could not find that track in the queue.", ephemeral=True)
 
     @app_commands.command(name="shuffle", description="Toggle shuffle mode.")
     async def shuffle_slash(self, interaction: discord.Interaction):
