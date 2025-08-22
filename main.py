@@ -29,7 +29,7 @@ class ModBot(commands.Bot):
         """Called when the bot is starting up"""
         logger.info("Setting up bot...")
 
-        # Load cogs (old style)
+        # Load all cogs
         await self.load_extension("cogs.moderation")
         await self.load_extension("cogs.general")
         await self.load_extension("cogs.serverinfo")
@@ -37,9 +37,13 @@ class ModBot(commands.Bot):
         await self.load_extension("cogs.snipeeditsnipe")
         await self.load_extension("cogs.music")
         await self.load_extension("cogs.url_download")
-        await self.load_extension("cogs.sync")  # load your sync cog here
+        await self.load_extension("cogs.sync")
 
-        logger.info("✅ Loaded cogs (slash commands not auto-synced)")
+        logger.info("✅ Loaded cogs (slash commands will now auto-sync)")
+
+        # --- Global slash command sync ---
+        synced = await self.tree.sync()  # Global sync
+        logger.info(f"🎯 Synced {len(synced)} Commands! ✅")
 
     async def on_ready(self):
         logger.info(f"✅ Bot is ready! Logged in as {self.user}")
@@ -79,6 +83,7 @@ class ModBot(commands.Bot):
     async def on_guild_remove(self, guild):
         logger.info(f"📤 Left guild: {guild.name} ({guild.id})")
 
+
 # ----------------------------
 # Run the bot
 # ----------------------------
@@ -86,7 +91,7 @@ bot = ModBot()
 
 async def main():
     """Main function to run the bot"""
-    # Load extra cogs (old style)
+    # Load extra cogs
     await bot.load_extension("messagelogger")
     await bot.load_extension("invite")
     await bot.load_extension("xoxo")
