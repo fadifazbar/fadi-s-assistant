@@ -23,11 +23,11 @@ class ModBot(commands.Bot):
             case_insensitive=True
         )
 
-    async def on_ready(self):
+async def on_ready(self):
         """Called when the bot is ready"""
-        logger.info(f"🤖 Bot is ready! Logged in as {self.user}")
-        logger.info(f"🆔 Bot ID: {self.user.id}")
-        logger.info(f"💥 Serving {len(self.guilds)} guilds")
+        logger.info(f"Bot is ready! Logged in as {self.user}")
+        logger.info(f"Bot ID: {self.user.id}")
+        logger.info(f"Serving {len(self.guilds)} guilds")
 
         # Set bot status
         await self.change_presence(
@@ -44,7 +44,6 @@ class ModBot(commands.Bot):
             logger.info(f"✅ Synced {len(synced)} slash commands")
         except Exception as e:
             logger.error(f"❌ Failed to sync commands: {e}")
-
         
 
     async def on_command_error(self, ctx, error):
