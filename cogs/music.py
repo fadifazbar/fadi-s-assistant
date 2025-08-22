@@ -529,16 +529,38 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
     # =========================
     @commands.command(name="play", help="Play a song or playlist (YouTube URL or search).")
     async def play_prefix(self, ctx: commands.Context, *, query: str):
+        # Ensure the user is in a voice channel
         if not ctx.author.voice or not ctx.author.voice.channel:
-            return await ctx.send("❌ You must be in a voice channel.")
+            await ctx.send("❌ You must be in a voice channel.")
+            return
+
+        # Join the voice channel if needed
         await self._ensure_voice(ctx.guild, ctx.author.voice.channel)
-        await self._handle_play_or_unplay(ctx.guild, ctx.channel, ctx.author, query, action="play")
+
+        # Handle playing the track or playlist
+        await self._handle_play_or_unplay(
+            guild=ctx.guild,
+            text_channel=ctx.channel,
+            requester=ctx.author,
+            query=query,
+            action="play"
+        )
 
     @commands.command(name="unplay", help="Remove a song from the queue by name or URL")
     async def unplay_prefix(self, ctx: commands.Context, *, query: str):
+        # Ensure the user is in a voice channel
         if not ctx.author.voice or not ctx.author.voice.channel:
-            return await ctx.send("❌ You must be in a voice channel.")
-        await self._handle_play_or_unplay(ctx.guild, ctx.channel, ctx.author, query, action="unplay")
+            await ctx.send("❌ You must be in a voice channel.")
+            return
+
+        # Handle removing the track from the queue or stopping currently playing track
+        await self._handle_play_or_unplay(
+            guild=ctx.guild,
+            text_channel=ctx.channel,
+            requester=ctx.author,
+            query=query,
+            action="unplay"
+        )
 
     @commands.command(name="queue", help="Show the current queue (with buttons).")
     async def queue_prefix(self, ctx: commands.Context):
@@ -612,34 +634,70 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
     # =====================
     # SLASH COMMANDS (/) 🎯
     # =====================
-    @app_commands.command(name="play", description="Play a song or playlist (YouTube URL or search).")
+    @app_commands.command(
+        name="play",
+        description="Play a song or playlist (YouTube URL or search)."
+    )
     @app_commands.describe(query="YouTube URL or search terms")
     async def play_slash(self, interaction: discord.Interaction, query: str):
+        # Ensure the user is in a voice channel
         if not interaction.user or not isinstance(interaction.user, discord.Member) or not interaction.user.voice:
-            return await interaction.response.send_message("❌ You must be in a voice channel.", ephemeral=True)
+            return await interaction.response.send_message(
+                "❌ You must be in a voice channel.", ephemeral=True
+            )
 
+        # Defer response to allow time for processing
         await interaction.response.defer(thinking=True)
-        await self._ensure_voice(interaction.guild, interaction.user.voice.channel)
-        await self._handle_play_or_unplay(interaction.guild, interaction.channel, interaction.user, query, action="play")
 
+        # Join the voice channel if needed
+        await self._ensure_voice(interaction.guild, interaction.user.voice.channel)
+
+        # Handle playing the track or playlist
+        await self._handle_play_or_unplay(
+            guild=interaction.guild,
+            text_channel=interaction.channel,
+            requester=interaction.user,
+            query=query,
+            action="play"
+        )
+
+        # Confirm to the user
         try:
             await interaction.followup.send("✅ Done.")
         except discord.HTTPException:
             pass
 
-    @app_commands.command(name="unplay", description="Remove a song from the queue by name or URL")
+
+    @app_commands.command(
+        name="unplay",
+        description="Remove a song from the queue by name or URL"
+    )
     @app_commands.describe(query="The song name or URL to remove from the queue")
     async def unplay_slash(self, interaction: discord.Interaction, query: str):
+        # Ensure the user is in a voice channel
         if not interaction.user or not isinstance(interaction.user, discord.Member) or not interaction.user.voice:
-            return await interaction.response.send_message("❌ You must be in a voice channel.", ephemeral=True)
+            return await interaction.response.send_message(
+                "❌ You must be in a voice channel.", ephemeral=True
+            )
 
+        # Defer response to allow time for processing
         await interaction.response.defer(thinking=True)
-        await self._handle_play_or_unplay(interaction.guild, interaction.channel, interaction.user, query, action="unplay")
 
+        # Handle removing track from queue or stopping current track
+        await self._handle_play_or_unplay(
+            guild=interaction.guild,
+            text_channel=interaction.channel,
+            requester=interaction.user,
+            query=query,
+            action="unplay"
+        )
+
+        # Confirm to the user
         try:
             await interaction.followup.send("✅ Done.")
         except discord.HTTPException:
             pass
+
 
     @app_commands.command(name="skip", description="Skip the current song.")
     async def skip_slash(self, interaction: discord.Interaction):
