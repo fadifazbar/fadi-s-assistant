@@ -8,7 +8,7 @@ import asyncio
 import math
 import re
 
-from server import upload_to_drive, delete_after_48h
+from server import upload_to_drive, delete_after_48h  # service-account-based
 
 MAX_DISCORD_FILESIZE = 8 * 1024 * 1024  # 8MB
 DOWNLOADS_DIR = "downloads"
@@ -46,11 +46,9 @@ class ProgressHook:
             except:
                 return
 
-            # progress bar with 🟩⬛
             bar_step = math.floor(percent_float / 10)
             bar = "🟩" * bar_step + "⬛" * (10 - bar_step)
 
-            # status message
             if percent_float < 25:
                 msg = "Starting download..."
             elif percent_float < 50:
@@ -63,7 +61,7 @@ class ProgressHook:
                 msg = "Finalizing..."
 
             now = time.time()
-            if now - self.last_update > 1:  # update once per second
+            if now - self.last_update > 1:
                 self.last_update = now
                 asyncio.run_coroutine_threadsafe(
                     self.message.edit(
@@ -98,7 +96,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             "no_warnings": True,
         }
 
-        # Extract video info first
+        # Extract video info
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             title = info.get("title", "Unknown")
@@ -138,15 +136,13 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
         embed.add_field(name="📦 Size", value=sizeof_fmt(file_size), inline=True)
         embed.add_field(name="⏳ Time taken", value=f"{elapsed:.2f}s", inline=True)
 
-        # If file small enough, upload to Discord
+        # Upload
         if file_size <= MAX_DISCORD_FILESIZE:
             await status_msg.edit(content="📤 Uploading to Discord...")
             if is_slash:
                 await interaction_or_ctx.followup.send(embed=embed, file=discord.File(filename))
             else:
                 await interaction_or_ctx.send(embed=embed, file=discord.File(filename))
-
-        # Else upload to Google Drive
         else:
             await status_msg.edit(
                 content=f"⚠️ File too large for Discord ({sizeof_fmt(file_size)}).\n"
@@ -161,14 +157,12 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
                 else:
                     await interaction_or_ctx.send(embed=embed)
 
-                # schedule deletion after 48h
                 asyncio.create_task(delete_after_48h(file_id))
             else:
                 await status_msg.edit(content="❌ Upload failed. Please try again later.")
 
     except Exception as e:
         await status_msg.edit(content=f"❌ Download Failed\nError: `{e}`")
-
     finally:
         if "filename" in locals() and os.path.exists(filename):
             os.remove(filename)
