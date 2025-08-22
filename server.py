@@ -1,95 +1,57 @@
 import os
 import json
-import asyncio
-from fastapi import FastAPI
-import uvicorn
-
+import base64
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-# ✅ Read from environment variables
-SERVICE_JSON = os.environ.get("SERVICE_JSON")
-FOLDER_ID = os.environ.get("FOLDER_ID")
+# === CONFIG ===
+# Folder ID on Google Drive where files will be uploaded
+FOLDER_ID = os.environ.get("FOLDER_ID")  # e.g., '17P1q50Wp-2NzXJEiBQOA0HZxuoC4Vpei'
 
-if not SERVICE_JSON:
-    raise ValueError("SERVICE_JSON environment variable not set!")
-if not FOLDER_ID:
-    raise ValueError("FOLDER_ID environment variable not set!")
+# SERVICE_JSON should be the base64-encoded JSON content of your service account
+SERVICE_JSON_B64 = os.environ.get("SERVICE_JSON")
+if not SERVICE_JSON_B64:
+    raise ValueError("SERVICE_JSON environment variable is not set!")
 
-credentials = service_account.Credentials.from_service_account_info(
-    json.loads(SERVICE_JSON),
-    scopes=["https://www.googleapis.com/auth/drive.file"]
-)
+# Decode the base64 string and parse JSON
+SERVICE_JSON = base64.b64decode(SERVICE_JSON_B64).decode("utf-8")
+service_account_info = json.loads(SERVICE_JSON)
 
+# Authenticate
+credentials = service_account.Credentials.from_service_account_info(service_account_info)
 drive_service = build("drive", "v3", credentials=credentials)
 
-app = FastAPI()
-
-
-def upload_to_drive(filepath: str):
-    """Upload a file to Google Drive and make it publicly downloadable."""
+# === UPLOAD FUNCTION ===
+def upload_to_drive(file_path: str):
+    """
+    Uploads a file to Google Drive and makes it publicly viewable.
+    Returns (public_link, file_id)
+    """
+    file_name = os.path.basename(file_path)
+    media = MediaFileUpload(file_path, resumable=True)
     file_metadata = {
-        "name": os.path.basename(filepath),
-        "parents": [FOLDER_ID],
+        "name": file_name,
+        "parents": [FOLDER_ID]
     }
-    media = MediaFileUpload(filepath, resumable=True)
-    uploaded_file = drive_service.files().create(
-        body=file_metadata, media_body=media, fields="id"
-    ).execute()
 
-    file_id = uploaded_file.get("id")
+    # Upload file
+    file = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+    file_id = file.get("id")
 
-    # Make file shareable by anyone with the link
+    # Make file public
     drive_service.permissions().create(
         fileId=file_id,
-        body={"role": "reader", "type": "anyone"},
+        body={"role": "reader", "type": "anyone"}
     ).execute()
 
-    # Return direct download link + file ID
+    # Direct download link
     link = f"https://drive.google.com/uc?export=download&id={file_id}"
     return link, file_id
 
-
+# === DELETE FUNCTION ===
 def delete_from_drive(file_id: str):
-    """Delete a file from Google Drive."""
-    try:
-        drive_service.files().delete(fileId=file_id).execute()
-    except Exception as e:
-        print(f"[!] Failed to delete file {file_id}: {e}")
-
-
-async def delete_after_48h(file_id: str):
-    """Wait 48 hours then delete the file."""
-    await asyncio.sleep(48 * 3600)  # 48 hours
-    delete_from_drive(file_id)
-
-
-@app.get("/")
-async def home():
-    return {"status": "Bot + Google Drive uploader running!"}
-
-
-async def start_fastapi():
-    config = uvicorn.Config(app=app, host="0.0.0.0", port=8080, log_level="info")
-    server = uvicorn.Server(config)
-    await server.serve()
-
-
-# ✅ Import your bot's main function (make sure main.py exists)
-from main import main as bot_main
-
-
-async def main():
-    """Run Discord bot + FastAPI concurrently."""
-    await asyncio.gather(
-        bot_main(),
-        start_fastapi()
-    )
-
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("Shutting down...")
+    """
+    Deletes a file from Google Drive.
+    """
+    drive_service.files().delete(fileId=file_id).execute()
