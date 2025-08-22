@@ -3,7 +3,7 @@ import os
 import shutil
 import uvicorn
 from fastapi import FastAPI, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from main import main as bot_main
 
 app = FastAPI()
@@ -11,6 +11,7 @@ app = FastAPI()
 # Make sure downloads folder exists
 DOWNLOADS_DIR = "downloads"
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -21,9 +22,10 @@ async def upload_file(file: UploadFile = File(...)):
 
     base_url = os.environ.get("RAILWAY_STATIC_URL", "localhost:8080")
     return {
-        # ✅ return /download instead of /files
+        # ✅ return /download instead of /files for forced download
         "file_url": f"https://{base_url}/download/{file.filename}"
     }
+
 
 @app.get("/download/{filename}")
 async def download_file(filename: str):
@@ -31,12 +33,18 @@ async def download_file(filename: str):
     file_path = os.path.join(DOWNLOADS_DIR, filename)
     if not os.path.exists(file_path):
         return {"detail": "File not found"}
-    return FileResponse(
-        file_path,
-        filename=filename,
-        media_type="application/octet-stream",  # forces browser download
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+
+    with open(file_path, "rb") as f:
+        data = f.read()
+
+    return Response(
+        content=data,
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
     )
+
 
 @app.get("/files/{filename}")
 async def get_file(filename: str):
@@ -46,11 +54,13 @@ async def get_file(filename: str):
         return {"detail": "File not found"}
     return FileResponse(file_path, filename=filename)
 
+
 async def start_fastapi():
     """Run FastAPI inside asyncio"""
     config = uvicorn.Config(app=app, host="0.0.0.0", port=8080, log_level="info")
     server = uvicorn.Server(config)
     await server.serve()
+
 
 async def main():
     """Run Discord bot and FastAPI at the same time"""
@@ -58,6 +68,7 @@ async def main():
         bot_main(),       # your Discord bot
         start_fastapi()   # FastAPI server
     )
+
 
 if __name__ == "__main__":
     try:
