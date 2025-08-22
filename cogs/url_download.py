@@ -9,15 +9,13 @@ import asyncio
 import math
 import re
 
-# ---------- CONFIG ----------
 EXTERNAL_HOST = "https://fadi-s-assistant-production.up.railway.app"
 MAX_DISCORD_FILESIZE = 8 * 1024 * 1024  # 8MB
 DOWNLOADS_DIR = "downloads"
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
-# Fast testing → your guild ID
-TEST_GUILD_ID = 123456789012345678  # replace with your server ID
-# ----------------------------
+# ⚠️ replace this with your actual server ID
+TEST_GUILD_ID = 123456789012345678  
 
 
 def clean_filename(name: str) -> str:
@@ -28,7 +26,6 @@ def clean_filename(name: str) -> str:
 
 
 def sizeof_fmt(num, suffix="B"):
-    """Convert bytes → human-readable format."""
     for unit in ["", "K", "M", "G"]:
         if abs(num) < 1024.0:
             return f"{num:.1f}{unit}{suffix}"
@@ -51,8 +48,6 @@ async def upload_external(file_path: str):
 
 
 class ProgressHook:
-    """Handles yt-dlp progress reporting with bar + %."""
-
     def __init__(self, message: discord.Message, bot: commands.Bot):
         self.message = message
         self.bot = bot
@@ -81,10 +76,8 @@ class ProgressHook:
 
 
 async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
-    """Shared logic for both slash + prefix command."""
     start_time = time.time()
 
-    # Send first message
     if is_slash:
         await interaction_or_ctx.response.defer(thinking=True)
         status_msg = await interaction_or_ctx.followup.send("🔄 Fetching video...", wait=True)
@@ -92,7 +85,6 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
         status_msg = await interaction_or_ctx.reply("🔄 Fetching video...")
 
     try:
-        # yt-dlp setup
         ydl_opts = {
             "format": "mp4/bv*+ba/bestvideo+bestaudio/best",
             "outtmpl": os.path.join(DOWNLOADS_DIR, "%(title).200s.%(ext)s"),
@@ -113,17 +105,14 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             safe_name = clean_filename(title) + ".mp4"
             filename = os.path.join(DOWNLOADS_DIR, safe_name)
 
-        # Progress
         hook = ProgressHook(status_msg, bot)
         ydl_opts["progress_hooks"] = [lambda d: asyncio.run_coroutine_threadsafe(hook.update(d), bot.loop)]
 
         await status_msg.edit(content="⬇️ Downloading... 0.0%\n`░░░░░░░░░░`")
 
-        # Run download in thread
         def run_download():
             with yt_dlp.YoutubeDL(ydl_opts) as y:
                 y.download([url])
-            # Rename file safely
             if os.path.exists(raw_filename):
                 os.rename(raw_filename, filename)
 
@@ -175,13 +164,10 @@ class URLDownload(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # Slash command
     @app_commands.command(name="urldownload", description="Download a video from a URL")
-    @app_commands.guilds(discord.Object(id=TEST_GUILD_ID))  # Instant in your server
     async def urldownload_slash(self, interaction: discord.Interaction, url: str):
         await handle_download(self.bot, interaction, url, is_slash=True)
 
-    # Prefix command
     @commands.command(name="urldownload")
     async def urldownload_prefix(self, ctx: commands.Context, url: str):
         await handle_download(self.bot, ctx, url, is_slash=False)
@@ -189,4 +175,15 @@ class URLDownload(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(URLDownload(bot))
-    await bot.tree.sync(guild=discord.Object(id=TEST_GUILD_ID))  # auto sync
+
+    # 🔹 Safe sync after ready, so bot never hangs
+    async def sync_commands():
+        await bot.wait_until_ready()
+        try:
+            guild = discord.Object(id=TEST_GUILD_ID)
+            await bot.tree.sync(guild=guild)
+            print(f"✅ Synced /urldownload in guild {TEST_GUILD_ID}")
+        except Exception as e:
+            print(f"⚠️ Failed to sync commands: {e}")
+
+    bot.loop.create_task(sync_commands())
