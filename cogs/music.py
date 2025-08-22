@@ -115,27 +115,24 @@ def _is_youtube_playlist_url(url: str) -> bool:
 # ==============
 LoopMode = Literal["off", "one", "all"]
 
-def _progress_bar_emoji(current: int, total: Optional[int], length: int = 20) -> str:
-    """Returns a progress bar using red and black squares."""
-    if total is None or total == 0:
-        return "🟥 LIVE"
-    current = max(0, min(current, total))
-    filled_length = int(length * current / total)
-    bar = "🟥" * filled_length + "⬛" * (length - filled_length)
-    return bar
+def _progress_bar(elapsed: int, total: Optional[int], width: int = 18) -> str:
+    if not total or total <= 0:
+        return "▬" * width
+    filled = int(width * min(elapsed / total, 1.0))
+    return ("▬" * max(filled - 1, 0)) + "🔘" + ("▬" * (width - filled))
 
 def _entry_to_track(entry: dict, requester) -> Optional[Track]:
-    """Converts a YouTube (or other) entry dict into a playable Track object."""
     if not entry:
         return None
-
-    title = entry.get("title") or "Unknown Title"
-
-    # Only skip if title is deleted/private
-    if title in ("[Deleted video]", "[Private video]"):
+    title = entry.get("title")
+    if title in (None, "[Deleted video]", "[Private video]"):
+        return None
+    if entry.get("availability") in ("private", "needs_auth"):
+        return None
+    live_status = entry.get("live_status")
+    if live_status in ("is_live", "is_upcoming"):
         return None
 
-    # Attempt to get a playable URL
     webpage_url = entry.get("webpage_url")
     if not webpage_url:
         vid_id = entry.get("id")
@@ -144,25 +141,15 @@ def _entry_to_track(entry: dict, requester) -> Optional[Track]:
         else:
             webpage_url = entry.get("url")
     if not webpage_url:
-        # If no URL is available, we can’t play it
         return None
 
-    # Duration (may be None for live)
-    duration = entry.get("duration")
-
-    # Thumbnail fallback
-    thumbnail = entry.get("thumbnail")
-
-    # Uploader or channel
-    uploader = entry.get("uploader") or entry.get("channel")
-
     return Track(
-        title=title,
+        title=title or "Unknown Title",
         webpage_url=webpage_url,
-        duration=duration,
-        thumbnail=thumbnail,
+        duration=entry.get("duration"),
+        thumbnail=entry.get("thumbnail"),
         requester=requester,
-        uploader=uploader
+        uploader=entry.get("uploader") or entry.get("channel"),
     )
 
 # ==============
@@ -304,15 +291,13 @@ class Music(commands.Cog):
         self.idle_tasks[guild.id] = self.bot.loop.create_task(_idle_task())
 
     # ------------- embeds -------------
-
-async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
-    """Send a now playing embed that updates with elapsed time and progress bar."""
-    if track.duration is None:
-        # For live or unknown-duration tracks
+    async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
+        dur = track.pretty_duration()
+        bar = _progress_bar(0, track.duration)
         embed = discord.Embed(
             title="🎶 Now Playing",
-            description=f"[{track.title}]({track.webpage_url})\n🟥 LIVE",
-            color=discord.Color.green()
+            description=f"[{track.title}]({track.webpage_url})\n{bar}\n`0:00 / {dur}`",
+            color=discord.Color.green(),
         )
         if track.thumbnail:
             embed.set_thumbnail(url=track.thumbnail)
@@ -321,59 +306,22 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
         embed.add_field(
             name="Requested by",
             value=getattr(track.requester, "mention", str(track.requester)),
-            inline=True
-        )
-        await channel.send(embed=embed)
-        return
-
-    # Send initial embed
-    elapsed = 0
-    bar = _progress_bar_emoji(elapsed, track.duration)
-    embed = discord.Embed(
-        title="🎶 Now Playing",
-        description=f"[{track.title}]({track.webpage_url})\n{bar}\n`0:00 / {track.pretty_duration()}`",
-        color=discord.Color.green(),
-    )
-    if track.thumbnail:
-        embed.set_thumbnail(url=track.thumbnail)
-    if track.uploader:
-        embed.add_field(name="Channel", value=track.uploader, inline=True)
-    embed.add_field(
-        name="Requested by",
-        value=getattr(track.requester, "mention", str(track.requester)),
-        inline=True,
-    )
-
-    message = await channel.send(embed=embed)
-
-    # Live update loop
-    while elapsed < track.duration:
-        await asyncio.sleep(5)  # update every 5 seconds
-        elapsed += 5
-        if elapsed > track.duration:
-            elapsed = track.duration
-        bar = _progress_bar_emoji(elapsed, track.duration)
-        new_embed = discord.Embed(
-            title="🎶 Now Playing",
-            description=f"[{track.title}]({track.webpage_url})\n{bar}\n`{self._format_time(elapsed)} / {track.pretty_duration()}`",
-            color=discord.Color.green(),
-        )
-        if track.thumbnail:
-            new_embed.set_thumbnail(url=track.thumbnail)
-        if track.uploader:
-            new_embed.add_field(name="Channel", value=track.uploader, inline=True)
-        new_embed.add_field(
-            name="Requested by",
-            value=getattr(track.requester, "mention", str(track.requester)),
             inline=True,
         )
-        try:
-            await message.edit(embed=new_embed)
-        except discord.NotFound:
-            break  # message deleted
-        except discord.HTTPException:
-            continue  # skip if rate-limited
+        await channel.send(embed=embed)
 
+    async def _announce_added(self, channel: discord.abc.Messageable, track: Track, pos: int):
+        embed = discord.Embed(
+            title="➕ Added to queue",
+            description=f"[{track.title}]({track.webpage_url})",
+            color=discord.Color.blurple(),
+        )
+        if track.thumbnail:
+            embed.set_thumbnail(url=track.thumbnail)
+        if track.duration:
+            embed.add_field(name="Duration", value=track.pretty_duration(), inline=True)
+        embed.add_field(name="Position", value=str(pos), inline=True)
+        await channel.send(embed=embed)
 
     # ------------- playback core -------------
     async def _start_if_idle(self, guild: discord.Guild, channel: discord.abc.Messageable):
@@ -385,8 +333,6 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
             next_track = self._dequeue_next(guild.id)
             if not next_track:
                 self.currents[guild.id] = None
-                # ✅ Let users know nothing is left
-                await channel.send("🎵 No Music Is Playing RightNow. Queue is empty.")
                 self._schedule_idle_disconnect(guild, channel)
                 return
 
@@ -408,20 +354,13 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
     async def _after_track(self, guild: discord.Guild, channel: discord.abc.Messageable, played: Optional[Track], err):
         if err:
             await channel.send(f"⚠️ Playback error: {err}")
-
         mode = self._get_loop(guild.id)
         if played:
             if mode == "one":
                 self._queue(guild.id).insert(0, played)  # replay immediately
             elif mode == "all":
                 self._queue(guild.id).append(played)
-
         self.currents[guild.id] = None
-
-        # ✅ Before starting the next track, check if queue is empty
-        if not self._queue(guild.id):
-            await channel.send("✅ Finished playing all tracks. No Music Is Playing RightNow.")
-
         await self._start_if_idle(guild, channel)
 
     # ------------- play/queue logic -------------
@@ -435,14 +374,14 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
             else:
                 info = await _extract(query, flat=use_flat_playlist)
         except Exception as e:
-            await text_channel.send(f"❌ Error: {e}")
+            await text_channel.send(f"❌ Error: `{e}`")
             return
 
         if not info:
             await text_channel.send("❌ No results.")
             return
 
-        tracks_to_add: list[Track] = []
+        tracks_to_add: List[Track] = []
 
         if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist" and "search" in (info.get("extractor_key", "")).lower():
             entries = (info.get("entries") or [])[:1]
@@ -476,7 +415,6 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
 
         await self._start_if_idle(guild, text_channel)
 
-
     # =========================
     # PREFIX COMMANDS (classic)
     # =========================
@@ -487,7 +425,6 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
         await self._ensure_voice(ctx.guild, ctx.author.voice.channel)
         await self._handle_play(ctx.guild, ctx.channel, ctx.author, query)
 
-    
     @commands.command(name="queue", help="Show the current queue (with buttons).")
     async def queue_prefix(self, ctx: commands.Context):
         view = QueueView(self, ctx.guild.id, ctx.author)
@@ -560,7 +497,6 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
     # =====================
     # SLASH COMMANDS (/) 🎯
     # =====================
-
     @app_commands.command(name="play", description="Play a song or playlist (YouTube URL or search).")
     @app_commands.describe(query="YouTube URL or search terms")
     async def play_slash(self, interaction: discord.Interaction, query: str):
@@ -573,6 +509,11 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
             await interaction.followup.send("✅ Done.")
         except discord.HTTPException:
             pass
+
+    @app_commands.command(name="queue", description="Show the current queue (with buttons).")
+    async def queue_slash(self, interaction: discord.Interaction):
+        view = QueueView(self, interaction.guild.id, interaction.user)
+        await interaction.response.send_message(embed=view.format_page(), view=view)
 
     @app_commands.command(name="skip", description="Skip the current song.")
     async def skip_slash(self, interaction: discord.Interaction):
@@ -638,14 +579,6 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
         state = not self._is_shuffle(interaction.guild.id)
         self.shuffle_enabled[interaction.guild.id] = state
         await interaction.response.send_message("🔀 Shuffle enabled." if state else "➡️ Shuffle disabled.")
-
-    @app_commands.command(name="queue", description="Show the current queue with buttons.")
-    async def queue_slash(self, interaction: discord.Interaction):
-        view = QueueView(self, interaction.guild.id, interaction.user)
-        await interaction.response.send_message(embed=view.format_page(), view=view, ephemeral=True)
-
-
-    
 
     # ------------- listeners -------------
     @commands.Cog.listener()
