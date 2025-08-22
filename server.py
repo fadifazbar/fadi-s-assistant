@@ -1,58 +1,54 @@
 import asyncio
 import os
-import shutil
 import uvicorn
-from fastapi import FastAPI, UploadFile, File
-from fastapi.responses import FileResponse, Response
+from fastapi import FastAPI
 from main import main as bot_main
+
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 
 app = FastAPI()
 
-# Make sure downloads folder exists
-DOWNLOADS_DIR = "downloads"
-os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+# Google Drive setup
+SERVICE_ACCOUNT_FILE = "angelic-cat-469803-c8-7ec9cc0a6674.json"
+SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+
+credentials = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE, scopes=SCOPES
+)
+drive_service = build("drive", "v3", credentials=credentials)
+
+# Your uploads folder in Google Drive (you created it already)
+FOLDER_ID = "YOUR_FOLDER_ID_HERE"  # <-- replace with actual BotUploads folder ID
 
 
-@app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    """Save file into downloads/ and return its direct download URL"""
-    file_path = os.path.join(DOWNLOADS_DIR, file.filename)
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    base_url = os.environ.get("RAILWAY_STATIC_URL", "localhost:8080")
-    return {
-        # ✅ return /download instead of /files for forced download
-        "file_url": f"https://{base_url}/download/{file.filename}"
+def upload_to_drive(filepath: str) -> str:
+    """Upload file to Google Drive and return direct download link"""
+    file_metadata = {
+        "name": os.path.basename(filepath),
+        "parents": [FOLDER_ID],
     }
+    media = MediaFileUpload(filepath, resumable=True)
+    uploaded_file = drive_service.files().create(
+        body=file_metadata, media_body=media, fields="id"
+    ).execute()
+
+    file_id = uploaded_file.get("id")
+
+    # Make file shareable
+    drive_service.permissions().create(
+        fileId=file_id,
+        body={"role": "reader", "type": "anyone"},
+    ).execute()
+
+    # Return direct download link
+    return f"https://drive.google.com/uc?export=download&id={file_id}"
 
 
-@app.get("/download/{filename}")
-async def download_file(filename: str):
-    """Force download instead of just serving the file"""
-    file_path = os.path.join(DOWNLOADS_DIR, filename)
-    if not os.path.exists(file_path):
-        return {"detail": "File not found"}
-
-    with open(file_path, "rb") as f:
-        data = f.read()
-
-    return Response(
-        content=data,
-        media_type="application/octet-stream",
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"'
-        }
-    )
-
-
-@app.get("/files/{filename}")
-async def get_file(filename: str):
-    """Serve files normally (view in browser)"""
-    file_path = os.path.join(DOWNLOADS_DIR, filename)
-    if not os.path.exists(file_path):
-        return {"detail": "File not found"}
-    return FileResponse(file_path, filename=filename)
+@app.get("/")
+async def home():
+    return {"status": "Bot + Google Drive uploader running!"}
 
 
 async def start_fastapi():
