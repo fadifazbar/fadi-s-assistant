@@ -435,6 +435,7 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
     action: str = "play"
 ):
     # """Handles both play and unplay actions."""
+    
     if action == "play":
         # --- Play logic ---
         try_single_search = not _looks_like_url(query)
@@ -488,7 +489,7 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
         await self._start_if_idle(guild, text_channel)
 
     elif action == "unplay":
-        # Use currents and queue
+        # Use your currents and queue instead of get_player
         current_track = self.currents.get(guild.id)
         q = self._queue(guild.id)
 
@@ -499,10 +500,7 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
         removed = None
 
         # Check current playing track first
-        if current_track and (
-            query.lower() in current_track.title.lower() or
-            query in getattr(current_track, "webpage_url", "")
-        ):
+        if current_track and (query.lower() in current_track.title.lower() or query in getattr(current_track, "webpage_url", "")):
             removed = current_track
             vc = guild.voice_client
             if vc and vc.is_playing():
