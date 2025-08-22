@@ -425,103 +425,56 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
         await self._start_if_idle(guild, channel)
 
     # ------------- play/queue logic -------------
+    async def _handle_play(self, guild: discord.Guild, text_channel: discord.abc.Messageable, requester, query: str):
+        try_single_search = not _looks_like_url(query)
+        use_flat_playlist = _is_youtube_playlist_url(query)
 
-    async def _handle_play_or_unplay(
-        self,
-        guild: discord.Guild,
-        text_channel: discord.abc.Messageable,
-        requester,
-        query: str,
-        action: str = "play"
-    ):
-        # """Handles both play and unplay actions."""
-
-        if action == "play":
-            # --- Play logic ---
-            try_single_search = not _looks_like_url(query)
-            use_flat_playlist = _is_youtube_playlist_url(query)
-
-            try:
-                if try_single_search:
-                    info = await _extract(f"ytsearch1:{query}", flat=False)
-                else:
-                    info = await _extract(query, flat=use_flat_playlist)
-            except Exception as e:
-                await text_channel.send(f"❌ Error: `{e}`")
-                return
-
-            if not info:
-                await text_channel.send("❌ No results.")
-                return
-
-            tracks_to_add: list[Track] = []
-
-            if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist" and "search" in (info.get("extractor_key", "")).lower():
-                entries = (info.get("entries") or [])[:1]
-                for entry in entries:
-                    t = _entry_to_track(entry, requester)
-                    if t:
-                        tracks_to_add.append(t)
-            elif "entries" in info:
-                for entry in info.get("entries") or []:
-                    t = _entry_to_track(entry, requester)
-                    if t:
-                        tracks_to_add.append(t)
+        try:
+            if try_single_search:
+                info = await _extract(f"ytsearch1:{query}", flat=False)
             else:
-                t = _entry_to_track(info, requester)
+                info = await _extract(query, flat=use_flat_playlist)
+        except Exception as e:
+            await text_channel.send(f"❌ Error: {e}")
+            return
+
+        if not info:
+            await text_channel.send("❌ No results.")
+            return
+
+        tracks_to_add: list[Track] = []
+
+        if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist" and "search" in (info.get("extractor_key", "")).lower():
+            entries = (info.get("entries") or [])[:1]
+            for entry in entries:
+                t = _entry_to_track(entry, requester)
                 if t:
                     tracks_to_add.append(t)
+        elif "entries" in info:
+            for entry in info.get("entries") or []:
+                t = _entry_to_track(entry, requester)
+                if t:
+                    tracks_to_add.append(t)
+        else:
+            t = _entry_to_track(info, requester)
+            if t:
+                tracks_to_add.append(t)
 
-            if not tracks_to_add:
-                await text_channel.send("⚠️ No playable videos found (deleted/private/unavailable).")
-                return
+        if not tracks_to_add:
+            await text_channel.send("⚠️ No playable videos found (deleted/private/unavailable).")
+            return
 
-            q = self._queue(guild.id)
-            start_len = len(q)
-            q.extend(tracks_to_add)
+        q = self._queue(guild.id)
+        start_len = len(q)
+        q.extend(tracks_to_add)
 
-            if len(tracks_to_add) == 1:
-                await self._announce_added(text_channel, tracks_to_add[0], start_len + 1)
-            else:
-                title = info.get("title") or "playlist"
-                await text_channel.send(f"📑 Added **{len(tracks_to_add)}** tracks from **{title}**.")
+        if len(tracks_to_add) == 1:
+            await self._announce_added(text_channel, tracks_to_add[0], start_len + 1)
+        else:
+            title = info.get("title") or "playlist"
+            await text_channel.send(f"📑 Added **{len(tracks_to_add)}** tracks from **{title}**.")
 
-            await self._start_if_idle(guild, text_channel)
-
-        elif action == "unplay":
-            # Use currents and queue instead of get_player
-            current_track = self.currents.get(guild.id)
-            q = self._queue(guild.id)
-
-            if not current_track and not q:
-                await text_channel.send("❌ Nothing is playing or queued.")
-                return
-
-            removed = None
-
-            # Check current playing track first
-            if current_track and (query.lower() in current_track.title.lower() or query in getattr(current_track, "webpage_url", "")):
-                removed = current_track
-                vc = guild.voice_client
-                if vc and vc.is_playing():
-                    vc.stop()  # stop current playback to remove it
-                self.currents[guild.id] = None
-
-            else:
-                # Otherwise search the queue
-                for track in list(q):
-                    if query.lower() in track.title.lower() or query in getattr(track, "webpage_url", ""):
-                        q.remove(track)
-                        removed = track
-                        break
-
-            if removed:
-                if removed == current_track:
-                    await text_channel.send(f"🛑 Stopped and removed currently playing track: **{removed.title}**.")
-                else:
-                    await text_channel.send(f"🗑️ Removed **{removed.title}** from the queue.")
-            else:
-                await text_channel.send("❌ Could not find a matching track in the queue or currently playing.")
+        await self._start_if_idle(guild, text_channel)
 
 
     # =========================
@@ -529,39 +482,12 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
     # =========================
     @commands.command(name="play", help="Play a song or playlist (YouTube URL or search).")
     async def play_prefix(self, ctx: commands.Context, *, query: str):
-        # Ensure the user is in a voice channel
         if not ctx.author.voice or not ctx.author.voice.channel:
-            await ctx.send("❌ You must be in a voice channel.")
-            return
-
-        # Join the voice channel if needed
+            return await ctx.send("❌ You must be in a voice channel.")
         await self._ensure_voice(ctx.guild, ctx.author.voice.channel)
+        await self._handle_play(ctx.guild, ctx.channel, ctx.author, query)
 
-        # Handle playing the track or playlist
-        await self._handle_play_or_unplay(
-            guild=ctx.guild,
-            text_channel=ctx.channel,
-            requester=ctx.author,
-            query=query,
-            action="play"
-        )
-
-    @commands.command(name="unplay", help="Remove a song from the queue by name or URL")
-    async def unplay_prefix(self, ctx: commands.Context, *, query: str):
-        # Ensure the user is in a voice channel
-        if not ctx.author.voice or not ctx.author.voice.channel:
-            await ctx.send("❌ You must be in a voice channel.")
-            return
-
-        # Handle removing the track from the queue or stopping currently playing track
-        await self._handle_play_or_unplay(
-            guild=ctx.guild,
-            text_channel=ctx.channel,
-            requester=ctx.author,
-            query=query,
-            action="unplay"
-        )
-
+    
     @commands.command(name="queue", help="Show the current queue (with buttons).")
     async def queue_prefix(self, ctx: commands.Context):
         view = QueueView(self, ctx.guild.id, ctx.author)
@@ -634,69 +560,19 @@ async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
     # =====================
     # SLASH COMMANDS (/) 🎯
     # =====================
-    @app_commands.command(
-        name="play",
-        description="Play a song or playlist (YouTube URL or search)."
-    )
+    @app_commands.command(name="play", description="Play a song or playlist (YouTube URL or search).")
     @app_commands.describe(query="YouTube URL or search terms")
     async def play_slash(self, interaction: discord.Interaction, query: str):
-        # Ensure the user is in a voice channel
         if not interaction.user or not isinstance(interaction.user, discord.Member) or not interaction.user.voice:
-            return await interaction.response.send_message(
-                "❌ You must be in a voice channel.", ephemeral=True
-            )
-
-        # Defer response to allow time for processing
+            return await interaction.response.send_message("❌ You must be in a voice channel.", ephemeral=True)
         await interaction.response.defer(thinking=True)
-
-        # Join the voice channel if needed
         await self._ensure_voice(interaction.guild, interaction.user.voice.channel)
-
-        # Handle playing the track or playlist
-        await self._handle_play_or_unplay(
-            guild=interaction.guild,
-            text_channel=interaction.channel,
-            requester=interaction.user,
-            query=query,
-            action="play"
-        )
-
-        # Confirm to the user
+        await self._handle_play(interaction.guild, interaction.channel, interaction.user, query)
         try:
             await interaction.followup.send("✅ Done.")
         except discord.HTTPException:
             pass
 
-
-    @app_commands.command(
-        name="unplay",
-        description="Remove a song from the queue by name or URL"
-    )
-    @app_commands.describe(query="The song name or URL to remove from the queue")
-    async def unplay_slash(self, interaction: discord.Interaction, query: str):
-        # Ensure the user is in a voice channel
-        if not interaction.user or not isinstance(interaction.user, discord.Member) or not interaction.user.voice:
-            return await interaction.response.send_message(
-                "❌ You must be in a voice channel.", ephemeral=True
-            )
-
-        # Defer response to allow time for processing
-        await interaction.response.defer(thinking=True)
-
-        # Handle removing track from queue or stopping current track
-        await self._handle_play_or_unplay(
-            guild=interaction.guild,
-            text_channel=interaction.channel,
-            requester=interaction.user,
-            query=query,
-            action="unplay"
-        )
-
-        # Confirm to the user
-        try:
-            await interaction.followup.send("✅ Done.")
-        except discord.HTTPException:
-            pass
 
 
     @app_commands.command(name="skip", description="Skip the current song.")
