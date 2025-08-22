@@ -30,7 +30,7 @@ class ModBot(commands.Bot):
         """Called when the bot is starting up"""
         logger.info("Setting up bot...")
 
-        # Load cogs (kept exactly as before)
+        # Load cogs (same as before)
         await self.load_extension("cogs.moderation")
         await self.load_extension("cogs.general")
         await self.load_extension("cogs.serverinfo")
@@ -38,6 +38,13 @@ class ModBot(commands.Bot):
         await self.load_extension("cogs.snipeeditsnipe")
         await self.load_extension("cogs.music")
         await self.load_extension("cogs.url_download")
+
+        # 🔄 Auto-sync slash commands globally
+        try:
+            synced = await self.tree.sync()
+            logger.info(f"✅ Synced {len(synced)} commands globally")
+        except Exception as e:
+            logger.error(f"❌ Failed to sync commands: {e}")
 
     async def on_ready(self):
         """Called when the bot is ready"""
@@ -105,7 +112,7 @@ bot = ModBot()
 
 async def main():
     """Main function to run the bot"""
-    # Load extra cogs (kept same as your original)
+    # Load extra cogs (same as your original)
     await bot.load_extension("messagelogger")
     await bot.load_extension("invite")
     await bot.load_extension("xoxo")
