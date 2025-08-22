@@ -3,6 +3,7 @@ import json
 import base64
 import threading
 import subprocess
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from google.oauth2 import service_account
@@ -12,36 +13,26 @@ from googleapiclient.http import MediaFileUpload
 # =========================
 # Config / Env
 # =========================
-FOLDER_ID = os.environ.get("FOLDER_ID")  # Optional; if None, uploads to My Drive
+FOLDER_ID = os.environ.get("FOLDER_ID")
 SERVICE_JSON_ENV = os.environ.get("SERVICE_JSON")
 if not SERVICE_JSON_ENV:
     raise ValueError("SERVICE_JSON environment variable is not set!")
 
 def _load_service_json(value: str) -> dict:
-    """
-    Accepts either raw JSON or base64-encoded JSON.
-    Also fixes private_key newlines if needed.
-    """
     data = None
-
-    # Try plain JSON first
     try:
         data = json.loads(value)
     except Exception:
-        # Fallback: try base64 -> JSON
         try:
             decoded = base64.b64decode(value).decode("utf-8")
             data = json.loads(decoded)
         except Exception as e:
             raise ValueError(f"SERVICE_JSON is neither valid JSON nor valid base64 JSON: {e}")
 
-    # Normalize private_key newlines if they are escaped
     pk = data.get("private_key")
     if isinstance(pk, str):
-        # If it looks like a single line with literal \n, convert to real newlines
         if "\\n" in pk and "-----BEGIN" in pk and "-----END" in pk:
             data["private_key"] = pk.replace("\\n", "\n")
-
     return data
 
 service_account_info = _load_service_json(SERVICE_JSON_ENV)
@@ -53,43 +44,46 @@ credentials = service_account.Credentials.from_service_account_info(service_acco
 drive_service = build("drive", "v3", credentials=credentials)
 
 # =========================
-# Upload / Delete functions (unchanged behavior)
+# Upload / Delete functions
 # =========================
 def upload_to_drive(file_path: str):
-    """
-    Uploads a file to Google Drive and makes it publicly viewable.
-    Returns (public_link, file_id)
-    """
     file_name = os.path.basename(file_path)
     media = MediaFileUpload(file_path, resumable=True)
     metadata = {"name": file_name}
-
-    # Only set parents when FOLDER_ID is provided
     if FOLDER_ID:
         metadata["parents"] = [FOLDER_ID]
 
-    # Upload file
     file = drive_service.files().create(body=metadata, media_body=media, fields="id").execute()
     file_id = file.get("id")
 
-    # Make file public
     drive_service.permissions().create(
         fileId=file_id,
         body={"role": "reader", "type": "anyone"}
     ).execute()
 
-    # Direct download link
     link = f"https://drive.google.com/uc?export=download&id={file_id}"
     return link, file_id
 
 def delete_from_drive(file_id: str):
-    """
-    Deletes a file from Google Drive.
-    """
     drive_service.files().delete(fileId=file_id).execute()
 
+def delete_after_48h(file_id: str):
+    """
+    Schedules a Google Drive file to be deleted after 48 hours.
+    """
+    def _worker():
+        print(f"[server] ⏳ File {file_id} scheduled for deletion in 48h")
+        time.sleep(48 * 3600)  # wait 48 hours
+        try:
+            delete_from_drive(file_id)
+            print(f"[server] ✅ File {file_id} deleted after 48h")
+        except Exception as e:
+            print(f"[server] ❌ Failed to delete {file_id}: {e}")
+
+    threading.Thread(target=_worker, daemon=True).start()
+
 # =========================
-# Tiny health server for Railway
+# Tiny health server
 # =========================
 class _HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -103,7 +97,6 @@ class _HealthHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def log_message(self, fmt, *args):
-        # Keep logs clean
         return
 
 def _start_health_server():
@@ -113,23 +106,18 @@ def _start_health_server():
     server.serve_forever()
 
 # =========================
-# Start Discord bot (main.py)
+# Start Discord bot
 # =========================
 def _start_bot():
-    # Launch your Discord bot script
-    # If your runtime needs "python3", change it below.
     print("[server] Starting main.py (Discord bot)...")
     proc = subprocess.Popen(["python", "main.py"])
     return proc
 
 if __name__ == "__main__":
-    # Start health server in a background thread
     t = threading.Thread(target=_start_health_server, daemon=True)
     t.start()
 
-    # Start the bot and keep this process alive while it runs
     bot_proc = _start_bot()
     exit_code = bot_proc.wait()
     print(f"[server] main.py exited with code {exit_code}")
-    # If the bot exits, also exit this process (Railway will restart it based on your settings)
     raise SystemExit(exit_code)
