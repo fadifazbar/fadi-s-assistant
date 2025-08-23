@@ -11,6 +11,7 @@ DEATHBATTLE_EMOJI = "<:Deathbattle_V2:1408666286463914067>"
 HEALTH_EMOJI = "<:HP_V2:1408669354069065748>"
 CRITICAL_EMOJI = "<:CRITICAL_HIT:1408659817127612519>"
 HEAL_EMOJI = "<:MENDING_HEART:1408664782005080094>"
+GOLDEN_HEART = "<:GOLDEN_HEART:1408674925950144614>"
 
 class DeathBattle(commands.Cog):
     def __init__(self, bot):
@@ -35,6 +36,7 @@ class DeathBattle(commands.Cog):
         hp1, hp2 = 100, 100
         turn = 1
         log = []
+        full_log = []  # Keep the entire battle history for DM
 
         # Attack actions (chance %, damage, template)
         attack_messages = [
@@ -70,33 +72,45 @@ class DeathBattle(commands.Cog):
             attacker = player1 if turn % 2 != 0 else player2
             defender = player2 if turn % 2 != 0 else player1
 
-            # 🩹 Healing chance (15%)
-            if random.random() < 0.15:
-                heal_amount = random.randint(5, 20)
-                if attacker == player1:
-                    hp1 = min(100, hp1 + heal_amount)
-                    heal_text = f"{HEAL_EMOJI} **__{attacker.name}__** used a mending heart and recovered **{heal_amount} HP**! (Now at {hp1} HP)"
+# 🩹 Healing chance (15%)
+        if random.random() < 0.15:
+            heal_amount = random.randint(5, 20)
+
+            # Critical heal (10%)
+            crit_heal = random.random() < 0.1
+            if crit_heal:
+                heal_amount *= 2  # Double healing!
+
+            if attacker == player1:
+                hp1 = min(100, hp1 + heal_amount)
+                if crit_heal:
+                    heal_text = f"{GOLDEN_HEART} **__{attacker.name}__** used the **Ultimate Golden Heart** and recovered __**{heal_amount} HP**__! (Now at {hp1} HP)"
                 else:
-                    hp2 = min(100, hp2 + heal_amount)
+                    heal_text = f"{HEAL_EMOJI} **__{attacker.name}__** used a mending heart and recovered **{heal_amount} HP**! (Now at {hp1} HP)"
+            else:
+                hp2 = min(100, hp2 + heal_amount)
+                if crit_heal:
+                    heal_text = f"{GOLDEN_HEART} **__{attacker.name}__** used the **Ultimate Golden Heart** and recovered __**{heal_amount} HP**__! (Now at {hp2} HP)"
+                else:
                     heal_text = f"{HEAL_EMOJI} **__{attacker.name}__** used a mending heart and recovered **{heal_amount} HP**! (Now at {hp2} HP)"
 
-                log.append((turn, heal_text))
-                if len(log) > 3:
-                    log.pop(0)
+            log.append((turn, heal_text))
+            if len(log) > 3:
+                log.pop(0)
 
-                # Update embed
-                embed.clear_fields()
-                for t, entry in log:
-                    embed.add_field(name=f"Turn {t}", value=entry, inline=False)
+            # Update embed
+            embed.clear_fields()
+            for t, entry in log:
+                embed.add_field(name=f"Turn {t}", value=entry, inline=False)
 
-                embed.add_field(name=player1.name, value=f"{HEALTH_EMOJI} {hp1}", inline=True)
-                embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
+            embed.add_field(name=player1.name, value=f"{HEALTH_EMOJI} {hp1}", inline=True)
+            embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
 
-                await msg.edit(embed=embed)
-                await asyncio.sleep(1.5)
+            await msg.edit(embed=embed)
+            await asyncio.sleep(1.5)
 
-                turn += 1
-                continue  # Skip attack this turn
+            turn += 1
+            continue  # Skip attack this turn
 
             # Pick attack style based on %
             r = random.random()
@@ -134,6 +148,7 @@ class DeathBattle(commands.Cog):
                 attack_text += f" {CRITICAL_EMOJI} **CRITICAL HIT!**"
 
             log.append((turn, attack_text))
+            full_log.append(f"Turn {turn}: {attack_text}")
             if len(log) > 3:
                 log.pop(0)
 
@@ -160,7 +175,7 @@ class DeathBattle(commands.Cog):
         finishing_action = random.choice([
             "annihilated", "finished off", "destroyed", "ended", "humiliated"
         ])
-        finish_text = f"{winner.name} {finishing_action} {loser.name} to claim victory!"
+        finish_text = f"# {WINNER_EMOJI} {winner.name} {finishing_action} {loser.name} to claim victory!"
 
         embed = discord.Embed(
             title=f"{WINNER_EMOJI} {winner.name.upper()} WINS!!! {WINNER_EMOJI}",
@@ -170,7 +185,25 @@ class DeathBattle(commands.Cog):
         embed.add_field(name=winner.name, value=f"{HEALTH_EMOJI} {hp1 if winner == player1 else hp2}", inline=True)
         embed.add_field(name=loser.name, value=f"{HEALTH_EMOJI} {hp1 if loser == player1 else hp2}", inline=True)
 
-        await msg.edit(embed=embed)
+        # Add button to request full log
+        view = discord.ui.View()
+
+        async def send_log(interaction: discord.Interaction):
+            try:
+                full_text = "\n".join(full_log)
+                await interaction.user.send(f"📜 **Full DeathBattle Log:**\n{full_text}")
+                await interaction.response.send_message("📩 Check your DMs!", ephemeral=True)
+            except discord.Forbidden:
+                await interaction.response.send_message("❌ I couldn't DM you! Enable DMs from server members.", ephemeral=True)
+
+        view.add_item(discord.ui.Button(label="📜 Get Full Battle Log", style=discord.ButtonStyle.blurple, custom_id="get_log"))
+
+        async def button_callback(interaction: discord.Interaction):
+            await send_log(interaction)
+
+        view.children[0].callback = button_callback
+
+        await msg.edit(embed=embed, view=view)
 
 
 async def setup(bot):
