@@ -2,84 +2,71 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import random
-from io import BytesIO
 
 class DeathBattle(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # Prefix command
-    @commands.command(name="deathbattle")
-    async def deathbattle_prefix(self, ctx, player1: discord.Member, player2: discord.Member):
-        await self.run_battle(ctx, player1, player2)
+        # Attacks system (add more attacks here)
+        # Higher damage = rarer (lower weight)
+        self.attacks = [
+            {"name": "Punch 👊", "damage": 10, "weight": 40},
+            {"name": "Kick 🦵", "damage": 15, "weight": 30},
+            {"name": "Fireball 🔥", "damage": 25, "weight": 20},
+            {"name": "Mega Blast 💥", "damage": 40, "weight": 8},
+            {"name": "Ultimate Slash ⚔️", "damage": 60, "weight": 2},
+        ]
 
-    # Slash command
-    @app_commands.command(name="deathbattle", description="Start a deathbattle between two players")
+    @app_commands.command(name="deathbattle", description="Start a deathbattle between two players!")
     async def deathbattle_slash(self, interaction: discord.Interaction, player1: discord.Member, player2: discord.Member):
         await self.run_battle(interaction, player1, player2)
 
-    async def run_battle(self, ctx_or_inter, player1, player2):
-        # Initial stats
-        health = {player1: 100, player2: 100}
-        log = []
-        attacks = [
-            ("shot", 5, 15),
-            ("slapped", 1, 10),
-            ("threw a bomb at", 20, 35),
-            ("nuked", 30, 50),
-        ]
+    async def run_battle(self, interaction, player1, player2):
+        # Pick random attacks for each player
+        p1_attack = random.choices(self.attacks, weights=[a["weight"] for a in self.attacks])[0]
+        p2_attack = random.choices(self.attacks, weights=[a["weight"] for a in self.attacks])[0]
 
-        # Embed setup
+        p1_damage = p1_attack["damage"]
+        p2_damage = p2_attack["damage"]
+
+        # Decide winner (no ties)
+        if p1_damage > p2_damage:
+            winner, loser = player1, player2
+            winner_attack, loser_attack = p1_attack, p2_attack
+        elif p2_damage > p1_damage:
+            winner, loser = player2, player1
+            winner_attack, loser_attack = p2_attack, p1_attack
+        else:
+            # If exact same, force winner randomly
+            winner, loser = random.choice([(player1, player2), (player2, player1)])
+            winner_attack, loser_attack = (p1_attack, p2_attack) if winner == player1 else (p2_attack, p1_attack)
+
+        # Fetch avatars
+        p1_avatar = player1.display_avatar
+        p2_avatar = player2.display_avatar
+
+        # Create embed
         embed = discord.Embed(
-            title="⚔️ Deathbattle ⚔️",
-            description=f"<:deathbattle:1408624946858426430> **Battle Log:**\n",
+            title="<:deathbattle:1408624946858426430> DeathBattle!",
+            description=f"<:battle_emoji:1408620699349946572> **{player1.display_name}** vs **{player2.display_name}**\n\n"
+                        f"**{player1.display_name}** used **{p1_attack['name']}** and dealt **{p1_damage}** damage!\n"
+                        f"**{player2.display_name}** used **{p2_attack['name']}** and dealt **{p2_damage}** damage!\n\n"
+                        f"<:deathbattle_winner:1408624915388563467> **Winner:** {winner.mention}",
             color=discord.Color.red()
         )
+        embed.set_thumbnail(url=winner.display_avatar.url)
+        embed.set_image(url=p1_avatar.url if random.choice([True, False]) else p2_avatar.url)  # Randomly show one avatar big
+        embed.set_footer(text="⚔️ Add more attacks in the list to expand battles!")
 
-        embed.add_field(name=f"{player1.name}", value=f"<:health_emoji:1408622054734958664> {health[player1]}%", inline=True)
-        embed.add_field(name=f"{player2.name}", value=f"<:health_emoji:1408622054734958664> {health[player2]}%", inline=True)
+        # Send images + embed in one message
+        files = [
+            await p1_avatar.to_file(filename="p1.png"),
+            await p2_avatar.to_file(filename="p2.png")
+        ]
+        embed.set_author(name="🔥 DeathBattle Results 🔥", icon_url=interaction.user.display_avatar.url)
 
-        # Prepare header image with pfps
-        p1_avatar = player1.display_avatar.with_size(128)
-        p2_avatar = player2.display_avatar.with_size(128)
-        file = None
+        await interaction.response.send_message(files=files, embed=embed)
 
-        # Send initial message
-        if isinstance(ctx_or_inter, commands.Context):
-            message = await ctx_or_inter.send(files=[await p1_avatar.to_file("p1.png"), await p2_avatar.to_file("p2.png")], embed=embed)
-        else:
-            message = await ctx_or_inter.response.send_message(files=[await p1_avatar.to_file("p1.png"), await p2_avatar.to_file("p2.png")], embed=embed)
-            message = await ctx_or_inter.original_response()
-
-        # Battle loop
-        turn = 0
-        while all(hp > 0 for hp in health.values()):
-            attacker = player1 if turn % 2 == 0 else player2
-            defender = player2 if turn % 2 == 0 else player1
-
-            attack, min_dmg, max_dmg = random.choice(attacks)
-            dmg = random.randint(min_dmg, max_dmg)
-            health[defender] = max(0, health[defender] - dmg)
-
-            # Add to log
-            log.append(f"<:battle_emoji:1408620699349946572> __**{attacker.name}**__ {attack} __**{defender.name}**__ dealing **{dmg}** dmg!")
-            if len(log) > 4:
-                log.pop(0)
-
-            # Update embed
-            embed.clear_fields()
-            embed.description = f"<:deathbattle:1408624946858426430> **Battle Log:**\n" + "\n".join(log)
-            embed.add_field(name=f"{player1.name}", value=f"<:health_emoji:1408622054734958664> {health[player1]}%", inline=True)
-            embed.add_field(name=f"{player2.name}", value=f"<:health_emoji:1408622054734958664> {health[player2]}%", inline=True)
-
-            await message.edit(embed=embed)
-            await discord.utils.sleep_until(discord.utils.utcnow() + discord.utils.timedelta(seconds=2))
-            turn += 1
-
-        # Winner
-        winner = player1 if health[player1] > 0 else player2
-        embed.description += f"\n\n<:deathbattle_winner:1408624915388563467> __**{winner.name}**__ wins the Deathbattle!"
-        await message.edit(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(DeathBattle(bot))
