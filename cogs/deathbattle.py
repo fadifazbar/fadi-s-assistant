@@ -40,12 +40,22 @@ class DeathBattle(commands.Cog):
 
         # Attack actions (chance %, damage, template)
         attack_messages = [
-            (40, 5,  "**__{attacker}__** slapped **__{defender}__** so hard that he farted dealing **__{dmg}__** dmg ({chance}%)"),
-            (25, 10, "**__{attacker}__** punched **__{defender}__** straight in the face causing **__{dmg}__** dmg ({chance}%)"),
-            (15, 15, "**__{attacker}__** kicked **__{defender}__** in the stomach for **__{dmg}__** dmg ({chance}%)"),
-            (10, 20, "**__{attacker}__** sliced **__{defender}'s__** body parts taking **__{dmg}__** dmg out of him ({chance}%)"),
-            (5, 25,  "**__{attacker}__** stabbed **__{defender}__** violently dealing **__{dmg}__** dmg ({chance}%)"),
-            (5, 30,  "**__{attacker}__** decapitated **__{defender}__** leaving them with **__{dmg}__** dmg ({chance}%)"),
+            (40, 5,  "**__{attacker}__** slapped **__{defender}__** so hard that he farted dealing **__{dmg}__** damage"),
+            (25, 10, "**__{attacker}__** punched **__{defender}__** straight in the face causing **__{dmg}__** damage"),
+            (15, 15, "**__{attacker}__** kicked **__{defender}__** in the stomach for **__{dmg}__** damag"),
+            (10, 20, "**__{attacker}__** sliced **__{defender}'s__** body parts taking **__{dmg}__** damage out of him"),
+            (5, 25,  "**__{attacker}__** stabbed **__{defender}__** violently dealing **__{dmg}__** damage"),
+            (5, 30,  "**__{attacker}__** decapitated **__{defender}__** removing **__{dmg}__** hp from them"),
+            (45, 4,  "**__{attacker}__** threw sand into **__{defender}'s__** eyes blinding them for **__{dmg}__** damage"),
+            (2, 50,  "**__{defender}__** lost **__{dmg}__** because of**__{attacker}'s__** aura"),
+            (19, 20,  "**__{attacker}__** dashes into **__{defender}__** breaking some of his bones and hr lost **__{dmg}__** hp"),
+            (27, 27,  "**__{attacker}__** used a diamond sword on **__{defender}__** that does **__{dmg}__** damage"),
+            (31, 0,  "**__{attacker}__** got scared from **__{defender}__** and dealt **__{dmg}__** damage"),
+            (21, 29,  "**__{attacker}__** used nostalgia on **__{defender}__** leading him to lose **__{dmg}__**.hp"),
+            (13, 35,  "**__{attacker}__** brainwashed **__{defender}__** making him take away **__{dmg}__** hp from his hp bar"),
+            (0.1, 10000,  "**__{attacker}__** became god and 1 shot **__{defender}__** (this is 0.1% to get.)"),
+            (27, 19,  "**__{attacker}__** got freaky in bed with **__{defender}__** which led to sex making him lose **__{dmg}%__** of his virginity 🙏😭"),
+            (36, 12,  "**__{attacker}__** smashed **__{defender}__** with a hammer that delt **__{dmg}__** damage"), 
         ]
 
         # Normalize %
