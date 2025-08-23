@@ -13,6 +13,7 @@ CRITICAL_EMOJI = "<:CRITICAL_HIT:1408659817127612519>"
 HEAL_EMOJI = "<:MENDING_HEART:1408664782005080094>"
 GOLDEN_HEART = "<:GOLDEN_HEART:1408674925950144614>"
 
+
 class DeathBattle(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -72,45 +73,46 @@ class DeathBattle(commands.Cog):
             attacker = player1 if turn % 2 != 0 else player2
             defender = player2 if turn % 2 != 0 else player1
 
-# 🩹 Healing chance (15%)
-        if random.random() < 0.15:
-            heal_amount = random.randint(5, 20)
+            # 🩹 Healing chance (15%)
+            if random.random() < 0.15:
+                heal_amount = random.randint(5, 20)
 
-            # Critical heal (10%)
-            crit_heal = random.random() < 0.1
-            if crit_heal:
-                heal_amount *= 2  # Double healing!
-
-            if attacker == player1:
-                hp1 = min(100, hp1 + heal_amount)
+                # Critical heal (10%)
+                crit_heal = random.random() < 0.1
                 if crit_heal:
-                    heal_text = f"{GOLDEN_HEART} **__{attacker.name}__** used the **Ultimate Golden Heart** and recovered __**{heal_amount} HP**__! (Now at {hp1} HP)"
+                    heal_amount *= 2  # Double healing!
+
+                if attacker == player1:
+                    hp1 = min(100, hp1 + heal_amount)
+                    if crit_heal:
+                        heal_text = f"{GOLDEN_HEART} **__{attacker.name}__** used the **Ultimate Golden Heart** and recovered __**{heal_amount} HP**__! (Now at {hp1} HP)"
+                    else:
+                        heal_text = f"{HEAL_EMOJI} **__{attacker.name}__** used a mending heart and recovered **{heal_amount} HP**! (Now at {hp1} HP)"
                 else:
-                    heal_text = f"{HEAL_EMOJI} **__{attacker.name}__** used a mending heart and recovered **{heal_amount} HP**! (Now at {hp1} HP)"
-            else:
-                hp2 = min(100, hp2 + heal_amount)
-                if crit_heal:
-                    heal_text = f"{GOLDEN_HEART} **__{attacker.name}__** used the **Ultimate Golden Heart** and recovered __**{heal_amount} HP**__! (Now at {hp2} HP)"
-                else:
-                    heal_text = f"{HEAL_EMOJI} **__{attacker.name}__** used a mending heart and recovered **{heal_amount} HP**! (Now at {hp2} HP)"
+                    hp2 = min(100, hp2 + heal_amount)
+                    if crit_heal:
+                        heal_text = f"{GOLDEN_HEART} **__{attacker.name}__** used the **Ultimate Golden Heart** and recovered __**{heal_amount} HP**__! (Now at {hp2} HP)"
+                    else:
+                        heal_text = f"{HEAL_EMOJI} **__{attacker.name}__** used a mending heart and recovered **{heal_amount} HP**! (Now at {hp2} HP)"
 
-            log.append((turn, heal_text))
-            if len(log) > 3:
-                log.pop(0)
+                log.append((turn, heal_text))
+                full_log.append(f"Turn {turn}: {heal_text}")  # Save heal log
+                if len(log) > 3:
+                    log.pop(0)
 
-            # Update embed
-            embed.clear_fields()
-            for t, entry in log:
-                embed.add_field(name=f"Turn {t}", value=entry, inline=False)
+                # Update embed
+                embed.clear_fields()
+                for t, entry in log:
+                    embed.add_field(name=f"Turn {t}", value=entry, inline=False)
 
-            embed.add_field(name=player1.name, value=f"{HEALTH_EMOJI} {hp1}", inline=True)
-            embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
+                embed.add_field(name=player1.name, value=f"{HEALTH_EMOJI} {hp1}", inline=True)
+                embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
 
-            await msg.edit(embed=embed)
-            await asyncio.sleep(1.5)
+                await msg.edit(embed=embed)
+                await asyncio.sleep(1.5)
 
-            turn += 1
-            continue  # Skip attack this turn
+                turn += 1
+                continue  # Skip attack this turn
 
             # Pick attack style based on %
             r = random.random()
@@ -148,7 +150,7 @@ class DeathBattle(commands.Cog):
                 attack_text += f" {CRITICAL_EMOJI} **CRITICAL HIT!**"
 
             log.append((turn, attack_text))
-            full_log.append(f"Turn {turn}: {attack_text}")
+            full_log.append(f"Turn {turn}: {attack_text}")  # Save attack log
             if len(log) > 3:
                 log.pop(0)
 
@@ -176,6 +178,9 @@ class DeathBattle(commands.Cog):
             "annihilated", "finished off", "destroyed", "ended", "humiliated"
         ])
         finish_text = f"# {WINNER_EMOJI} {winner.name} {finishing_action} {loser.name} to claim victory!"
+
+        # Add winner log
+        full_log.append(f"🏆 {winner.name} {finishing_action} {loser.name} and WON the battle!")
 
         embed = discord.Embed(
             title=f"{WINNER_EMOJI} {winner.name.upper()} WINS!!! {WINNER_EMOJI}",
