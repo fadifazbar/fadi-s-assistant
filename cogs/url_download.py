@@ -8,6 +8,8 @@ import asyncio
 import math
 import re
 
+Loading = "<:loading:1408941121803124807>"
+
 MAX_DISCORD_FILESIZE = 10 * 1024 * 1024  # 10MB
 DOWNLOADS_DIR = "downloads"
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
@@ -157,7 +159,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
         embed.add_field(name="📦 Size", value=sizeof_fmt(final_size), inline=True)
         embed.add_field(name="⏳ Time taken", value=f"{elapsed:.2f}s", inline=True)
 
-        await status_msg.edit(content="📤 Uploading to Discord...", embed=None)
+        await status_msg.edit(content=f"{Loading} Uploading to Discord...", embed=None)
         if is_slash:
             await interaction_or_ctx.followup.send(embed=embed, file=discord.File(filename))
         else:
