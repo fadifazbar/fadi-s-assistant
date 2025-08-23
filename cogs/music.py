@@ -8,6 +8,11 @@ from discord.ext import commands
 from discord import app_commands
 import yt_dlp
 
+DUA_EMOJI = "<:duration:1408936058112184601>"
+CHAN_EMOJI = "<:channel:1408936126357700732>"
+POSE_EMOJI = "<:position:1408936089221201930>"
+NP_EMOJI = "<:music_note:1408941536044908684>"
+
 # ======================
 # yt-dlp & ffmpeg config
 # ======================
@@ -117,9 +122,9 @@ LoopMode = Literal["off", "one", "all"]
 
 def _progress_bar(elapsed: int, total: Optional[int], width: int = 18) -> str:
     if not total or total <= 0:
-        return "▬" * width
+        return "⬛" * width
     filled = int(width * min(elapsed / total, 1.0))
-    return ("▬" * max(filled - 1, 0)) + "🔘" + ("▬" * (width - filled))
+    return ("⬛" * max(filled - 1, 0)) + "🟥" + ("⬛" * (width - filled))
 
 def _entry_to_track(entry: dict, requester) -> Optional[Track]:
     if not entry:
@@ -295,7 +300,7 @@ class Music(commands.Cog):
         dur = track.pretty_duration()
         bar = _progress_bar(0, track.duration)
         embed = discord.Embed(
-            title="🎶 Now Playing",
+            title=f"{NP_EMOJI} Now Playing",
             description=f"[{track.title}]({track.webpage_url})\n{bar}\n`0:00 / {dur}`",
             color=discord.Color.green(),
         )
@@ -319,8 +324,8 @@ class Music(commands.Cog):
         if track.thumbnail:
             embed.set_thumbnail(url=track.thumbnail)
         if track.duration:
-            embed.add_field(name="Duration", value=track.pretty_duration(), inline=True)
-        embed.add_field(name="Position", value=str(pos), inline=True)
+            embed.add_field(name=f"{DUA_EMOJI} Duration", value=track.pretty_duration(), inline=True)
+        embed.add_field(name=f"{POSE_EMOJI} Position", value=str(pos), inline=True)
         await channel.send(embed=embed)
 
     # ------------- playback core -------------
