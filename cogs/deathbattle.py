@@ -83,7 +83,8 @@ class DeathBattle(commands.Cog):
             damage = chosen_dmg
 
             # Critical hit (10%)
-            crit =         if crit:
+            crit =
+            if crit:
                 damage *= 2
 
             # Apply damage
