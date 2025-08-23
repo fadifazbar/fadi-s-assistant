@@ -25,6 +25,7 @@ YTDL_BASE = {
     # Use a client profile less likely to hit SABR-only formats
     "extractor_args": {"youtube": {"player_client": ["android"]}},
     "cachedir": False,
+    "cookiefile": "cookies.txt",
 }
 
 # Main YDL (full extraction)
