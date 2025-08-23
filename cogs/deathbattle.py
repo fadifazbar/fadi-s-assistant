@@ -6,9 +6,11 @@ import asyncio
 
 # Hardcoded emojis
 BATTLE_EMOJI = "<:battle_emoji:1408620699349946572>"
-WINNER_EMOJI = "<:deathbattle_winner:1408624915388563467>"
-DEATHBATTLE_EMOJI = "<:deathbattle:1408624946858426430>"
-HEALTH_EMOJI = "<:health_emoji:1408622054734958664>"
+WINNER_EMOJI = "<:Deathbattle_Winer_V2:1408667344682618951>"
+DEATHBATTLE_EMOJI = "<:Deathbattle_V2:1408666286463914067>"
+HEALTH_EMOJI = "<:HP_V2:1408669354069065748>"
+CRITICAL_EMOJI = "<:CRITICAL_HIT:1408659817127612519>"
+HEAL_EMOJI = "<:MENDING_HEART:1408664782005080094>"
 
 class DeathBattle(commands.Cog):
     def __init__(self, bot):
@@ -36,12 +38,12 @@ class DeathBattle(commands.Cog):
 
         # Attack actions (chance %, damage, template)
         attack_messages = [
-            (40, 5,  "{attacker} slapped {defender} so hard that he farted dealing {dmg} dmg ({chance}%)"),
-            (25, 10, "{attacker} punched {defender} straight in the face causing {dmg} dmg ({chance}%)"),
-            (15, 15, "{attacker} kicked {defender} in the stomach for {dmg} dmg ({chance}%)"),
-            (10, 20, "{attacker} sliced {defender}'s body parts taking {dmg} dmg out of him ({chance}%)"),
-            (5, 25,  "{attacker} stabbed {defender} violently dealing {dmg} dmg ({chance}%)"),
-            (5, 30,  "{attacker} decapitated {defender} leaving them with {dmg} dmg ({chance}%)"),
+            (40, 5,  "**__{attacker}__** slapped **__{defender}__** so hard that he farted dealing **__{dmg}__** dmg ({chance}%)"),
+            (25, 10, "**__{attacker}__** punched **__{defender}__** straight in the face causing **__{dmg}__** dmg ({chance}%)"),
+            (15, 15, "**__{attacker}__** kicked **__{defender}__** in the stomach for **__{dmg}__** dmg ({chance}%)"),
+            (10, 20, "**__{attacker}__** sliced **__{defender}'s__** body parts taking **__{dmg}__** dmg out of him ({chance}%)"),
+            (5, 25,  "**__{attacker}__** stabbed **__{defender}__** violently dealing **__{dmg}__** dmg ({chance}%)"),
+            (5, 30,  "**__{attacker}__** decapitated **__{defender}__** leaving them with **__{dmg}__** dmg ({chance}%)"),
         ]
 
         # Normalize %
@@ -68,6 +70,34 @@ class DeathBattle(commands.Cog):
             attacker = player1 if turn % 2 != 0 else player2
             defender = player2 if turn % 2 != 0 else player1
 
+            # 🩹 Healing chance (15%)
+            if random.random() < 0.15:
+                heal_amount = random.randint(5, 20)
+                if attacker == player1:
+                    hp1 = min(100, hp1 + heal_amount)
+                    heal_text = f"{HEAL_EMOJI} **__{attacker.name}__** used a mending heart and recovered **{heal_amount} HP**! (Now at {hp1} HP)"
+                else:
+                    hp2 = min(100, hp2 + heal_amount)
+                    heal_text = f"{HEAL_EMOJI} **__{attacker.name}__** used a mending heart and recovered **{heal_amount} HP**! (Now at {hp2} HP)"
+
+                log.append((turn, heal_text))
+                if len(log) > 3:
+                    log.pop(0)
+
+                # Update embed
+                embed.clear_fields()
+                for t, entry in log:
+                    embed.add_field(name=f"Turn {t}", value=entry, inline=False)
+
+                embed.add_field(name=player1.name, value=f"{HEALTH_EMOJI} {hp1}", inline=True)
+                embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
+
+                await msg.edit(embed=embed)
+                await asyncio.sleep(1.5)
+
+                turn += 1
+                continue  # Skip attack this turn
+
             # Pick attack style based on %
             r = random.random()
             cumulative = 0
@@ -83,7 +113,7 @@ class DeathBattle(commands.Cog):
             damage = chosen_dmg
 
             # Critical hit (10%)
-            crit = random.random () < 0.1
+            crit = random.random() < 0.1
             if crit:
                 damage *= 2
 
@@ -101,7 +131,7 @@ class DeathBattle(commands.Cog):
                 chance=chosen_percent
             )
             if crit:
-                attack_text += " 💥 **CRITICAL HIT!**"
+                attack_text += f" {CRITICAL_EMOJI} **CRITICAL HIT!**"
 
             log.append((turn, attack_text))
             if len(log) > 3:
