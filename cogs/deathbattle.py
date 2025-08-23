@@ -13,7 +13,6 @@ CRITICAL_EMOJI = "<:CRITICAL_HIT:1408659817127612519>"
 HEAL_EMOJI = "<:MENDING_HEART:1408664782005080094>"
 GOLDEN_HEART = "<:GOLDEN_HEART:1408674925950144614>"
 
-
 class DeathBattle(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -96,7 +95,7 @@ class DeathBattle(commands.Cog):
                         heal_text = f"{HEAL_EMOJI} **__{attacker.name}__** used a mending heart and recovered **{heal_amount} HP**! (Now at {hp2} HP)"
 
                 log.append((turn, heal_text))
-                full_log.append(f"Turn {turn}: {heal_text}")  # Save heal log
+                full_log.append(f"Turn {turn}: {heal_text}")
                 if len(log) > 3:
                     log.pop(0)
 
@@ -150,7 +149,7 @@ class DeathBattle(commands.Cog):
                 attack_text += f" {CRITICAL_EMOJI} **CRITICAL HIT!**"
 
             log.append((turn, attack_text))
-            full_log.append(f"Turn {turn}: {attack_text}")  # Save attack log
+            full_log.append(f"Turn {turn}: {attack_text}")
             if len(log) > 3:
                 log.pop(0)
 
@@ -179,9 +178,6 @@ class DeathBattle(commands.Cog):
         ])
         finish_text = f"# {WINNER_EMOJI} {winner.name} {finishing_action} {loser.name} to claim victory!"
 
-        # Add winner log
-        full_log.append(f"🏆 {winner.name} {finishing_action} {loser.name} and WON the battle!")
-
         embed = discord.Embed(
             title=f"{WINNER_EMOJI} {winner.name.upper()} WINS!!! {WINNER_EMOJI}",
             description=finish_text,
@@ -195,8 +191,16 @@ class DeathBattle(commands.Cog):
 
         async def send_log(interaction: discord.Interaction):
             try:
+                # Split into multiple messages if >2000 chars
                 full_text = "\n".join(full_log)
-                await interaction.user.send(f"📜 **Full DeathBattle Log:**\n{full_text}")
+                chunks = [full_text[i:i+2000] for i in range(0, len(full_text), 2000)]
+
+                for idx, chunk in enumerate(chunks):
+                    if idx == 0:
+                        await interaction.user.send(f"📜 **Full DeathBattle Log:**\n{chunk}")
+                    else:
+                        await interaction.user.send(chunk)
+
                 await interaction.response.send_message("📩 Check your DMs!", ephemeral=True)
             except discord.Forbidden:
                 await interaction.response.send_message("❌ I couldn't DM you! Enable DMs from server members.", ephemeral=True)
