@@ -191,17 +191,21 @@ class DeathBattle(commands.Cog):
 
         async def send_log(interaction: discord.Interaction):
             try:
-                # Split into multiple messages if >2000 chars
-                full_text = "\n".join(full_log)
-                chunks = [full_text[i:i+1800] for i in range(0, len(full_text), 1800)]
+                # Split logs into multiple embeds (25 fields max per embed)
+                chunk_size = 20
+                for i in range(0, len(full_log), chunk_size):
+                    chunk = full_log[i:i+chunk_size]
+                    log_embed = discord.Embed(
+                        title="📜 DeathBattle Log",
+                        description=f"Turns {i+1} → {i+len(chunk)}",
+                        color=discord.Color.purple()
+                    )
+                    for entry in chunk:
+                        turn_num, text = entry.split(": ", 1)
+                        log_embed.add_field(name=turn_num, value=text, inline=False)
+                    await interaction.user.send(embed=log_embed)
 
-                for idx, chunk in enumerate(chunks):
-                    if idx == 0:
-                        await interaction.user.send(f"📜 **Full DeathBattle Log:**\n{chunk}")
-                    else:
-                        await interaction.user.send(chunk)
-
-                await interaction.response.send_message("📩 Check your DMs!", ephemeral=True)
+                await interaction.response.send_message("📩 Check your DMs! Full battle log sent as embeds.", ephemeral=True)
             except discord.Forbidden:
                 await interaction.response.send_message("❌ I couldn't DM you! Enable DMs from server members.", ephemeral=True)
 
