@@ -11,7 +11,7 @@ import yt_dlp
 DUA_EMOJI = "<:duration:1408936058112184601>"
 CHAN_EMOJI = "<:channel:1408936126357700732>"
 POSE_EMOJI = "<:position:1408936089221201930>"
-NP_EMOJI = "<:music_note:1408941536044908684>"
+NP_EMOJI = "<a:music_note:1408941536044908684>"
 
 # ======================
 # yt-dlp & ffmpeg config
@@ -307,7 +307,7 @@ class Music(commands.Cog):
         if track.thumbnail:
             embed.set_thumbnail(url=track.thumbnail)
         if track.uploader:
-            embed.add_field(name="Channel", value=track.uploader, inline=True)
+            embed.add_field(name=f"{CHAN_EMOJI} Channel", value=track.uploader, inline=True)
         embed.add_field(
             name="Requested by",
             value=getattr(track.requester, "mention", str(track.requester)),
