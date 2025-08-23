@@ -83,7 +83,7 @@ class DeathBattle(commands.Cog):
             damage = chosen_dmg
 
             # Critical hit (10%)
-            crit =
+            crit = random.random () < 0.1
             if crit:
                 damage *= 2
 
