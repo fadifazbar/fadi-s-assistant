@@ -25,7 +25,6 @@ YTDL_BASE = {
     # Use a client profile less likely to hit SABR-only formats
     "extractor_args": {"youtube": {"player_client": ["android"]}},
     "cachedir": False,
-    "cookiefile": "cookies.txt",
 }
 
 # Main YDL (full extraction)
@@ -495,6 +494,7 @@ class Music(commands.Cog):
         self._set_loop(ctx.guild.id, mode)  # type: ignore
         await ctx.send(f"🔁 Loop set to **{mode}**.")
 
+
     # =====================
     # SLASH COMMANDS (/) 🎯
     # =====================
@@ -580,6 +580,8 @@ class Music(commands.Cog):
         state = not self._is_shuffle(interaction.guild.id)
         self.shuffle_enabled[interaction.guild.id] = state
         await interaction.response.send_message("🔀 Shuffle enabled." if state else "➡️ Shuffle disabled.")
+
+    
 
     # ------------- listeners -------------
     @commands.Cog.listener()
