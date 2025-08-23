@@ -193,7 +193,7 @@ class DeathBattle(commands.Cog):
             try:
                 # Split into multiple messages if >2000 chars
                 full_text = "\n".join(full_log)
-                chunks = [full_text[i:i+2000] for i in range(0, len(full_text), 2000)]
+                chunks = [full_text[i:i+1800] for i in range(0, len(full_text), 1800)]
 
                 for idx, chunk in enumerate(chunks):
                     if idx == 0:
