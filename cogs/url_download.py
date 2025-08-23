@@ -8,7 +8,7 @@ import asyncio
 import math
 import re
 
-Loading = "<:loading:1408941121803124807>"
+Loading = "<a:loading:1408941121803124807>"
 
 MAX_DISCORD_FILESIZE = 10 * 1024 * 1024  # 10MB
 DOWNLOADS_DIR = "downloads"
