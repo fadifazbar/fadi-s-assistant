@@ -2,101 +2,100 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import random
+import asyncio
 
-# ---------------- Emojis ----------------
-HP_EMOJI = "<:health_emoji:1408622054734958664>"
-BATTLE_LOG_EMOJI = "<:deathbattle:1408624946858426430>"
+# Emojis
+HEALTH_EMOJI = "<:health_emoji:1408622054734958664>"
+DEATH_EMOJI = "<:deathbattle:1408624946858426430>"
 WINNER_EMOJI = "<:deathbattle_winner:1408624915388563467>"
-ATTACK_EMOJI = "<:battle_emoji:1408620699349946572>"
+BATTLE_EMOJI = "<:battle_emoji:1408620699349946572>"
 
-# ---------------- Attack Pool (damage, rarity) ----------------
-attacks = [
-    {"name": "Punch", "damage": 10, "weight": 50},
-    {"name": "Kick", "damage": 15, "weight": 30},
-    {"name": "Fireball", "damage": 20, "weight": 15},
-    {"name": "Ultimate Smash", "damage": 35, "weight": 5},
+# Attack list with rarity (weight = lower means rarer)
+ATTACKS = [
+    {"name": "punched", "damage": 10, "weight": 10},
+    {"name": "slapped", "damage": 8, "weight": 12},
+    {"name": "kicked", "damage": 12, "weight": 8},
+    {"name": "headbutted", "damage": 15, "weight": 5},
+    {"name": "dropkicked", "damage": 20, "weight": 3},
+    {"name": "unleashed a mega blast on", "damage": 25, "weight": 1},
 ]
+
+def pick_attack():
+    return random.choices(ATTACKS, weights=[a["weight"] for a in ATTACKS], k=1)[0]
 
 class DeathBattle(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # -------- Prefix Command --------
-    @commands.command(name="deathbattle")
-    async def deathbattle_prefix(self, ctx, player1: discord.Member, player2: discord.Member):
-        await self.run_battle(ctx, player1, player2)
+    async def run_battle(self, interaction, player1, player2):
+        hp1, hp2 = 100, 100
+        logs = []  # store last 3 actions
 
-    # -------- Slash Command --------
-    @app_commands.command(name="deathbattle", description="Start a death battle between two players!")
-    async def deathbattle_slash(self, interaction: discord.Interaction, player1: discord.Member, player2: discord.Member):
-        await interaction.response.defer()
-        await self.run_battle(interaction, player1, player2)
-
-    # -------- Battle Logic --------
-    async def run_battle(self, ctx_or_interaction, player1, player2):
-        hp1 = 100
-        hp2 = 100
-        log = []
-
-        # Pick first attacker randomly
-        attacker, defender = (player1, player2) if random.choice([True, False]) else (player2, player1)
-        hp_attacker, hp_defender = (hp1, hp2) if attacker == player1 else (hp2, hp1)
-
-        # Embed Setup
-        embed = discord.Embed(
-            title=f"{BATTLE_LOG_EMOJI} Death Battle!",
-            description=f"**{player1.name}** {HP_EMOJI} 100%  VS  **{player2.name}** {HP_EMOJI} 100%",
+        # Intro message
+        intro_embed = discord.Embed(
+            title=f"{DEATH_EMOJI} Death Battle:",
+            description=f"{player1.name} vs {player2.name}",
             color=discord.Color.red()
         )
-        embed.set_thumbnail(url=self.bot.user.avatar.url if self.bot.user.avatar else discord.Embed.Empty)
+        msg = await interaction.response.send_message(embed=intro_embed)
+        await asyncio.sleep(5)
 
-        # Send initial embed
-        if isinstance(ctx_or_interaction, commands.Context):
-            message = await ctx_or_interaction.send(embed=embed)
-        else:
-            message = await ctx_or_interaction.followup.send(embed=embed, wait=True)
-
-        # Battle Loop
         while hp1 > 0 and hp2 > 0:
-            attack = random.choices(attacks, weights=[atk["weight"] for atk in attacks], k=1)[0]
-            dmg = attack["damage"]
+            attacker, defender = (player1, player2) if random.choice([True, False]) else (player2, player1)
+            attack = pick_attack()
+
+            # Critical hit check
+            crit = random.random() < 0.2
+            damage = attack["damage"] * (2 if crit else 1)
 
             if defender == player1:
-                hp1 -= dmg
-                if hp1 < 0:
-                    hp1 = 0
+                hp1 = max(0, hp1 - damage)
             else:
-                hp2 -= dmg
-                if hp2 < 0:
-                    hp2 = 0
+                hp2 = max(0, hp2 - damage)
 
-            log.append(f"{ATTACK_EMOJI} **__{attacker.name}__** used **{attack['name']}** dealing **{dmg}%** damage!")
+            # Attack log line
+            if crit:
+                line = f"**CRITICAL HIT!** {attacker.name} {attack['name']} {defender.name} for {damage} damage!"
+            else:
+                line = f"{attacker.name} {attack['name']} {defender.name} for {damage} damage!"
 
-            # Update Embed
-            embed.description = (
-                f"**{player1.name}** {HP_EMOJI} {hp1}%  VS  **{player2.name}** {HP_EMOJI} {hp2}%\n\n"
-                f"{BATTLE_LOG_EMOJI} **Battle Log:**\n" + "\n".join(log[-8:])
+            logs.append(line)
+            if len(logs) > 3:
+                logs.pop(0)
+
+            # Health display
+            health_display = (
+                f"{player1.name} {HEALTH_EMOJI} {hp1}\n"
+                f"{player2.name} {HEALTH_EMOJI} {hp2}\n\n"
+                f"{BATTLE_EMOJI} Battle Log:\n" + "\n".join(logs)
             )
 
-            await message.edit(embed=embed)
+            battle_embed = discord.Embed(
+                title=f"{DEATH_EMOJI} Death Battle",
+                description=health_display,
+                color=discord.Color.orange()
+            )
 
-            if hp1 <= 0 or hp2 <= 0:
-                break
+            await msg.edit(embed=battle_embed)
+            await asyncio.sleep(1.5)
 
-            # Switch turns
-            attacker, defender = defender, attacker
-
-        # Winner
+        # Winner message
         winner = player1 if hp1 > 0 else player2
-        loser = player2 if winner == player1 else player1
-
-        embed.description = (
-            f"**{player1.name}** {HP_EMOJI} {hp1}%  VS  **{player2.name}** {HP_EMOJI} {hp2}%\n\n"
-            f"{BATTLE_LOG_EMOJI} **Battle Log:**\n" + "\n".join(log[-8:]) +
-            f"\n\n{WINNER_EMOJI} **__{winner.name}__ Wins!**"
+        win_embed = discord.Embed(
+            title=f"{WINNER_EMOJI} {winner.name} WINS!!!",
+            color=discord.Color.gold()
         )
-        embed.set_thumbnail(url=winner.avatar.url if winner.avatar else discord.Embed.Empty)
-        await message.edit(embed=embed)
+        await msg.edit(embed=win_embed)
+
+    # Prefix command
+    @commands.command(name="deathbattle")
+    async def deathbattle_prefix(self, ctx, user1: discord.Member, user2: discord.Member):
+        await self.run_battle(ctx, user1, user2)
+
+    # Slash command
+    @app_commands.command(name="deathbattle", description="Start a death battle between two players")
+    async def deathbattle_slash(self, interaction: discord.Interaction, user1: discord.Member, user2: discord.Member):
+        await self.run_battle(interaction, user1, user2)
 
 
 async def setup(bot):
