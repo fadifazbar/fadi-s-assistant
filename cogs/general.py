@@ -1192,7 +1192,7 @@ class General(commands.Cog):
                   "• Fun Bot\n"
                   "• Music features\n"
                   "• Downloads Video!"
-        ),
+            ),
             inline=True
         )
 
