@@ -36,7 +36,7 @@ def hp_bar(hp: int, max_hp: int = 100) -> str:
     else:
         bar = "🟥" * filled_bars
 
-    return bar + "⬛" * empty_bars + f"\n{HEALTH_EMOJI}  {hp} Health"
+    return bar + "⬛" * empty_bars + f"\n{HEALTH_EMOJI}  {hp}/100 Health"
 class DeathBattle(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -209,8 +209,8 @@ class DeathBattle(commands.Cog):
                 embed.clear_fields()
                 for t, entry in log:
                     embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-                embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
-                embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
+                embed.add_field(name=player1.mention, value=hp_bar(hp1), inline=True)
+                embed.add_field(name=player2.mention, value=hp_bar(hp2), inline=True)
                 await msg.edit(embed=embed)
                 await asyncio.sleep(1.5)
 
