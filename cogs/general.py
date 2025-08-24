@@ -1193,7 +1193,7 @@ class General(commands.Cog):
                   "• Music features\n",
                   "• Downloads Video!",
             inline=True
-        )
+        ),
 
         embed.add_field(
             name="🔧 Technical",
