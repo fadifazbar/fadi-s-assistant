@@ -133,17 +133,17 @@ class DeathBattle(commands.Cog):
                 continue
 
             # Apply burn damage if any
-            if burn_damage_next_turn[attacker] > 0:
-                burn_text = f"{BURN_EMOJI} __**{attacker.name}**__ takes __**{burn_damage_next_turn[attacker]}**__ burn damage!"
+            if burn_damage > 0:
+                burn_text = f"{BURN_EMOJI} __**{attacker.name}**__ burned __**{defender.name}**__ dealing an extra __**{burn_damage}**__ damag!"
                 if attacker == player1:
-                    hp1 = max(0, hp1 - burn_damage_next_turn[attacker])
+                    hp1 = max(0, hp1 - burn_damage)
                 else:
-                    hp2 = max(0, hp2 - burn_damage_next_turn[attacker])
+                    hp2 = max(0, hp2 - burn_damage_next)
                 log.append((turn, burn_text))
                 full_log.append(f"Turn {turn}: {burn_text}")
                 if len(log) > 3:
                     log.pop(0)
-                burn_damage_next_turn[attacker] = 0
+                burn_damage = 0
 
                 embed.clear_fields()
                 for t, entry in log:
@@ -192,12 +192,12 @@ class DeathBattle(commands.Cog):
                     chosen_dmg = dmg
                     break
 
-            damage = chosen_dmg
+            base_damage = chosen_dmg
 
             # Critical hit (10%)
             crit = random.random() < 0.1
             if crit:
-                damage *= 2
+                base_damage *= 2
 
             # Special mechanics
             dodge = random.random() < 0.04
@@ -205,33 +205,51 @@ class DeathBattle(commands.Cog):
             stun = random.random() < 0.03
             special_text = ""
 
+            # If defender dodges → no damage
             if dodge:
-                damage = 0
+                base_damage = 0
                 special_text += f"{DODGE_EMOI} __**{defender.name}**__ dodged __**{attacker.name}'s**__ attack!\n"
+
+            # If burn triggers → extra dmg added THIS turn
+            burn_damage = 0
             if burn:
-                burn_damage_next_turn[defender] = random.randint(5, 10)
-                special_text += f"{BURN_EMOJI} __**{defender.name}**__ is burned and will take {burn_damage_next_turn[defender]} damage next turn!\n"
+                burn_damage = random.randint(5, 10)
+                special_text += f"{BURN_EMOJI} __**{defender.name}**__ is burned and suffers __**{burn_damage}**__ extra damage!\n"
+
+            # If stun triggers → affects NEXT turn
             if stun:
                 stunned_players[defender] = True
                 special_text += f"{STUN_EMOJI} __**{defender.name}**__ is stunned and will miss their next turn!\n"
 
-            # Apply damage
+            # ✅ Apply total damage (base + burn)
+            total_damage = base_damage + burn_damage
             if defender == player1:
-                hp1 = max(0, hp1 - damage)
+                hp1 = max(0, hp1 - total_damage)
             else:
-                hp2 = max(0, hp2 - damage)
+                hp2 = max(0, hp2 - total_damage)
 
-            total_stats[attacker]["damage"] += damage
-            attack_text = f"{BATTLE_EMOJI} " + chosen_template.format(attacker=attacker.name, defender=defender.name, dmg=damage, chance=chosen_percent)
+            total_stats[attacker]["damage"] += total_damage
+
+            # Build attack message
+            attack_text = (
+                f"{BATTLE_EMOJI} " +
+                chosen_template.format(attacker=attacker.name, defender=defender.name, dmg=base_damage, chance=chosen_percent)
+            )
+
+            if burn_damage > 0:
+                attack_text += f" (+__**{burn_damage}**__ burn dmg)"
             if crit:
                 attack_text += f" {CRITICAL_EMOJI} **CRITICAL HIT!**"
-            attack_text += "\n" + special_text if special_text else ""
+            if special_text:
+                attack_text += "\n" + special_text
 
+            # Add to log
             log.append((turn, attack_text))
             full_log.append(f"Turn {turn}: {attack_text}")
             if len(log) > 3:
                 log.pop(0)
 
+            # Update embed
             embed.clear_fields()
             for t, entry in log:
                 embed.add_field(name=f"Turn {t}", value=entry, inline=False)
@@ -240,6 +258,7 @@ class DeathBattle(commands.Cog):
             await msg.edit(embed=embed)
             await asyncio.sleep(1.5)
             turn += 1
+
 
         # Winner section
         winner = player1 if hp1 > 0 else player2
