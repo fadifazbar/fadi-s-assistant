@@ -146,13 +146,12 @@ class DeathBattle(commands.Cog):
         )
     embed.add_field(
         name=player1.name,
-        value=f"{hp_to_bar(hp1)}\n{HEALTH_EMOJI} {hp1}/100",
+        value=f"{hp_bar(hp1)}\n{HEALTH_EMOJI} {hp1}/100",
         inline=True
     )
-
     embed.add_field(
         name=player2.name,
-        value=f"{hp_to_bar(hp2)}\n{HEALTH_EMOJI} {hp2}/100",
+        value=f"{hp_bar(hp2)}\n{HEALTH_EMOJI} {hp2}/100",
         inline=True
     )
 
