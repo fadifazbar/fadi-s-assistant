@@ -1186,15 +1186,17 @@ class General(commands.Cog):
 
         embed.add_field(
             name="⚙️ Features",
-            value="• Moderation commands\n"
-                  "• Slash & prefix commands\n"
-                  "• Message management\n"
-                  "• Fun Bot\n"
-                  "• Music features\n"
-                  "• Downloads Video!"
+            value=(
+                "• Moderation commands\n"
+                "• Slash & prefix commands\n"
+                "• Message management\n"
+                "• Fun Bot\n"
+                "• Music features\n"
+                "• Downloads Video!"
             ),
             inline=True
         )
+
 
         embed.add_field(
             name="🔧 Technical",
