@@ -141,7 +141,7 @@ class DeathBattle(commands.Cog):
             description=f"# {DEATHBATTLE_EMOJI} {player1.name} VS {player2.name} {DEATHBATTLE_EMOJI}\nFight begins!",
             color=discord.Color.red()
         )
-embed.add_field(
+    embed.add_field(
         name=player1.name,
         value=f"{hp_to_bar(hp1)}\n{HEALTH_EMOJI} {hp1}/100",
         inline=True
