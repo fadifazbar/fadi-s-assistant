@@ -261,9 +261,9 @@ class DeathBattle(commands.Cog):
                 damage *= 2
 
             # Special mechanics
-            dodge = random.random() < 0.1
-            burn = random.random() < 0.05
-            stun = random.random() < 0.05
+            dodge = random.random() < 0.04
+            burn = random.random() < 0.03
+            stun = random.random() < 0.03
             special_text = ""
 
             if dodge:
