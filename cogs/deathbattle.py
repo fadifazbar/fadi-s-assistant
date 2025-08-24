@@ -16,6 +16,22 @@ STUN_EMOJI = "<:stun:1409016286104518827>"
 BURN_EMOJI = "<:burn:1409016476760936529>"
 DODGE_EMOI = "<:dodge:1409016517970100325>"
 
+# ✅ HP BAR FUNCTION
+def hp_bar(hp: int) -> str:
+    total_bars = 10
+    filled_bars = max(0, hp // 10)  # each 10 HP = 1 bar
+    empty_bars = total_bars - filled_bars
+
+    # Decide bar color
+    if hp > 60:
+        bar = "🟩" * filled_bars
+    elif hp > 30:
+        bar = "🟨" * filled_bars
+    else:
+        bar = "🟥" * filled_bars
+
+    return bar + "⬛" * empty_bars + f"  ({hp} HP)"
+
 class DeathBattle(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -125,8 +141,8 @@ class DeathBattle(commands.Cog):
             description=f"# {DEATHBATTLE_EMOJI} {player1.name} VS {player2.name} {DEATHBATTLE_EMOJI}\nFight begins!",
             color=discord.Color.red()
         )
-        embed.add_field(name=player1.name, value=f"{HEALTH_EMOJI} {hp1}", inline=True)
-        embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
+        embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
+        embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
 
         msg = await send(embed=embed)
         if is_interaction:
@@ -152,8 +168,8 @@ class DeathBattle(commands.Cog):
                 embed.clear_fields()
                 for t, entry in log:
                     embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-                embed.add_field(name=player1.name, value=f"{HEALTH_EMOJI} {hp1}", inline=True)
-                embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
+                embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
+                embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
                 await msg.edit(embed=embed)
                 await asyncio.sleep(1.5)
                 turn += 1
@@ -172,12 +188,11 @@ class DeathBattle(commands.Cog):
                     log.pop(0)
                 burn_damage_next_turn[attacker] = 0
 
-                # Update embed
                 embed.clear_fields()
                 for t, entry in log:
                     embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-                embed.add_field(name=player1.name, value=f"{HEALTH_EMOJI} {hp1}", inline=True)
-                embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
+                embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
+                embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
                 await msg.edit(embed=embed)
                 await asyncio.sleep(1.5)
 
@@ -201,8 +216,8 @@ class DeathBattle(commands.Cog):
                 embed.clear_fields()
                 for t, entry in log:
                     embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-                embed.add_field(name=player1.name, value=f"{HEALTH_EMOJI} {hp1}", inline=True)
-                embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
+                embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
+                embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
                 await msg.edit(embed=embed)
                 await asyncio.sleep(1.5)
                 turn += 1
@@ -263,13 +278,13 @@ class DeathBattle(commands.Cog):
             embed.clear_fields()
             for t, entry in log:
                 embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-            embed.add_field(name=player1.name, value=f"{HEALTH_EMOJI} {hp1}", inline=True)
-            embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
+            embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
+            embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
             await msg.edit(embed=embed)
             await asyncio.sleep(1.5)
             turn += 1
 
-        # Winner section (unchanged)
+        # Winner section
         winner = player1 if hp1 > 0 else player2
         loser = player2 if winner == player1 else player1
         finishing_action = random.choice(["annihilated", "finished off", "destroyed", "ended", "humiliated"])
@@ -279,9 +294,10 @@ class DeathBattle(commands.Cog):
             description=finish_text,
             color=discord.Color.gold()
         )
-        embed.add_field(name=winner.name, value=f"{HEALTH_EMOJI} {hp1 if winner == player1 else hp2}", inline=True)
-        embed.add_field(name=loser.name, value=f"{HEALTH_EMOJI} {hp1 if loser == player1 else hp2}", inline=True)
+        embed.add_field(name=winner.name, value=hp_bar(hp1 if winner == player1 else hp2), inline=True)
+        embed.add_field(name=loser.name, value=hp_bar(hp1 if loser == player1 else hp2), inline=True)
 
+        # Button for logs
         view = discord.ui.View()
         async def send_log(interaction: discord.Interaction):
             try:
