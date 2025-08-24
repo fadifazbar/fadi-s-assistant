@@ -1189,9 +1189,10 @@ class General(commands.Cog):
             value="• Moderation commands\n"
                   "• Slash & prefix commands\n"
                   "• Message management\n"
-                  "• Fun Bot\n",
-                  "• Music features\n",
-                  "• Downloads Video!",
+                  "• Fun Bot\n"
+                  "• Music features\n"
+                  "• Downloads Video!"
+        ),
             inline=True
         )
 
