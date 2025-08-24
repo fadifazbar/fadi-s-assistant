@@ -36,7 +36,7 @@ def hp_bar(hp: int, max_hp: int = 100) -> str:
     else:
         bar = "🟥" * filled_bars
 
-    return bar + "⬛" * empty_bars + f"{HEALTH_EMOJI}  ({hp} HP)"
+    return bar + "⬛" * empty_bars + f"\n{HEALTH_EMOJI}  {hp} Health"
 class DeathBattle(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
