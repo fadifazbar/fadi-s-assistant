@@ -84,7 +84,7 @@ class DeathBattle(commands.Cog):
             (19, 20,  "**__{attacker}__** dashes into **__{defender}__** breaking some of his bones and hr lost **__{dmg}__** hp"),
             (27, 27,  "**__{attacker}__** used a diamond sword on **__{defender}__** that does **__{dmg}__** damage"),
             (31, 0,  "**__{attacker}__** got scared from **__{defender}__** and dealt **__{dmg}__** damage"),
-            (21, 29,  "**__{attacker}__** used nostalgia on **__{defender}__** leading him to lose **__{dmg}__**.hp"),
+            (21, 29,  "**__{attacker}__** used nostalgia on **__{defender}__** leading him to lose **__{dmg}__** hp"),
             (13, 35,  "**__{attacker}__** brainwashed **__{defender}__** making him take away **__{dmg}__** hp from his hp bar"),
             (0.1, 10000,  "**__{attacker}__** became god and 1 shot **__{defender}__** (this is 0.1% to get.)"),
             (36, 12,  "**__{attacker}__** smashed **__{defender}__** with a hammer that delt **__{dmg}__** damage"),
@@ -151,12 +151,12 @@ class DeathBattle(commands.Cog):
         )
 
         embed.add_field(
-            name=player1.mention,
+            name=player1.name,
             value=f"{hp_bar(hp1)}",
             inline=True
         )
         embed.add_field(
-            name=player2.mention,
+            name=player2.name,
             value=f"{hp_bar(hp2)}",
             inline=True
         )
@@ -186,8 +186,8 @@ class DeathBattle(commands.Cog):
                 embed.clear_fields()
                 for t, entry in log:
                     embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-                embed.add_field(name=player1.mention, value=hp_bar(hp1), inline=True)
-                embed.add_field(name=player2.mention, value=hp_bar(hp2), inline=True)
+                embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
+                embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
                 await msg.edit(embed=embed)
                 await asyncio.sleep(1.5)
                 turn += 1
@@ -195,7 +195,7 @@ class DeathBattle(commands.Cog):
 
             # Apply burn damage if any
             if burn_damage_next_turn[attacker] > 0:
-                burn_text = f"{BURN_EMOJI} **{attacker.name}** takes {burn_damage_next_turn[attacker]} burn damage!"
+                burn_text = f"{BURN_EMOJI} __**{attacker.name}**__ takes __**{burn_damage_next_turn[attacker]}**__ burn damage!"
                 if attacker == player1:
                     hp1 = max(0, hp1 - burn_damage_next_turn[attacker])
                 else:
@@ -209,8 +209,8 @@ class DeathBattle(commands.Cog):
                 embed.clear_fields()
                 for t, entry in log:
                     embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-                embed.add_field(name=player1.mention, value=hp_bar(hp1), inline=True)
-                embed.add_field(name=player2.mention, value=hp_bar(hp2), inline=True)
+                embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
+                embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
                 await msg.edit(embed=embed)
                 await asyncio.sleep(1.5)
 
@@ -234,8 +234,8 @@ class DeathBattle(commands.Cog):
                 embed.clear_fields()
                 for t, entry in log:
                     embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-                embed.add_field(name=player1.mention, value=hp_bar(hp1), inline=True)
-                embed.add_field(name=player2.mention, value=hp_bar(hp2), inline=True)
+                embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
+                embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
                 await msg.edit(embed=embed)
                 await asyncio.sleep(1.5)
                 turn += 1
@@ -268,13 +268,13 @@ class DeathBattle(commands.Cog):
 
             if dodge:
                 damage = 0
-                special_text += f"{DODGE_EMOI} **{defender.name}** dodged the attack!\n"
+                special_text += f"{DODGE_EMOI} __**{defender.name}**__ dodged __**{attacker.name}'s**__ attack!\n"
             if burn:
                 burn_damage_next_turn[defender] = random.randint(5, 10)
-                special_text += f"{BURN_EMOJI} **{defender.name}** is burned and will take {burn_damage_next_turn[defender]} damage next turn!\n"
+                special_text += f"{BURN_EMOJI} __**{defender.name}**__ is burned and will take {burn_damage_next_turn[defender]} damage next turn!\n"
             if stun:
                 stunned_players[defender] = True
-                special_text += f"{STUN_EMOJI} **{defender.name}** is stunned and will miss their next turn!\n"
+                special_text += f"{STUN_EMOJI} __**{defender.name}**__ is stunned and will miss their next turn!\n"
 
             # Apply damage
             if defender == player1:
@@ -305,7 +305,7 @@ class DeathBattle(commands.Cog):
         # Winner section
         winner = player1 if hp1 > 0 else player2
         loser = player2 if winner == player1 else player1
-        finishing_action = random.choice(["annihilated", "finished off", "destroyed", "ended", "humiliated"])
+        finishing_action = random.choice(["annihilated", "finished off", "destroyed", "ended", "humiliated", "obliterated", "eradicated", "crushed", "smashed", "terminated", "defeated", "wrecked", "ruined", "shattered", "demolished", "vanquished", "erased", "beaten", "trounced", "slain", "neutralized", "decimated", "flattened", "overpowered", "subdued", "leveled", "massacred", "slaughtered", "wiped out", "dismantled", "collapsed", "overthrown", "uprooted", "broken", "annexed", "smothered", "stomped", "snuffed out", "undone", "beheaded", "silenced", "overrun", "toppled", "axed", "liquidated", "extinguished", "deflated", "outclassed", "dethroned", "squashed", "wrecked beyond repair", "pulverized", "dominated", "ravaged", "trashed", "overwhelmed", "outmatched", "suffocated", "eradicated completely", "pummeled", "steamrolled", "humiliated utterly", "gutted", "dismembered", "wrecked utterly", "subjugated", "beaten down", "finished utterly", "torched", "ravished", "obliterated totally", "neutralized fully", "suppressed", "thrashed", "downtrodden", "laid waste", "cut down", "outdone", "snapped", "flattened completely", "taken apart", "rendered helpless", "beaten senseless", "dominated entirely", "reduced to nothing", "destroyed utterly", "eradicated fully", "pounded", "clobbered", "battered", "outstripped", "squelched", "terminated utterly", "sundered", "worn down", "left in ruins", "eliminated", "outshined", "obliterated brutally", "wrecked fully", "trampled", "beaten brutally", "leveled utterly", "finished mercilessly", "squashed flat"])
         finish_text = f"# {WINNER_EMOJI} {winner.name} {finishing_action} {loser.name} to claim victory!"
         embed = discord.Embed(
             title=f"{WINNER_EMOJI} {winner.name.upper()} WINS!!! {WINNER_EMOJI}",
