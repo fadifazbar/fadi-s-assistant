@@ -19,7 +19,10 @@ DODGE_EMOI = "<:dodge:1409016517970100325>"
 # ✅ HP BAR FUNCTION
 def hp_bar(hp: int, max_hp: int = 100) -> str:
     total_bars = 10
-    filled_bars = max(1, (hp * total_bars) // max_hp) if hp 0 > else 0 # each 10 HP = 1 bar
+    if hp > 0:
+        filled_bars = (hp * total_bars) // max_hp  # each 10 HP = 1 bar
+    else:
+        filled_bars = 0
     empty_bars = total_bars - filled_bars
 
     # Decide bar color
