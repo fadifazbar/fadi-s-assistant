@@ -17,9 +17,9 @@ BURN_EMOJI = "<:burn:1409016476760936529>"
 DODGE_EMOI = "<:dodge:1409016517970100325>"
 
 # ✅ HP BAR FUNCTION
-def hp_bar(hp: int) -> str:
+def hp_bar(hp: int, max_hp: int = 100) -> str:
     total_bars = 10
-    filled_bars = max(0, hp // 10)  # each 10 HP = 1 bar
+    filled_bars = max(1, (hp * total_bars) // max_hp) if hp 0 > else 0 # each 10 HP = 1 bar
     empty_bars = total_bars - filled_bars
 
     # Decide bar color
@@ -141,8 +141,17 @@ class DeathBattle(commands.Cog):
             description=f"# {DEATHBATTLE_EMOJI} {player1.name} VS {player2.name} {DEATHBATTLE_EMOJI}\nFight begins!",
             color=discord.Color.red()
         )
-        embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
-        embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
+embed.add_field(
+        name=player1.name,
+        value=f"{hp_to_bar(hp1)}\n{HEALTH_EMOJI} {hp1}/100",
+        inline=True
+    )
+
+    embed.add_field(
+        name=player2.name,
+        value=f"{hp_to_bar(hp2)}\n{HEALTH_EMOJI} {hp2}/100",
+        inline=True
+    )
 
         msg = await send(embed=embed)
         if is_interaction:
