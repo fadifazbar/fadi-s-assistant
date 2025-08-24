@@ -144,16 +144,17 @@ class DeathBattle(commands.Cog):
             description=f"# {DEATHBATTLE_EMOJI} {player1.name} VS {player2.name} {DEATHBATTLE_EMOJI}\nFight begins!",
             color=discord.Color.red()
         )
-    embed.add_field(
-        name=player1.name,
-        value=f"{hp_bar(hp1)}\n{HEALTH_EMOJI} {hp1}/100",
-        inline=True
-    )
-    embed.add_field(
-        name=player2.name,
-        value=f"{hp_bar(hp2)}\n{HEALTH_EMOJI} {hp2}/100",
-        inline=True
-    )
+        embed.add_field(
+    name=player1.name,
+    value=f"{hp_bar(hp1)}\n{HEALTH_EMOJI} {hp1}/100",
+    inline=True
+)
+
+embed.add_field(
+    name=player2.name,
+    value=f"{hp_bar(hp2)}\n{HEALTH_EMOJI} {hp2}/100",
+    inline=True
+)
 
         msg = await send(embed=embed)
         if is_interaction:
