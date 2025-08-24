@@ -744,6 +744,192 @@ class General(commands.Cog):
         embed.set_image(url=gif)
         await interaction.response.send_message(embed=embed)
 
+    
+    # prefix command
+    @commands.command(name="slap")
+    async def slap_prefix(self, ctx, member: discord.Member):
+        slap_gifs = [
+            "https://gifdb.com/images/high/anime-girl-slapping-funny-romance-cgvlonw265kjn0r6.gif",
+            "https://i.pinimg.com/originals/71/a5/1c/71a51cd5b7a3e372522b5011bdf40102.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTZjMDliOTUyZHA0ZHR4aXQ4b3VxNzBlbTR0Z2Zrd2x3eTlqMXFkZTk0NGZpYTdwMCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Zau0yrl17uzdK/giphy.gif",
+            "https://i.imgur.com/EozsOgA.gif",
+            "https://media.tenor.com/CvBTA0GyrogAAAAC/anime-slap.gif",
+            "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/b02c16d5-1b1b-4139-92e6-ca6b3d768d7a/d6wv007-5fbf8755-5fca-4e12-b04a-ab43156ac7d4.gif?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcL2IwMmMxNmQ1LTFiMWItNDEzOS05MmU2LWNhNmIzZDc2OGQ3YVwvZDZ3djAwNy01ZmJmODc1NS01ZmNhLTRlMTItYjA0YS1hYjQzMTU2YWM3ZDQuZ2lmIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.4MVfHXfzK83yI6L2NpBfVb2knaJtyGd7TlSEDH79bH8",
+            "https://i.pinimg.com/originals/68/de/67/68de679cc20000570e8a7d9ed9218cd3.gif",
+            "https://i.makeagif.com/media/10-16-2016/_bqU0l.gif",
+            "https://pa1.aminoapps.com/6807/ac91cef2e5ae98f598665193f37bba223301d75c_hq.gif",
+            "https://i.imgur.com/wlLCjRo.gif",
+            "https://i.pinimg.com/originals/d1/49/69/d14969a21a96ec46f61770c50fccf24f.gif",
+            "https://78.media.tumblr.com/664045302ec83165bc35db7709d99ebd/tumblr_nbjnosotP11sfeoupo1_500.gif",
+            "https://steamuserimages-a.akamaihd.net/ugc/850473950842117246/8C83635F86CE09C683D511622D7ED2B85BAD3ADD/?imw=500&imh=281&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true",
+            "https://gifdb.com/images/high/angry-girlfriend-anime-slap-x66ge6ep8mx7a7vb.gif",
+            "https://pa1.narvii.com/5728/7b796b9cd6a6f44ef6b0aabee0d28d1351fdc7be_hq.gif",
+            "https://i.imgur.com/lQZ3Tr5.gif",
+            "https://64.media.tumblr.com/dd5d751f86002fd4a544dcef7a9763d6/tumblr_n13t3nbjXn1r0x02zo1_500.gifv",
+            "https://3.bp.blogspot.com/-CHYXl4bcgA0/UYGNzdDooBI/AAAAAAAADSY/MgmWVYn5ZR0/s400/2828+-+animated_gif+slap+umineko_no_naku_koro_ni+ushiromiya_maria+ushiromiya_rosa.gif",
+            "https://art.ngfiles.com/images/2749000/2749337_themiamispellcaster_ass-slap-gif.gif?f1664065019",
+            "https://media.giphy.com/media/LB1kIoSRFTC2Q/giphy.gif"
+        ]
+        gif = random.choice(slap_gifs)
+        color = discord.Color(random.randint(0, 0xFFFFFF))
+        embed = discord.Embed(
+            description=f"*{ctx.author.mention}  {member.mention}*",
+            color=color
+        )
+        embed.set_image(url=gif)
+        await ctx.send(embed=embed)
+
+    # --- Slash command ---
+    @app_commands.command(name="slap", description="Slap someone")
+    @app_commands.describe(member="The member you want to slap")
+    async def slap_slash(self, interaction: discord.Interaction, member: discord.Member):
+        slap_gifs = [
+            "https://gifdb.com/images/high/anime-girl-slapping-funny-romance-cgvlonw265kjn0r6.gif",
+            "https://i.pinimg.com/originals/71/a5/1c/71a51cd5b7a3e372522b5011bdf40102.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTZjMDliOTUyZHA0ZHR4aXQ4b3VxNzBlbTR0Z2Zrd2x3eTlqMXFkZTk0NGZpYTdwMCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Zau0yrl17uzdK/giphy.gif",
+            "https://i.imgur.com/EozsOgA.gif",
+            "https://media.tenor.com/CvBTA0GyrogAAAAC/anime-slap.gif",
+            "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/b02c16d5-1b1b-4139-92e6-ca6b3d768d7a/d6wv007-5fbf8755-5fca-4e12-b04a-ab43156ac7d4.gif?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcL2IwMmMxNmQ1LTFiMWItNDEzOS05MmU2LWNhNmIzZDc2OGQ3YVwvZDZ3djAwNy01ZmJmODc1NS01ZmNhLTRlMTItYjA0YS1hYjQzMTU2YWM3ZDQuZ2lmIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.4MVfHXfzK83yI6L2NpBfVb2knaJtyGd7TlSEDH79bH8",
+            "https://i.pinimg.com/originals/68/de/67/68de679cc20000570e8a7d9ed9218cd3.gif",
+            "https://i.makeagif.com/media/10-16-2016/_bqU0l.gif",
+            "https://pa1.aminoapps.com/6807/ac91cef2e5ae98f598665193f37bba223301d75c_hq.gif",
+            "https://i.imgur.com/wlLCjRo.gif",
+            "https://i.pinimg.com/originals/d1/49/69/d14969a21a96ec46f61770c50fccf24f.gif",
+            "https://78.media.tumblr.com/664045302ec83165bc35db7709d99ebd/tumblr_nbjnosotP11sfeoupo1_500.gif",
+            "https://steamuserimages-a.akamaihd.net/ugc/850473950842117246/8C83635F86CE09C683D511622D7ED2B85BAD3ADD/?imw=500&imh=281&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true",
+            "https://gifdb.com/images/high/angry-girlfriend-anime-slap-x66ge6ep8mx7a7vb.gif",
+            "https://pa1.narvii.com/5728/7b796b9cd6a6f44ef6b0aabee0d28d1351fdc7be_hq.gif",
+            "https://i.imgur.com/lQZ3Tr5.gif",
+            "https://64.media.tumblr.com/dd5d751f86002fd4a544dcef7a9763d6/tumblr_n13t3nbjXn1r0x02zo1_500.gifv",
+            "https://3.bp.blogspot.com/-CHYXl4bcgA0/UYGNzdDooBI/AAAAAAAADSY/MgmWVYn5ZR0/s400/2828+-+animated_gif+slap+umineko_no_naku_koro_ni+ushiromiya_maria+ushiromiya_rosa.gif",
+            "https://art.ngfiles.com/images/2749000/2749337_themiamispellcaster_ass-slap-gif.gif?f1664065019",
+            "https://media.giphy.com/media/LB1kIoSRFTC2Q/giphy.gif"
+        ]
+        gif = random.choice(slap_gifs)
+        color = discord.Color(random.randint(0, 0xFFFFFF))
+        embed = discord.Embed(
+            description=f"*{interaction.user.mention}  {member.mention}*",
+            color=color
+        )
+        embed.set_image(url=gif)
+        await interaction.response.send_message(embed=embed)
+
+    # prefix command
+    @commands.command(name="punch")
+    async def punch_prefix(self, ctx, member: discord.Member):
+        punch_gifs = [
+            "https://i.pinimg.com/originals/17/5c/f2/175cf269b6df62b75a5d25a0ed45e954.gif",
+            "https://tenor.com/view/anime-smash-lesbian-punch-wall-gif-4790446 ",
+            "https://tenor.com/view/anime-fight-gif-25435588 ",
+            "https://i.pinimg.com/originals/48/d5/59/48d55975d1c4ec1aa74f4646962bb815.gif",
+            "https://i.pinimg.com/originals/92/f4/59/92f4595d3f6ac39b6c175eb3d454fec2.gif",
+            "https://giffiles.alphacoders.com/131/13126.gif",
+            "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/3a702ca6-2509-4117-bde4-c53cd3abd470/djdq1l7-d0e6362d-76ac-48eb-9860-484c72f98aad.gif?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcLzNhNzAyY2E2LTI1MDktNDExNy1iZGU0LWM1M2NkM2FiZDQ3MFwvZGpkcTFsNy1kMGU2MzYyZC03NmFjLTQ4ZWItOTg2MC00ODRjNzJmOThhYWQuZ2lmIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.zC55-rWx66SFIPNx77VP1pgRoJ2NZajOqIb83gsT2j4",
+            "https://giffiles.alphacoders.com/169/169956.gif",
+            "https://i.pinimg.com/originals/86/c3/ce/86c3ce1869454a96b138fe66992fa3b7.gif",
+            "https://i.makeagif.com/media/12-26-2023/fn9qkD.gif",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+        ]
+        gif = random.choice(punch_gifs)
+        color = discord.Color(random.randint(0, 0xFFFFFF))
+        embed = discord.Embed(
+            description=f"*{ctx.author.mention}  {member.mention}*",
+            color=color
+        )
+        embed.set_image(url=gif)
+        await ctx.send(embed=embed)
+
+    # --- Slash command ---
+    @app_commands.command(name="punch", description="Punch a member")
+    @app_commands.describe(member="The member you want to punch")
+    async def punch_slash(self, interaction: discord.Interaction, member: discord.Member):
+        punch_gifs = [
+            ""
+        ]
+        gif = random.choice(punch_gifs)
+        color = discord.Color(random.randint(0, 0xFFFFFF))
+        embed = discord.Embed(
+            description=f"*{interaction.user.mention}  {member.mention}*",
+            color=color
+        )
+        embed.set_image(url=gif)
+        await interaction.response.send_message(embed=embed)
+
+    # prefix command
+    @commands.command(name="hug")
+    async def hug_prefix(self, ctx, member: discord.Member):
+        hug_gifs = [
+            ""
+        ]
+        gif = random.choice(hug_gifs)
+        color = discord.Color(random.randint(0, 0xFFFFFF))
+        embed = discord.Embed(
+            description=f"*{ctx.author.mention}  {member.mention}*",
+            color=color
+        )
+        embed.set_image(url=gif)
+        await ctx.send(embed=embed)
+
+    # --- Slash command ---
+    @app_commands.command(name="hug", description="Hug someone")
+    @app_commands.describe(member="The member you want to hug")
+    async def hug_slash(self, interaction: discord.Interaction, member: discord.Member):
+        hug_gifs = [
+            ""
+        ]
+        gif = random.choice(hug_gifs)
+        color = discord.Color(random.randint(0, 0xFFFFFF))
+        embed = discord.Embed(
+            description=f"*{interaction.user.mention}  {member.mention}*",
+            color=color
+        )
+        embed.set_image(url=gif)
+        await interaction.response.send_message(embed=embed)
+
+        # prefix command
+    @commands.command(name="pat")
+    async def pat_prefix(self, ctx, member: discord.Member):
+        pat_gifs = [
+            ""
+        ]
+        gif = random.choice(pat_gifs)
+        color = discord.Color(random.randint(0, 0xFFFFFF))
+        embed = discord.Embed(
+            description=f"*{ctx.author.mention}  {member.mention}*",
+            color=color
+        )
+        embed.set_image(url=gif)
+        await ctx.send(embed=embed)
+
+    # --- Slash command ---
+    @app_commands.command(name="pat", description="Pat someone")
+    @app_commands.describe(member="The member you want to pat")
+    async def pat_slash(self, interaction: discord.Interaction, member: discord.Member):
+        pat_gifs = [
+            ""
+        ]
+        gif = random.choice(pat_gifs)
+        color = discord.Color(random.randint(0, 0xFFFFFF))
+        embed = discord.Embed(
+            description=f"*{interaction.user.mention}  {member.mention}*",
+            color=color
+        )
+        embed.set_image(url=gif)
+        await interaction.response.send_message(embed=embed)
+
+
+
+
+
     # ===============================
     # PREFIX COMMAND
     # ===============================
