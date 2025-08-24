@@ -318,7 +318,7 @@ class DeathBattle(commands.Cog):
             inline=True
         )
         embed.add_field(
-            name=player2.mention
+            name=player2.mention,
             value=f"{hp_bar(hp1 if winner == player1 else hp2)}",
             inline=True
         )
