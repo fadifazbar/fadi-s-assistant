@@ -151,7 +151,13 @@ class General(commands.Cog):
             "resetnick": ("🎨 ResetNick", f"`{Config.PREFIX}resetnick <member>` or `/resetnick`\nResets a user's nickname\n"),
             "slowmode": ("🐌 Slowmode", f"`{Config.PREFIX}slowmode <seconds>` or `/slowmode`\nSet's a channel's slowmode\n"),
             "lock": ("🔒 Lock", f"`{Config.PREFIX}lock <channel>` or `/lock`\nLocks a channel\n"),
-            "unlock": ("🔒 Unlock", f"`{Config.PREFIX}unlock <channel>` or `/unlock`\nUnlocks a channel")
+            "unlock": ("🔒 Unlock", f"`{Config.PREFIX}unlock <channel>` or `/unlock`\nUnlocks a channel\n"),
+            "deathbattle": ("💥 DeathBattle", f"`{Config.PREFIX}deathbattle <member> <member>` or `/deathbattle`\nMake 2 users fight for death\n"),
+            "hug": ("🤗 Hug", f"`{Config.PREFIX}hug <member>` or `/hug`\nHug someone\n"),
+            "slap": ("👋 Slap", f"`{Config.PREFIX}slap <member>` or `/slap`\nSlap spomeone\n"),
+            "punch": ("👊 Punch", f"`{Config.PREFIX}punch <member>` or `/punch`\nPunch a member\n"),
+            "pat": ("🐶 Pat", f"`{Config.PREFIX}pat <member>` or `/pat`\nPat Someone\n"),
+            "forcekiss": ("💋 ForceKiss", f"`{Config.PREFIX}forcekiss <member> <member>` or `/forcekiss`\nMake 2 members kiss\n")
         }
 
         # --- Show specific command help ---
@@ -216,6 +222,12 @@ class General(commands.Cog):
                     f"`{Config.PREFIX}userinfo` - Check some information about a user\n"
                     f"`{Config.PREFIX}banner` - Check a user's banner\n"
                     f"`{Config.PREFIX}urldownload` - Download a video using a url"
+                    f"`{Config.PREFIX}deathbattle` - Make 2 members fight"
+                    f"`{Config.PREFIX}slap` - Slaps someone"
+                    f"`{Config.PREFIX}punch` - Punches someone"
+                    f"`{Config.PREFIX}pat` - Pats someone"
+                    f"`{Config.PREFIX}hug` - Hugs someone"
+                    f"`{Config.PREFIX}forcekiss` - Make 2 users forcekiss eachother"
                 ),
                 inline=True
             )
@@ -767,7 +779,7 @@ class General(commands.Cog):
         gif = random.choice(kiss_gifs)
         color = discord.Color(random.randint(0, 0xFFFFFF))
         embed = discord.Embed(
-            description=f"*{ctx.author.mention} made {member1.mention} kissed {member2.mention}*",
+            description=f"*{ctx.author.mention} made {member1.mention} kiss {member2.mention}*",
             color=color
         )
         embed.set_image(url=gif)
@@ -798,7 +810,7 @@ class General(commands.Cog):
         gif = random.choice(kiss_gifs)
         color = discord.Color(random.randint(0, 0xFFFFFF))
         embed = discord.Embed(
-            description=f"*{interaction.user.mention} made {member1.mention} kissed {member2.mention}*",
+            description=f"*{interaction.user.mention} made {member1.mention} kiss {member2.mention}*",
             color=color
         )
         embed.set_image(url=gif)
@@ -1176,9 +1188,10 @@ class General(commands.Cog):
             name="⚙️ Features",
             value="• Moderation commands\n"
                   "• Slash & prefix commands\n"
-                  "• Permission management\n"
                   "• Message management\n"
-                  "• User timeout system",
+                  "• Fun Bot\n",
+                  "• Music features\n",
+                  "• Downloads Video!",
             inline=True
         )
 
@@ -1277,7 +1290,7 @@ class General(commands.Cog):
         result = random.choice(["Heads", "Tails"])
         embed = discord.Embed(
             title="🪙 Coin Flip",
-            description=f"🪙 The coin landed on **__{result}**__! 🪙",
+            description=f"🪙 The coin landed on **__{result}__**! 🪙",
             color=discord.Color.gold()
         )
         await interaction.response.send_message(embed=embed)
