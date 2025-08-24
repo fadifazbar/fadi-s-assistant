@@ -21,8 +21,11 @@ def hp_bar(hp: int, max_hp: int = 100) -> str:
     total_bars = 10
     if hp > 0:
         filled_bars = (hp * total_bars) // max_hp  # each 10 HP = 1 bar
+        if filled_bars == 0:  # 👈 ensure at least 1 bar if hp > 0
+            filled_bars = 1
     else:
         filled_bars = 0
+
     empty_bars = total_bars - filled_bars
 
     # Decide bar color
@@ -34,7 +37,6 @@ def hp_bar(hp: int, max_hp: int = 100) -> str:
         bar = "🟥" * filled_bars
 
     return bar + "⬛" * empty_bars + f"  ({hp} HP)"
-
 class DeathBattle(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -184,8 +186,8 @@ class DeathBattle(commands.Cog):
                 embed.clear_fields()
                 for t, entry in log:
                     embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-                embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
-                embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
+                embed.add_field(name=player1.mention, value=hp_bar(hp1), inline=True)
+                embed.add_field(name=player2.mention, value=hp_bar(hp2), inline=True)
                 await msg.edit(embed=embed)
                 await asyncio.sleep(1.5)
                 turn += 1
@@ -232,8 +234,8 @@ class DeathBattle(commands.Cog):
                 embed.clear_fields()
                 for t, entry in log:
                     embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-                embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
-                embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
+                embed.add_field(name=player1.mention, value=hp_bar(hp1), inline=True)
+                embed.add_field(name=player2.mention, value=hp_bar(hp2), inline=True)
                 await msg.edit(embed=embed)
                 await asyncio.sleep(1.5)
                 turn += 1
@@ -310,9 +312,17 @@ class DeathBattle(commands.Cog):
             description=finish_text,
             color=discord.Color.gold()
         )
-        embed.add_field(name=winner.name, value=hp_bar(hp1 if winner == player1 else hp2), inline=True)
-        embed.add_field(name=loser.name, value=hp_bar(hp1 if loser == player1 else hp2), inline=True)
-
+        embed.add_field(
+            name=player1.mention,
+            value=f"{hp_bar(hp1 if winner == player1 else hp2)",
+            inline=True
+        )
+        embed.add_field(
+            name=player2.mention
+            value=f"{hp_bar(hp1 if winner == player1 else hp2)",
+            inline=True
+        )
+        
         # Button for logs
         view = discord.ui.View()
         async def send_log(interaction: discord.Interaction):
