@@ -152,12 +152,12 @@ class DeathBattle(commands.Cog):
 
         embed.add_field(
             name=player1.mention,
-            value=f"{hp_bar(hp1)}\n{HEALTH_EMOJI} {hp1}/100",
+            value=f"{hp_bar(hp1)}",
             inline=True
         )
         embed.add_field(
             name=player2.mention,
-            value=f"{hp_bar(hp1)}\n{HEALTH_EMOJI} {hp2}/100",
+            value=f"{hp_bar(hp2)}",
             inline=True
         )
 
@@ -313,13 +313,13 @@ class DeathBattle(commands.Cog):
             color=discord.Color.gold()
         )
         embed.add_field(
-            name=player1.mention,
+            name=winner.mention,
             value=f"{hp_bar(hp1 if winner == player1 else hp2)}",
             inline=True
         )
         embed.add_field(
-            name=player2.mention,
-            value=f"{hp_bar(hp1 if winner == player1 else hp2)}",
+            name=loser.mention,
+            value=f"{hp_bar(hp1 if loser == player1 else hp2)}",
             inline=True
         )
         
