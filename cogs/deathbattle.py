@@ -12,6 +12,9 @@ HEALTH_EMOJI = "<:HP_V2:1408669354069065748>"
 CRITICAL_EMOJI = "<:CRITICAL_HIT:1408659817127612519>"
 HEAL_EMOJI = "<:MENDING_HEART:1408664782005080094>"
 GOLDEN_HEART = "<:GOLDEN_HEART:1408674925950144614>"
+STUN_EMOJI = "<:stun:1409016286104518827>"
+BURN_EMOJI = "<:burn:1409016476760936529>"
+DODGE_EMOI = "<:dodge:1409016517970100325>"
 
 class DeathBattle(commands.Cog):
     def __init__(self, bot):
@@ -138,7 +141,7 @@ class DeathBattle(commands.Cog):
 
             # Skip turn if stunned
             if stunned_players.get(attacker, False):
-                skip_text = f"💫 **{attacker.name}** is stunned and misses their turn!"
+                skip_text = f"{STUN_EMOJI} **{attacker.name}** is stunned and misses their turn!"
                 log.append((turn, skip_text))
                 full_log.append(f"Turn {turn}: {skip_text}")
                 if len(log) > 3:
@@ -158,7 +161,7 @@ class DeathBattle(commands.Cog):
 
             # Apply burn damage if any
             if burn_damage_next_turn[attacker] > 0:
-                burn_text = f"🔥 **{attacker.name}** takes {burn_damage_next_turn[attacker]} burn damage!"
+                burn_text = f"{BURN_EMOJI} **{attacker.name}** takes {burn_damage_next_turn[attacker]} burn damage!"
                 if attacker == player1:
                     hp1 = max(0, hp1 - burn_damage_next_turn[attacker])
                 else:
@@ -232,13 +235,13 @@ class DeathBattle(commands.Cog):
 
             if dodge:
                 damage = 0
-                special_text += f"💨 **{defender.name}** dodged the attack!\n"
+                special_text += f"{DODGE_EMOI} **{defender.name}** dodged the attack!\n"
             if burn:
                 burn_damage_next_turn[defender] = random.randint(5, 10)
-                special_text += f"🔥 **{defender.name}** is burned and will take {burn_damage_next_turn[defender]} damage next turn!\n"
+                special_text += f"{BURN_EMOJI} **{defender.name}** is burned and will take {burn_damage_next_turn[defender]} damage next turn!\n"
             if stun:
                 stunned_players[defender] = True
-                special_text += f"💫 **{defender.name}** is stunned and will miss their next turn!\n"
+                special_text += f"{STUN_EMOJI} **{defender.name}** is stunned and will miss their next turn!\n"
 
             # Apply damage
             if defender == player1:
