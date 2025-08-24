@@ -738,11 +738,73 @@ class General(commands.Cog):
         gif = random.choice(kiss_gifs)
         color = discord.Color(random.randint(0, 0xFFFFFF))
         embed = discord.Embed(
-            description=f"*{interaction.user.mention} kissed {member.mention}*",
+            description=f"*{ctx.author.mention} made {interaction.user.mention} kissed {member.mention}*",
             color=color
         )
         embed.set_image(url=gif)
         await interaction.response.send_message(embed=embed)
+
+    # --- Prefix command ---
+    @commands.command(name="forcekiss")
+    async def forcekiss_prefix(self, ctx, member1: discord.Member, member2: discord.Member):
+        kiss_gifs = [
+            "https://i.pinimg.com/originals/77/8d/51/778d51aca07848160ad9b52e6df37b30.gif",
+            "https://gifdb.com/images/high/anime-kissing-498-x-280-gif-op3h5wkpm21z2dil.gif",
+            "https://gifdb.com/images/high/surprising-anime-kiss-togashi-yuuta-q5960hphr79b0rwy.gif",
+            "https://31.media.tumblr.com/ea7842aad07c00b098397bf4d00723c6/tumblr_n570yg0ZIv1rikkvpo1_500.gif",
+            "https://i.pinimg.com/originals/28/62/37/2862374acd572ef4b1f2728e7e88962b.gif",
+            "https://media3.giphy.com/media/v1.Y2lkPTZjMDliOTUyNGd5cG4wYTV4dng2YTQwM3lwdmVhYmZ1Mjk2dTNraTdrZXByODBldiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/bGm9FuBCGg4SY/source.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUyY3dtN3lhaTB5b2Ixa3d2amtxdjNzZjNkMGZxZjk1NXlob3BjNTF4YyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/EVODaJHSXZGta/giphy.gif",
+            "https://www.gifcen.com/wp-content/uploads/2022/03/anime-kiss-gif-7.gif",
+            "https://www.icegif.com/wp-content/uploads/2022/08/icegif-1219.gif",
+            "https://images.steamusercontent.com/ugc/775102481299729428/7468303EA0E2477C7CBD56914883C0C37AA97E40/?imw=5000&imh=5000&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=false",
+            "https://www.gifcen.com/wp-content/uploads/2022/03/anime-kiss-gif.gif",
+            "https://i.pinimg.com/originals/10/5a/7a/105a7ad7edbe74e5ca834348025cc650.gif",
+            "https://gifdb.com/images/high/anime-kissing-498-x-263-gif-psa9fpr8l6kipmoj.gif",
+            "https://64.media.tumblr.com/84756421d21634f5f65d0d0f4c9da86f/tumblr_n2jz1jqEtq1sggrnxo1_500.gif",
+            "https://64.media.tumblr.com/386629a5ea2079fb76dfc76e7216dec2/783ccc48501e3d96-b4/s540x810/3fa7d5db78585d42176f9ce4253fa05702be295b.gifv"
+        ]
+        gif = random.choice(kiss_gifs)
+        color = discord.Color(random.randint(0, 0xFFFFFF))
+        embed = discord.Embed(
+            description=f"*{member1.mention} kissed {member2.mention}*",
+            color=color
+        )
+        embed.set_image(url=gif)
+        await ctx.send(embed=embed)
+
+
+    # --- Slash command ---
+    @app_commands.command(name="forcekiss", description="Make two members kiss each other")
+    @app_commands.describe(member1="The first member", member2="The second member")
+    async def forcekiss_slash(self, interaction: discord.Interaction, member1: discord.Member, member2: discord.Member):
+        kiss_gifs = [
+            "https://i.pinimg.com/originals/77/8d/51/778d51aca07848160ad9b52e6df37b30.gif",
+            "https://gifdb.com/images/high/anime-kissing-498-x-280-gif-op3h5wkpm21z2dil.gif",
+            "https://gifdb.com/images/high/surprising-anime-kiss-togashi-yuuta-q5960hphr79b0rwy.gif",
+            "https://31.media.tumblr.com/ea7842aad07c00b098397bf4d00723c6/tumblr_n570yg0ZIv1rikkvpo1_500.gif",
+            "https://i.pinimg.com/originals/28/62/37/2862374acd572ef4b1f2728e7e88962b.gif",
+            "https://media3.giphy.com/media/v1.Y2lkPTZjMDliOTUyNGd5cG4wYTV4dng2YTQwM3lwdmVhYmZ1Mjk2dTNraTdrZXByODBldiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/bGm9FuBCGg4SY/source.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUyY3dtN3lhaTB5b2Ixa3d2amtxdjNzZjNkMGZxZjk1NXlob3BjNTF4YyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/EVODaJHSXZGta/giphy.gif",
+            "https://www.gifcen.com/wp-content/uploads/2022/03/anime-kiss-gif-7.gif",
+            "https://www.icegif.com/wp-content/uploads/2022/08/icegif-1219.gif",
+            "https://images.steamusercontent.com/ugc/775102481299729428/7468303EA0E2477C7CBD56914883C0C37AA97E40/?imw=5000&imh=5000&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=false",
+            "https://www.gifcen.com/wp-content/uploads/2022/03/anime-kiss-gif.gif",
+            "https://i.pinimg.com/originals/10/5a/7a/105a7ad7edbe74e5ca834348025cc650.gif",
+            "https://gifdb.com/images/high/anime-kissing-498-x-263-gif-psa9fpr8l6kipmoj.gif",
+            "https://64.media.tumblr.com/84756421d21634f5f65d0d0f4c9da86f/tumblr_n2jz1jqEtq1sggrnxo1_500.gif",
+            "https://64.media.tumblr.com/386629a5ea2079fb76dfc76e7216dec2/783ccc48501e3d96-b4/s540x810/3fa7d5db78585d42176f9ce4253fa05702be295b.gifv"
+        ]
+        gif = random.choice(kiss_gifs)
+        color = discord.Color(random.randint(0, 0xFFFFFF))
+        embed = discord.Embed(
+            description=f"*{interaction.user.mention} made {member1.mention} kissed {member2.mention}*",
+            color=color
+        )
+        embed.set_image(url=gif)
+        await interaction.response.send_message(embed=embed)
+
+    
 
     
     # prefix command
@@ -767,13 +829,12 @@ class General(commands.Cog):
             "https://i.imgur.com/lQZ3Tr5.gif",
             "https://64.media.tumblr.com/dd5d751f86002fd4a544dcef7a9763d6/tumblr_n13t3nbjXn1r0x02zo1_500.gifv",
             "https://3.bp.blogspot.com/-CHYXl4bcgA0/UYGNzdDooBI/AAAAAAAADSY/MgmWVYn5ZR0/s400/2828+-+animated_gif+slap+umineko_no_naku_koro_ni+ushiromiya_maria+ushiromiya_rosa.gif",
-            "https://art.ngfiles.com/images/2749000/2749337_themiamispellcaster_ass-slap-gif.gif?f1664065019",
             "https://media.giphy.com/media/LB1kIoSRFTC2Q/giphy.gif"
         ]
         gif = random.choice(slap_gifs)
         color = discord.Color(random.randint(0, 0xFFFFFF))
         embed = discord.Embed(
-            description=f"*{ctx.author.mention}  {member.mention}*",
+            description=f"*{ctx.author.mention} slapped {member.mention}*",
             color=color
         )
         embed.set_image(url=gif)
@@ -802,13 +863,12 @@ class General(commands.Cog):
             "https://i.imgur.com/lQZ3Tr5.gif",
             "https://64.media.tumblr.com/dd5d751f86002fd4a544dcef7a9763d6/tumblr_n13t3nbjXn1r0x02zo1_500.gifv",
             "https://3.bp.blogspot.com/-CHYXl4bcgA0/UYGNzdDooBI/AAAAAAAADSY/MgmWVYn5ZR0/s400/2828+-+animated_gif+slap+umineko_no_naku_koro_ni+ushiromiya_maria+ushiromiya_rosa.gif",
-            "https://art.ngfiles.com/images/2749000/2749337_themiamispellcaster_ass-slap-gif.gif?f1664065019",
             "https://media.giphy.com/media/LB1kIoSRFTC2Q/giphy.gif"
         ]
         gif = random.choice(slap_gifs)
         color = discord.Color(random.randint(0, 0xFFFFFF))
         embed = discord.Embed(
-            description=f"*{interaction.user.mention}  {member.mention}*",
+            description=f"*{interaction.user.mention} slapped {member.mention}*",
             color=color
         )
         embed.set_image(url=gif)
@@ -828,21 +888,21 @@ class General(commands.Cog):
             "https://giffiles.alphacoders.com/169/169956.gif",
             "https://i.pinimg.com/originals/86/c3/ce/86c3ce1869454a96b138fe66992fa3b7.gif",
             "https://i.makeagif.com/media/12-26-2023/fn9qkD.gif",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            ""
+            "https://i2.kym-cdn.com/photos/images/original/000/989/495/3b8.gif",
+            "https://i.pinimg.com/originals/e1/63/ff/e163ff743644a8250d4f07112b8ddb08.gif",
+            "https://frogkun.com/wp-content/uploads/2013/06/1353830854270.gif",
+            "https://media1.giphy.com/media/v1.Y2lkPTZjMDliOTUydG1qaDJoY2Q3Zjg3NzVidDd4bGxlOTg2MTU2YmQ3Z2Q1MDE4MGxxcCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ZcINp0p8P3vE4LAfLj/giphy.gif",
+            "https://i.gifer.com/C3SI.gif",
+            "https://64.media.tumblr.com/tumblr_m5r0kcbQgn1rn95k2o1_500.gif",
+            "https://i.pinimg.com/originals/5e/41/9a/5e419abe978312056292e141849bde23.gif",
+            "https://gifdb.com/images/high/anime-punch-the-rolling-girls-xyn7ogrfgc05vbe7.gif",
+            "https://giffiles.alphacoders.com/170/170135.gif",
+            "https://i.imgur.com/0nc0pTs.gif"
         ]
         gif = random.choice(punch_gifs)
         color = discord.Color(random.randint(0, 0xFFFFFF))
         embed = discord.Embed(
-            description=f"*{ctx.author.mention}  {member.mention}*",
+            description=f"*{ctx.author.mention} punched {member.mention}*",
             color=color
         )
         embed.set_image(url=gif)
@@ -853,12 +913,31 @@ class General(commands.Cog):
     @app_commands.describe(member="The member you want to punch")
     async def punch_slash(self, interaction: discord.Interaction, member: discord.Member):
         punch_gifs = [
-            ""
+            "https://i.pinimg.com/originals/17/5c/f2/175cf269b6df62b75a5d25a0ed45e954.gif",
+            "https://tenor.com/view/anime-smash-lesbian-punch-wall-gif-4790446 ",
+            "https://tenor.com/view/anime-fight-gif-25435588 ",
+            "https://i.pinimg.com/originals/48/d5/59/48d55975d1c4ec1aa74f4646962bb815.gif",
+            "https://i.pinimg.com/originals/92/f4/59/92f4595d3f6ac39b6c175eb3d454fec2.gif",
+            "https://giffiles.alphacoders.com/131/13126.gif",
+            "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/3a702ca6-2509-4117-bde4-c53cd3abd470/djdq1l7-d0e6362d-76ac-48eb-9860-484c72f98aad.gif?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcLzNhNzAyY2E2LTI1MDktNDExNy1iZGU0LWM1M2NkM2FiZDQ3MFwvZGpkcTFsNy1kMGU2MzYyZC03NmFjLTQ4ZWItOTg2MC00ODRjNzJmOThhYWQuZ2lmIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.zC55-rWx66SFIPNx77VP1pgRoJ2NZajOqIb83gsT2j4",
+            "https://giffiles.alphacoders.com/169/169956.gif",
+            "https://i.pinimg.com/originals/86/c3/ce/86c3ce1869454a96b138fe66992fa3b7.gif",
+            "https://i.makeagif.com/media/12-26-2023/fn9qkD.gif",
+            "https://i2.kym-cdn.com/photos/images/original/000/989/495/3b8.gif",
+            "https://i.pinimg.com/originals/e1/63/ff/e163ff743644a8250d4f07112b8ddb08.gif",
+            "https://frogkun.com/wp-content/uploads/2013/06/1353830854270.gif",
+            "https://media1.giphy.com/media/v1.Y2lkPTZjMDliOTUydG1qaDJoY2Q3Zjg3NzVidDd4bGxlOTg2MTU2YmQ3Z2Q1MDE4MGxxcCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ZcINp0p8P3vE4LAfLj/giphy.gif",
+            "https://i.gifer.com/C3SI.gif",
+            "https://64.media.tumblr.com/tumblr_m5r0kcbQgn1rn95k2o1_500.gif",
+            "https://i.pinimg.com/originals/5e/41/9a/5e419abe978312056292e141849bde23.gif",
+            "https://gifdb.com/images/high/anime-punch-the-rolling-girls-xyn7ogrfgc05vbe7.gif",
+            "https://giffiles.alphacoders.com/170/170135.gif",
+            "https://i.imgur.com/0nc0pTs.gif"
         ]
         gif = random.choice(punch_gifs)
         color = discord.Color(random.randint(0, 0xFFFFFF))
         embed = discord.Embed(
-            description=f"*{interaction.user.mention}  {member.mention}*",
+            description=f"*{interaction.user.mention} punched {member.mention}*",
             color=color
         )
         embed.set_image(url=gif)
@@ -868,12 +947,31 @@ class General(commands.Cog):
     @commands.command(name="hug")
     async def hug_prefix(self, ctx, member: discord.Member):
         hug_gifs = [
-            ""
+            "https://64.media.tumblr.com/db736b7f7e2583d3970f37a90dee89c2/tumblr_pm3mzc6zcZ1y5gr1do1_500.gif",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSqYGDIyC3h4HdMluyhlmGmhjwP0NC_FtIufg&s",
+            "https://i.pinimg.com/originals/8d/67/06/8d67066616331a8c661cb64c14ac6e62.gif",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ8JzpSw8iRnuxx-_Y0h9lhPDoM6i9c4no2-Q&s",
+            "https://i.imgur.com/7Bdh4C8.gif",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDBzBvjFtmEaGx4oFRZ851AiEUnzlIOI1SQQ&s",
+            "https://gifdb.com/images/high/anime-couple-hug-bzoul0ohlj3vyk8d.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTZjMDliOTUyajVmcW9zOXcxZ296bTY1cnU5cmNxbGdtYXlxaW05am5uZXp5a2g0ayZlcD12MV9naWZzX3NlYXJjaCZjdD1n/143v0Z4767T15e/giphy.gif",
+            "https://i.pinimg.com/originals/f7/c3/4a/f7c34adfbfc3d04973846e23cc1ad79d.gif",
+            "https://img.wattpad.com/2c92a80e97be1efab699fc670dbaabddb8f264fb/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f776174747061642d6d656469612d736572766963652f53746f7279496d6167652f49496e444b35555a5135354e46513d3d2d313138363633313231392e313663663861626330383336643965633339353734373931303533302e676966",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTK5Tas8Rl2TFNhqDTzonzqgzg-2O1RB_gF8A&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS3vl_m6d72Wb628wmNQcZqRUwifGNaKbqaBw&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSZhLb13a76jw9KP5cEIVm79g23UlS_Md4MzA&s",
+            "https://i.pinimg.com/originals/a6/21/d1/a621d17d3f22ab80e33e14919e3d5553.gif",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR71XprFT4UdDEIn96Y8SAwtBBtFeJF7c3_uA&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSY3MmQFQZZkAdShWAmDHBTb81RuR-U-lls-A&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTp3BDs7Ip-b-JqRNHQ7RUpD7rYbBru42TLRg&s",
+            "https://i.pinimg.com/originals/5d/93/f4/5d93f4ca1115d4f9e01a67ba9250f14f.gif",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS7FZDs1p-X6iv5mZggw11y8jKzF3hGHJIn2w&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTpID74HHwyXERPOUZkxNn_jHMDf3lXBd3WBg&s"
         ]
         gif = random.choice(hug_gifs)
         color = discord.Color(random.randint(0, 0xFFFFFF))
         embed = discord.Embed(
-            description=f"*{ctx.author.mention}  {member.mention}*",
+            description=f"*{ctx.author.mention} hugged {member.mention}*",
             color=color
         )
         embed.set_image(url=gif)
@@ -884,12 +982,31 @@ class General(commands.Cog):
     @app_commands.describe(member="The member you want to hug")
     async def hug_slash(self, interaction: discord.Interaction, member: discord.Member):
         hug_gifs = [
-            ""
+            "https://64.media.tumblr.com/db736b7f7e2583d3970f37a90dee89c2/tumblr_pm3mzc6zcZ1y5gr1do1_500.gif",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSqYGDIyC3h4HdMluyhlmGmhjwP0NC_FtIufg&s",
+            "https://i.pinimg.com/originals/8d/67/06/8d67066616331a8c661cb64c14ac6e62.gif",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ8JzpSw8iRnuxx-_Y0h9lhPDoM6i9c4no2-Q&s",
+            "https://i.imgur.com/7Bdh4C8.gif",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDBzBvjFtmEaGx4oFRZ851AiEUnzlIOI1SQQ&s",
+            "https://gifdb.com/images/high/anime-couple-hug-bzoul0ohlj3vyk8d.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTZjMDliOTUyajVmcW9zOXcxZ296bTY1cnU5cmNxbGdtYXlxaW05am5uZXp5a2g0ayZlcD12MV9naWZzX3NlYXJjaCZjdD1n/143v0Z4767T15e/giphy.gif",
+            "https://i.pinimg.com/originals/f7/c3/4a/f7c34adfbfc3d04973846e23cc1ad79d.gif",
+            "https://img.wattpad.com/2c92a80e97be1efab699fc670dbaabddb8f264fb/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f776174747061642d6d656469612d736572766963652f53746f7279496d6167652f49496e444b35555a5135354e46513d3d2d313138363633313231392e313663663861626330383336643965633339353734373931303533302e676966",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTK5Tas8Rl2TFNhqDTzonzqgzg-2O1RB_gF8A&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS3vl_m6d72Wb628wmNQcZqRUwifGNaKbqaBw&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSZhLb13a76jw9KP5cEIVm79g23UlS_Md4MzA&s",
+            "https://i.pinimg.com/originals/a6/21/d1/a621d17d3f22ab80e33e14919e3d5553.gif",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR71XprFT4UdDEIn96Y8SAwtBBtFeJF7c3_uA&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSY3MmQFQZZkAdShWAmDHBTb81RuR-U-lls-A&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTp3BDs7Ip-b-JqRNHQ7RUpD7rYbBru42TLRg&s",
+            "https://i.pinimg.com/originals/5d/93/f4/5d93f4ca1115d4f9e01a67ba9250f14f.gif",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS7FZDs1p-X6iv5mZggw11y8jKzF3hGHJIn2w&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTpID74HHwyXERPOUZkxNn_jHMDf3lXBd3WBg&s"
         ]
         gif = random.choice(hug_gifs)
         color = discord.Color(random.randint(0, 0xFFFFFF))
         embed = discord.Embed(
-            description=f"*{interaction.user.mention}  {member.mention}*",
+            description=f"*{interaction.user.mention} hugged {member.mention}*",
             color=color
         )
         embed.set_image(url=gif)
@@ -899,12 +1016,35 @@ class General(commands.Cog):
     @commands.command(name="pat")
     async def pat_prefix(self, ctx, member: discord.Member):
         pat_gifs = [
-            ""
+            "https://media1.giphy.com/media/v1.Y2lkPTZjMDliOTUyMHFkZTBzOHZqdmhsMGRweG1sdGR2djJ4a2x5cmk5MnJpd2t0b2JieiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/5tmRHwTlHAA9WkVxTU/source.gif",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTTX0tFI7xQ0YnAyODluKnTMTqRc3_xKcKiyA&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-Y9Y9POAHRjaYk82hmfeekKoDHqY_d9gjjg&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSP_gTECjDnKPVYMxsXrqhLLnQOvjKHof2hag&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRF5IAwbXy4YS29NXU6kbabROmS9rmhaEug6g&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvyD_lWdi4NOxXPVNTYeeurx8jM3R41NqkWw&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTujTG2A1mkoH9Rfmd4C1WELBZHb9Ayi7F9SA&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShc5beyZF7afdpBDeAW-2guIjo3rjxZWsixQ&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR6sHJjvAZnVZXk2sdkSBzfqL5bQF1YpU1aHA&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR1COvE-GfVkotbY5II_6NkN17vZhiv60mT4g&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTDqhNoU6pzvMiIRPCZ30XDmfXykz_R__6aDQ&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSrk7r5CQhImaO9CdayoV5GhFVhaOp4CW9gsw&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSKw5cJm47ibjWuYf-lxEyOGrm5LyA7w13OWA&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTF6YN2rvOtD5aJx9454Awc-rlV9X7R9a3wVQ&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIHOpAVD4p9VfuAW9KJak4DfnoP55WGakSFg&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSTXQY6Y6y1-JsYrGDXaMilqEXFpzmTsQcO6w&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxSbZ8MtY5I_pBL1cNyxh0ePAy0q3USvVVuA&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQzqkAyETRcn8HlCscG55SbnQYhc-cEIxDp_w&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQYVJWlQ8vCuJLOaaZkOBrqF2Q5tFq_TQTebw&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQpESUfWbVdhNHUqNs2HzpqkB3FyB1iHaZeiA&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTv8oZQZC2wTyjRwLsW4TwMZ5LJrd8g-z1xTQ&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvFVlLRJ4VwFhATszUyYcomJklxEmJZTDEPw&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRgPIntfz4Eq0dsFmN-JDOKNABY-KHnrQzkqQ&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQWu3XVTMtdKdi_5BoBEOcMeeH1Q3R4pS6hZQ&s"
         ]
         gif = random.choice(pat_gifs)
         color = discord.Color(random.randint(0, 0xFFFFFF))
         embed = discord.Embed(
-            description=f"*{ctx.author.mention}  {member.mention}*",
+            description=f"*{ctx.author.mention} pats {member.mention}*",
             color=color
         )
         embed.set_image(url=gif)
@@ -915,12 +1055,35 @@ class General(commands.Cog):
     @app_commands.describe(member="The member you want to pat")
     async def pat_slash(self, interaction: discord.Interaction, member: discord.Member):
         pat_gifs = [
-            ""
+            "https://media1.giphy.com/media/v1.Y2lkPTZjMDliOTUyMHFkZTBzOHZqdmhsMGRweG1sdGR2djJ4a2x5cmk5MnJpd2t0b2JieiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/5tmRHwTlHAA9WkVxTU/source.gif",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTTX0tFI7xQ0YnAyODluKnTMTqRc3_xKcKiyA&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-Y9Y9POAHRjaYk82hmfeekKoDHqY_d9gjjg&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSP_gTECjDnKPVYMxsXrqhLLnQOvjKHof2hag&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRF5IAwbXy4YS29NXU6kbabROmS9rmhaEug6g&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvyD_lWdi4NOxXPVNTYeeurx8jM3R41NqkWw&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTujTG2A1mkoH9Rfmd4C1WELBZHb9Ayi7F9SA&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShc5beyZF7afdpBDeAW-2guIjo3rjxZWsixQ&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR6sHJjvAZnVZXk2sdkSBzfqL5bQF1YpU1aHA&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR1COvE-GfVkotbY5II_6NkN17vZhiv60mT4g&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTDqhNoU6pzvMiIRPCZ30XDmfXykz_R__6aDQ&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSrk7r5CQhImaO9CdayoV5GhFVhaOp4CW9gsw&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSKw5cJm47ibjWuYf-lxEyOGrm5LyA7w13OWA&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTF6YN2rvOtD5aJx9454Awc-rlV9X7R9a3wVQ&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIHOpAVD4p9VfuAW9KJak4DfnoP55WGakSFg&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSTXQY6Y6y1-JsYrGDXaMilqEXFpzmTsQcO6w&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxSbZ8MtY5I_pBL1cNyxh0ePAy0q3USvVVuA&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQzqkAyETRcn8HlCscG55SbnQYhc-cEIxDp_w&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQYVJWlQ8vCuJLOaaZkOBrqF2Q5tFq_TQTebw&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQpESUfWbVdhNHUqNs2HzpqkB3FyB1iHaZeiA&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTv8oZQZC2wTyjRwLsW4TwMZ5LJrd8g-z1xTQ&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvFVlLRJ4VwFhATszUyYcomJklxEmJZTDEPw&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRgPIntfz4Eq0dsFmN-JDOKNABY-KHnrQzkqQ&s",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQWu3XVTMtdKdi_5BoBEOcMeeH1Q3R4pS6hZQ&s"
         ]
         gif = random.choice(pat_gifs)
         color = discord.Color(random.randint(0, 0xFFFFFF))
         embed = discord.Embed(
-            description=f"*{interaction.user.mention}  {member.mention}*",
+            description=f"*{interaction.user.mention} pats {member.mention}*",
             color=color
         )
         embed.set_image(url=gif)
