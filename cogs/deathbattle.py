@@ -132,19 +132,6 @@ class DeathBattle(commands.Cog):
                 turn += 1
                 continue
 
-            # Apply burn damage if any
-            if burn_damage > 0:
-                burn_text = f"{BURN_EMOJI} __**{attacker.name}**__ burned __**{defender.name}**__ dealing an extra __**{burn_damage}**__ damag!"
-                if attacker == player1:
-                    hp1 = max(0, hp1 - burn_damage)
-                else:
-                    hp2 = max(0, hp2 - burn_damage_next)
-                log.append((turn, burn_text))
-                full_log.append(f"Turn {turn}: {burn_text}")
-                if len(log) > 3:
-                    log.pop(0)
-                burn_damage = 0
-
                 embed.clear_fields()
                 for t, entry in log:
                     embed.add_field(name=f"Turn {t}", value=entry, inline=False)
