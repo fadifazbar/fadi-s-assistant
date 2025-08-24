@@ -11,7 +11,7 @@ DEATHBATTLE_EMOJI = "<:Deathbattle_V2:1408666286463914067>"
 HEALTH_EMOJI = "<:HP_V2:1408669354069065748>"
 CRITICAL_EMOJI = "<:CRITICAL_HIT:1408659817127612519>"
 HEAL_EMOJI = "<:MENDING_HEART:1408664782005080094>"
-GOLDEN_HEART = "<:GOLDEN_HEART:1408674925950144614>"
+GOLDEN_HEART = "<:Golden_Heart_V2:1408912627668750399>"
 STUN_EMOJI = "<:stun:1409016286104518827>"
 BURN_EMOJI = "<:burn:1409016476760936529>"
 DODGE_EMOI = "<:dodge:1409016517970100325>"
@@ -140,20 +140,30 @@ class DeathBattle(commands.Cog):
         normalized = [(percent / total_percent, percent, dmg, template) for percent, dmg, template in attack_messages]
 
         embed = discord.Embed(
-            title=f"{DEATHBATTLE_EMOJI} DEATHBATTLE {DEATHBATTLE_EMOJI}",
-            description=f"# {DEATHBATTLE_EMOJI} {player1.name} VS {player2.name} {DEATHBATTLE_EMOJI}\nFight begins!",
-            color=discord.Color.red()
-        )
-        embed.add_field(
-            name=player1.name,
-            value=f"{hp_bar(hp1)}\n    {HEALTH_EMOJI} {hp1}/100",
-            inline=True
-        )
-        embed.add_field(
-            name=player2.name,
-            value=f"{hp_bar(hp2)}\n    {HEALTH_EMOJI} {hp2}/100",
-            inline=True
-        )
+    title=f"{DEATHBATTLE_EMOJI} DEATHBATTLE {DEATHBATTLE_EMOJI}",
+    description=(
+        f"# {DEATHBATTLE_EMOJI} {player1.name} VS {player2.name} {DEATHBATTLE_EMOJI}\n"
+        f"Fight begins!"
+    ),
+    color=discord.Color.red()
+)
+
+embed.add_field(
+    name=player1.name,
+    value=f"{hp_bar(hp1)}\n{HEALTH_EMOJI} {hp1}/100",
+    inline=True
+)
+
+embed.add_field(
+    name=player2.name,
+    value=f"{hp_bar(hp2)}\n{HEALTH_EMOJI} {hp2}/100",
+    inline=True
+)
+
+
+
+
+        
         msg = await send(embed=embed)
         if is_interaction:
             msg = await ctx_or_interaction.original_response()
