@@ -314,12 +314,12 @@ class DeathBattle(commands.Cog):
         )
         embed.add_field(
             name=player1.mention,
-            value=f"{hp_bar(hp1 if winner == player1 else hp2)",
+            value=f"{hp_bar(hp1 if winner == player1 else hp2)}",
             inline=True
         )
         embed.add_field(
             name=player2.mention
-            value=f"{hp_bar(hp1 if winner == player1 else hp2)",
+            value=f"{hp_bar(hp1 if winner == player1 else hp2)}",
             inline=True
         )
         
