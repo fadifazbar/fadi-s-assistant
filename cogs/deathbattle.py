@@ -42,6 +42,10 @@ class DeathBattle(commands.Cog):
             player2: {"damage": 0, "healing": 0}
         }
 
+        # Track stun and burn
+        stunned_players = {player1: False, player2: False}
+        burn_damage_next_turn = {player1: 0, player2: 0}
+
         # Attack actions (chance %, damage, template)
         attack_messages = [
             (40, 5,  "**__{attacker}__** slapped **__{defender}__** so hard that he farted dealing **__{dmg}__** damage"),
@@ -58,7 +62,6 @@ class DeathBattle(commands.Cog):
             (21, 29,  "**__{attacker}__** used nostalgia on **__{defender}__** leading him to lose **__{dmg}__**.hp"),
             (13, 35,  "**__{attacker}__** brainwashed **__{defender}__** making him take away **__{dmg}__** hp from his hp bar"),
             (0.1, 10000,  "**__{attacker}__** became god and 1 shot **__{defender}__** (this is 0.1% to get.)"),
-            (27, 19,  "**__{attacker}__** got freaky in bed with **__{defender}__** which led to sex making him lose **__{dmg}%__** of his virginity 🙏😭"),
             (36, 12,  "**__{attacker}__** smashed **__{defender}__** with a hammer that delt **__{dmg}__** damage"),
             (38, 6,  "**__{attacker}__** spat at **__{defender}__**, grossing them out for **__{dmg}__** damage"),
             (33, 8,  "**__{attacker}__** tripped **__{defender}__**, scraping knees for **__{dmg}__** damage"),
@@ -106,6 +109,7 @@ class DeathBattle(commands.Cog):
             (3, 55,  "**__{attacker}__** summoned shadow hands to strangle **__{defender}__** for **__{dmg}__** damage"),
             (2, 70,  "**__{attacker}__** ripped **__{defender}__** apart in a gruesome strike dealing **__{dmg}__** damage"),
             (1, 100, "**__{attacker}__** unleashed an apocalyptic blast obliterating **__{defender}__** for **__{dmg}__** damage"),
+
         ]
 
         # Normalize %
@@ -121,7 +125,6 @@ class DeathBattle(commands.Cog):
         embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
 
         msg = await send(embed=embed)
-
         if is_interaction:
             msg = await ctx_or_interaction.original_response()
 
@@ -132,32 +135,14 @@ class DeathBattle(commands.Cog):
             attacker = player1 if turn % 2 != 0 else player2
             defender = player2 if turn % 2 != 0 else player1
 
-            # 🩹 Healing chance (15%)
-            if random.random() < 0.15:
-                heal_amount = random.randint(5, 20)
-
-                # Critical heal (10%)
-                crit_heal = random.random() < 0.1
-                if crit_heal:
-                    heal_amount *= 2
-
-                if attacker == player1:
-                    hp1 = min(100, hp1 + heal_amount)
-                else:
-                    hp2 = min(100, hp2 + heal_amount)
-
-                # track healing
-                total_stats[attacker]["healing"] += heal_amount
-
-                if crit_heal:
-                    heal_text = f"{GOLDEN_HEART} **__{attacker.name}__** used the **Ultimate Golden Heart** and recovered __**{heal_amount} HP**__!"
-                else:
-                    heal_text = f"{HEAL_EMOJI} **__{attacker.name}__** used a mending heart and recovered **{heal_amount} HP**!"
-
-                log.append((turn, heal_text))
-                full_log.append(f"Turn {turn}: {heal_text}")
+            # Skip turn if stunned
+            if stunned_players.get(attacker, False):
+                skip_text = f"💫 **{attacker.name}** is stunned and misses their turn!"
+                log.append((turn, skip_text))
+                full_log.append(f"Turn {turn}: {skip_text}")
                 if len(log) > 3:
                     log.pop(0)
+                stunned_players[attacker] = False
 
                 # Update embed
                 embed.clear_fields()
@@ -165,10 +150,57 @@ class DeathBattle(commands.Cog):
                     embed.add_field(name=f"Turn {t}", value=entry, inline=False)
                 embed.add_field(name=player1.name, value=f"{HEALTH_EMOJI} {hp1}", inline=True)
                 embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
+                await msg.edit(embed=embed)
+                await asyncio.sleep(1.5)
+                turn += 1
+                continue
 
+            # Apply burn damage if any
+            if burn_damage_next_turn[attacker] > 0:
+                burn_text = f"🔥 **{attacker.name}** takes {burn_damage_next_turn[attacker]} burn damage!"
+                if attacker == player1:
+                    hp1 = max(0, hp1 - burn_damage_next_turn[attacker])
+                else:
+                    hp2 = max(0, hp2 - burn_damage_next_turn[attacker])
+                log.append((turn, burn_text))
+                full_log.append(f"Turn {turn}: {burn_text}")
+                if len(log) > 3:
+                    log.pop(0)
+                burn_damage_next_turn[attacker] = 0
+
+                # Update embed
+                embed.clear_fields()
+                for t, entry in log:
+                    embed.add_field(name=f"Turn {t}", value=entry, inline=False)
+                embed.add_field(name=player1.name, value=f"{HEALTH_EMOJI} {hp1}", inline=True)
+                embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
                 await msg.edit(embed=embed)
                 await asyncio.sleep(1.5)
 
+            # 🩹 Healing chance (15%)
+            if random.random() < 0.15:
+                heal_amount = random.randint(5, 20)
+                crit_heal = random.random() < 0.1
+                if crit_heal:
+                    heal_amount *= 2
+                if attacker == player1:
+                    hp1 = min(100, hp1 + heal_amount)
+                else:
+                    hp2 = min(100, hp2 + heal_amount)
+                total_stats[attacker]["healing"] += heal_amount
+                heal_text = f"{GOLDEN_HEART} **__{attacker.name}__** used the **Ultimate Golden Heart** and recovered __**{heal_amount} HP**__!" if crit_heal else f"{HEAL_EMOJI} **__{attacker.name}__** used a mending heart and recovered **{heal_amount} HP**!"
+                log.append((turn, heal_text))
+                full_log.append(f"Turn {turn}: {heal_text}")
+                if len(log) > 3:
+                    log.pop(0)
+
+                embed.clear_fields()
+                for t, entry in log:
+                    embed.add_field(name=f"Turn {t}", value=entry, inline=False)
+                embed.add_field(name=player1.name, value=f"{HEALTH_EMOJI} {hp1}", inline=True)
+                embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
+                await msg.edit(embed=embed)
+                await asyncio.sleep(1.5)
                 turn += 1
                 continue
 
@@ -191,51 +223,53 @@ class DeathBattle(commands.Cog):
             if crit:
                 damage *= 2
 
+            # Special mechanics
+            dodge = random.random() < 0.1
+            burn = random.random() < 0.05
+            stun = random.random() < 0.05
+            special_text = ""
+
+            if dodge:
+                damage = 0
+                special_text += f"💨 **{defender.name}** dodged the attack!\n"
+            if burn:
+                burn_damage_next_turn[defender] = random.randint(5, 10)
+                special_text += f"🔥 **{defender.name}** is burned and will take {burn_damage_next_turn[defender]} damage next turn!\n"
+            if stun:
+                stunned_players[defender] = True
+                special_text += f"💫 **{defender.name}** is stunned and will miss their next turn!\n"
+
             # Apply damage
             if defender == player1:
                 hp1 = max(0, hp1 - damage)
             else:
                 hp2 = max(0, hp2 - damage)
 
-            # track damage
             total_stats[attacker]["damage"] += damage
-
-            # Build sentence
-            attack_text = f"{BATTLE_EMOJI} " + chosen_template.format(
-                attacker=attacker.name,
-                defender=defender.name,
-                dmg=damage,
-                chance=chosen_percent
-            )
+            attack_text = f"{BATTLE_EMOJI} " + chosen_template.format(attacker=attacker.name, defender=defender.name, dmg=damage, chance=chosen_percent)
             if crit:
                 attack_text += f" {CRITICAL_EMOJI} **CRITICAL HIT!**"
+            attack_text += "\n" + special_text if special_text else ""
 
             log.append((turn, attack_text))
             full_log.append(f"Turn {turn}: {attack_text}")
             if len(log) > 3:
                 log.pop(0)
 
-            # Update embed
             embed.clear_fields()
             for t, entry in log:
                 embed.add_field(name=f"Turn {t}", value=entry, inline=False)
             embed.add_field(name=player1.name, value=f"{HEALTH_EMOJI} {hp1}", inline=True)
             embed.add_field(name=player2.name, value=f"{HEALTH_EMOJI} {hp2}", inline=True)
-
             await msg.edit(embed=embed)
             await asyncio.sleep(1.5)
-
             turn += 1
 
-        # Winner
+        # Winner section (unchanged)
         winner = player1 if hp1 > 0 else player2
         loser = player2 if winner == player1 else player1
-
-        finishing_action = random.choice([
-            "annihilated", "finished off", "destroyed", "ended", "humiliated"
-        ])
+        finishing_action = random.choice(["annihilated", "finished off", "destroyed", "ended", "humiliated"])
         finish_text = f"# {WINNER_EMOJI} {winner.name} {finishing_action} {loser.name} to claim victory!"
-
         embed = discord.Embed(
             title=f"{WINNER_EMOJI} {winner.name.upper()} WINS!!! {WINNER_EMOJI}",
             description=finish_text,
@@ -244,12 +278,9 @@ class DeathBattle(commands.Cog):
         embed.add_field(name=winner.name, value=f"{HEALTH_EMOJI} {hp1 if winner == player1 else hp2}", inline=True)
         embed.add_field(name=loser.name, value=f"{HEALTH_EMOJI} {hp1 if loser == player1 else hp2}", inline=True)
 
-        # Add button to request full log
         view = discord.ui.View()
-
         async def send_log(interaction: discord.Interaction):
             try:
-                # Split logs into multiple embeds
                 chunk_size = 20
                 for i in range(0, len(full_log), chunk_size):
                     chunk = full_log[i:i+chunk_size]
@@ -262,8 +293,6 @@ class DeathBattle(commands.Cog):
                         turn_num, text = entry.split(": ", 1)
                         log_embed.add_field(name=turn_num, value=text, inline=False)
                     await interaction.user.send(embed=log_embed)
-
-                # totals embed
                 totals_text = (
                     f"**{player1.name}** → Damage: {total_stats[player1]['damage']} | Healing: {total_stats[player1]['healing']}\n"
                     f"**{player2.name}** → Damage: {total_stats[player2]['damage']} | Healing: {total_stats[player2]['healing']}"
@@ -274,7 +303,6 @@ class DeathBattle(commands.Cog):
                     color=discord.Color.gold()
                 )
                 await interaction.user.send(embed=totals_embed)
-
                 await interaction.response.send_message("📩 Check your DMs! Full battle log + totals sent as embeds.", ephemeral=True)
             except discord.Forbidden:
                 await interaction.response.send_message("❌ I couldn't DM you! Enable DMs from server members.", ephemeral=True)
@@ -282,7 +310,6 @@ class DeathBattle(commands.Cog):
         button = discord.ui.Button(label="📜 Get Full Battle Log", style=discord.ButtonStyle.blurple)
         button.callback = send_log
         view.add_item(button)
-
         await msg.edit(embed=embed, view=view)
 
 
