@@ -140,28 +140,24 @@ class DeathBattle(commands.Cog):
         normalized = [(percent / total_percent, percent, dmg, template) for percent, dmg, template in attack_messages]
 
         embed = discord.Embed(
-    title=f"{DEATHBATTLE_EMOJI} DEATHBATTLE {DEATHBATTLE_EMOJI}",
-    description=(
-        f"# {DEATHBATTLE_EMOJI} {player1.name} VS {player2.name} {DEATHBATTLE_EMOJI}\n"
-        f"Fight begins!"
-    ),
-    color=discord.Color.red()
-)
+            title=f"{DEATHBATTLE_EMOJI} DEATHBATTLE {DEATHBATTLE_EMOJI}",
+            description=(
+                f"# {DEATHBATTLE_EMOJI} {player1.mention} VS {player2.mention} {DEATHBATTLE_EMOJI}\n"
+                f"**__FIGHT BEGINS!!__**"
+            ),
+            color=discord.Color.red()
+        )
 
-embed.add_field(
-    name=player1.name,
-    value=f"{hp_bar(hp1)}\n{HEALTH_EMOJI} {hp1}/100",
-    inline=True
-)
-
-embed.add_field(
-    name=player2.name,
-    value=f"{hp_bar(hp2)}\n{HEALTH_EMOJI} {hp2}/100",
-    inline=True
-)
-
-
-
+        embed.add_field(
+            name=player1.mention,
+            value=f"{hp_bar(hp1)}\n{HEALTH_EMOJI} {hp1}/100",
+            inline=True
+        )
+        embed.add_field(
+            name=player2.mention
+            value=f"{hp_bar(hp1)}\n{HEALTH_EMOJI} {hp2}/100",
+            inline=True
+        )
 
         
         msg = await send(embed=embed)
