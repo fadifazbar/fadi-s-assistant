@@ -738,7 +738,7 @@ class General(commands.Cog):
         gif = random.choice(kiss_gifs)
         color = discord.Color(random.randint(0, 0xFFFFFF))
         embed = discord.Embed(
-            description=f"*{ctx.author.mention} made {interaction.user.mention} kissed {member.mention}*",
+            description=f"*{interaction.user.mention} kissed {member.mention}*",
             color=color
         )
         embed.set_image(url=gif)
@@ -767,7 +767,7 @@ class General(commands.Cog):
         gif = random.choice(kiss_gifs)
         color = discord.Color(random.randint(0, 0xFFFFFF))
         embed = discord.Embed(
-            description=f"*{member1.mention} kissed {member2.mention}*",
+            description=f"*{ctx.author.mention} made {member1.mention} kissed {member2.mention}*",
             color=color
         )
         embed.set_image(url=gif)
