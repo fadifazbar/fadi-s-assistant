@@ -6,6 +6,9 @@ import io
 import aiohttp
 import random
 import asyncio
+import os, json
+
+LOG_FILE = "/data/deathbattle_logs.json"
 
 # Hardcoded emojis (kept EXACTLY as provided)
 BATTLE_EMOJI = "<:battle_emoji:1408620699349946572>"
@@ -27,6 +30,42 @@ EXPLOSION_EMOJI = "<:explosion:1409341495378575430>"
 THORNS_EMOJI = "<:thorns:1409341564853026906>"
 DOUBLE_STRIKE_EMOJI = "<:double_strike:1409341518434537494>"
 CURSE_EMOJI = "<:curse:1409341540106506372>"
+
+def save_log(message_id, full_log, total_stats, player1, player2):
+    if os.path.exists(LOG_FILE):
+        with open(LOG_FILE, "r") as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                data = {}
+    else:
+        data = {}
+
+    data[str(message_id)] = {
+        "full_log": full_log,
+        "total_stats": {
+            str(player1.id): total_stats[player1],
+            str(player2.id): total_stats[player2]
+        },
+        "players": {
+            "p1": player1.id,
+            "p2": player2.id
+        }
+    }
+
+    with open(LOG_FILE, "w") as f:
+        json.dump(data, f)
+
+def load_log(message_id):
+    if not os.path.exists(LOG_FILE):
+        return None
+    with open(LOG_FILE, "r") as f:
+        try:
+            data = json.load(f)
+        except json.JSONDecodeError:
+            return None
+    return data.get(str(message_id))
+
 
 
 # ✅ HP BAR FUNCTION
@@ -500,42 +539,64 @@ class DeathBattle(commands.Cog):
             inline=True
         )
 
+        # ✅ Save the log here
+        save_log(msg.id, full_log, total_stats, player1, player2)
+
         # Button for logs
         view = discord.ui.View()
 
-        async def send_log(interaction: discord.Interaction):
-            try:
-                chunk_size = 20
-                for i in range(0, len(full_log), chunk_size):
-                    chunk = full_log[i:i + chunk_size]
-                    log_embed = discord.Embed(
-                        title="📜 DeathBattle Log",
-                        description=f"Turns {i + 1} → {i + len(chunk)}",
-                        color=discord.Color.purple()
-                    )
-                    for entry in chunk:
-                        turn_num, text = entry.split(": ", 1)
-                        log_embed.add_field(name=turn_num, value=text, inline=False)
-                    await interaction.user.send(embed=log_embed)
-                totals_text = (
-                    f"**{player1.name}** → Damage: {total_stats[player1]['damage']} | Healing: {total_stats[player1]['healing']}\n"
-                    f"**{player2.name}** → Damage: {total_stats[player2]['damage']} | Healing: {total_stats[player2]['healing']}"
-                )
-                totals_embed = discord.Embed(
-                    title="📊 Final Battle Totals",
-                    description=totals_text,
-                    color=discord.Color.gold()
-                )
-                await interaction.user.send(embed=totals_embed)
-                await interaction.response.send_message("📩 Check your DMs! Full battle log + totals sent as embeds.", ephemeral=True)
-            except discord.Forbidden:
-                await interaction.response.send_message("❌ I couldn't DM you! Enable DMs from server members.", ephemeral=True)
+async def send_log(interaction: discord.Interaction):
+    data = load_log(interaction.message.id)
+    if not data:
+        await interaction.response.send_message("⚠️ Log not found (maybe purged after restart).", ephemeral=True)
+        return
 
+    full_log = data["full_log"]
+    total_stats = data["total_stats"]
+    p1_id, p2_id = data["players"]["p1"], data["players"]["p2"]
+
+    player1 = interaction.client.get_user(p1_id)
+    player2 = interaction.client.get_user(p2_id)
+
+    try:
+        chunk_size = 20
+        for i in range(0, len(full_log), chunk_size):
+            chunk = full_log[i:i + chunk_size]
+            log_embed = discord.Embed(
+                title="📜 DeathBattle Log",
+                description=f"Turns {i + 1} → {i + len(chunk)}",
+                color=discord.Color.purple()
+            )
+            for entry in chunk:
+                turn_num, text = entry.split(": ", 1)
+                log_embed.add_field(name=turn_num, value=text, inline=False)
+            await interaction.user.send(embed=log_embed)
+
+        totals_text = (
+            f"**{player1.name if player1 else 'Player 1'}** → "
+            f"Damage: {total_stats[str(p1_id)]['damage']} | Healing: {total_stats[str(p1_id)]['healing']}\n"
+            f"**{player2.name if player2 else 'Player 2'}** → "
+            f"Damage: {total_stats[str(p2_id)]['damage']} | Healing: {total_stats[str(p2_id)]['healing']}"
+        )
+        totals_embed = discord.Embed(
+            title="📊 Final Battle Totals",
+            description=totals_text,
+            color=discord.Color.gold()
+        )
+        await interaction.user.send(embed=totals_embed)
+        await interaction.response.send_message("📩 Check your DMs! Full battle log + totals sent.", ephemeral=True)
+    except discord.Forbidden:
+        await interaction.response.send_message("❌ I couldn't DM you! Enable DMs from server members.", ephemeral=True)
+
+
+        # Button for logs
+        view = discord.ui.View()
         button = discord.ui.Button(label="📜 Get Full Battle Log", style=discord.ButtonStyle.blurple)
         button.callback = send_log
         view.add_item(button)
 
         await msg.edit(embed=embed, view=view)
+
 
 
 async def setup(bot):
