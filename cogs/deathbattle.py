@@ -4,7 +4,7 @@ from discord import app_commands
 import random
 import asyncio
 
-# Hardcoded emojis
+# Hardcoded emojis (kept EXACTLY as provided)
 BATTLE_EMOJI = "<:battle_emoji:1408620699349946572>"
 WINNER_EMOJI = "<:Deathbattle_Winer_V2:1408667344682618951>"
 DEATHBATTLE_EMOJI = "<:Deathbattle_V2:1408666286463914067>"
@@ -47,6 +47,8 @@ def hp_bar(hp: int, max_hp: int = 100) -> str:
         bar = "🟥" * filled_bars
 
     return bar + "⬛" * empty_bars + f"\n{HEALTH_EMOJI}  {hp}/100 Health"
+
+
 class DeathBattle(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -66,8 +68,9 @@ class DeathBattle(commands.Cog):
         is_interaction = isinstance(ctx_or_interaction, discord.Interaction)
         send = ctx_or_interaction.response.send_message if is_interaction else ctx_or_interaction.send
 
-        # Initial stats
-        hp1, hp2 = 100, 100
+        # Constants / initial stats
+        max_hp = 100
+        hp1, hp2 = max_hp, max_hp
         turn = 1
         log = []
         full_log = []  # Keep the entire battle history for DM
@@ -76,8 +79,14 @@ class DeathBattle(commands.Cog):
             player2: {"damage": 0, "healing": 0}
         }
 
-        # Track stun and burn
-        stunned_players = {player1: False, player2: False}
+        # Status trackers
+        stunned_players = {player1: False, player2: False}   # skip exactly next turn
+        frozen_players = {player1: False, player2: False}    # skip exactly next turn
+        paralyzed_players = {player1: 0, player2: 0}         # N turns with 50% fail chance
+        cursed_players = {player1: 0, player2: 0}            # N turns of halved damage when attacking
+        poison_effects = {player1: 0, player2: 0}            # N turns remaining, 3 dmg per turn at start of their turn
+        thorned_players = {player1: 0, player2: 0}           # N hits will reflect 3 dmg
+        # (kept var name from your code, though not used for DOT here)
         burn_damage_next_turn = {player1: 0, player2: 0}
 
         # Attack actions (chance %, damage, template)
@@ -144,8 +153,6 @@ class DeathBattle(commands.Cog):
             (3, 55,  "**__{attacker}__** summoned shadow hands to strangle **__{defender}__** for **__{dmg}__** damage"),
             (2, 70,  "**__{attacker}__** ripped **__{defender}__** apart in a gruesome strike dealing **__{dmg}__** damage"),
             (1, 100, "**__{attacker}__** unleashed an apocalyptic blast obliterating **__{defender}__** for **__{dmg}__** damage"),
-            
-
         ]
 
         # Normalize %
@@ -161,83 +168,69 @@ class DeathBattle(commands.Cog):
             color=discord.Color.red()
         )
 
-        embed.add_field(
-            name=player1.name,
-            value=f"{hp_bar(hp1)}",
-            inline=True
-        )
-        embed.add_field(
-            name=player2.name,
-            value=f"{hp_bar(hp2)}",
-            inline=True
-        )
+        embed.add_field(name=player1.name, value=f"{hp_bar(hp1)}", inline=True)
+        embed.add_field(name=player2.name, value=f"{hp_bar(hp2)}", inline=True)
 
-        
         msg = await send(embed=embed)
         if is_interaction:
             msg = await ctx_or_interaction.original_response()
 
         await asyncio.sleep(2)
 
+        # Helper to push a log line and refresh the embed
+        async def push_and_refresh(text: str):
+            nonlocal embed, msg, log, full_log, hp1, hp2, turn
+            log.append((turn, text))
+            full_log.append(f"Turn {turn}: {text}")
+            if len(log) > 3:
+                log.pop(0)
+            embed.clear_fields()
+            for t, entry in log:
+                embed.add_field(name=f"Turn {t}", value=entry, inline=False)
+            embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
+            embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
+            await msg.edit(embed=embed)
+
         # Fight loop
         while hp1 > 0 and hp2 > 0:
             attacker = player1 if turn % 2 != 0 else player2
             defender = player2 if turn % 2 != 0 else player1
 
-            # Skip turn if stunned
-            if stunned_players.get(attacker, False):
-                skip_text = f"{STUN_EMOJI} **{attacker.name}** is stunned and misses their turn!"
-                log.append((turn, skip_text))
-                full_log.append(f"Turn {turn}: {skip_text}")
-                if len(log) > 3:
-                    log.pop(0)
-                stunned_players[attacker] = False
-
-                # Update embed
-                embed.clear_fields()
-                for t, entry in log:
-                    embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-                embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
-                embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
-                await msg.edit(embed=embed)
-                await asyncio.sleep(1.5)
-                turn += 1
-                continue
-
-                embed.clear_fields()
-                for t, entry in log:
-                    embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-                embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
-                embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
-                await msg.edit(embed=embed)
-                await asyncio.sleep(1.5)
-
-            # 🩹 Healing chance (15%)
-            if random.random() < 0.15:
-                heal_amount = random.randint(5, 20)
-                crit_heal = random.random() < 0.1
-                if crit_heal:
-                    heal_amount *= 2
+            # Apply start-of-turn poison on attacker
+            if poison_effects[attacker] > 0 and (hp1 > 0 and hp2 > 0):
                 if attacker == player1:
-                    hp1 = min(100, hp1 + heal_amount)
+                    hp1 = max(0, hp1 - 3)
                 else:
-                    hp2 = min(100, hp2 + heal_amount)
-                total_stats[attacker]["healing"] += heal_amount
-                heal_text = f"{GOLDEN_HEART} **__{attacker.name}__** used the **Ultimate Golden Heart** and recovered __**{heal_amount} HP**__!" if crit_heal else f"{HEAL_EMOJI} **__{attacker.name}__** used a mending heart and recovered **{heal_amount} HP**!"
-                log.append((turn, heal_text))
-                full_log.append(f"Turn {turn}: {heal_text}")
-                if len(log) > 3:
-                    log.pop(0)
+                    hp2 = max(0, hp2 - 3)
+                poison_effects[attacker] -= 1
+                await push_and_refresh(f"{POISON_EMOJI} **{attacker.name}** suffers **3** poison damage!")
+                await asyncio.sleep(1.0)
+                if hp1 == 0 or hp2 == 0:
+                    break  # died to poison
 
-                embed.clear_fields()
-                for t, entry in log:
-                    embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-                embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
-                embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
-                await msg.edit(embed=embed)
-                await asyncio.sleep(1.5)
+            # Freeze / Stun checks (skip turn)
+            if frozen_players.get(attacker, False):
+                frozen_players[attacker] = False
+                await push_and_refresh(f"{FREEZE_EMOJI} **{attacker.name}** is frozen and skips their turn!")
+                await asyncio.sleep(1.2)
                 turn += 1
                 continue
+
+            if stunned_players.get(attacker, False):
+                stunned_players[attacker] = False
+                await push_and_refresh(f"{STUN_EMOJI} **{attacker.name}** is stunned and misses their turn!")
+                await asyncio.sleep(1.2)
+                turn += 1
+                continue
+
+            # Paralyze (50% fail chance)
+            if paralyzed_players.get(attacker, 0) > 0:
+                paralyzed_players[attacker] -= 1
+                if random.random() < 0.5:
+                    await push_and_refresh(f"{PARALYZE_EMOJI} **{attacker.name}** is paralyzed and fails to act!")
+                    await asyncio.sleep(1.2)
+                    turn += 1
+                    continue
 
             # Pick attack
             r = random.random()
@@ -251,19 +244,24 @@ class DeathBattle(commands.Cog):
                     chosen_dmg = dmg
                     break
 
-            base_damage = chosen_dmg
+            base_damage = chosen_dmg if chosen_dmg is not None else 0
+
+            # Curse halves attacker's damage (if any)
+            if cursed_players.get(attacker, 0) > 0:
+                base_damage = int(base_damage / 2)
+                cursed_players[attacker] -= 1
 
             # Critical hit (10%)
             crit = random.random() < 0.1
             if crit:
                 base_damage *= 2
 
-            # Special mechanics
-            dodge = random.random() < 0.04       # 4% chance
-            burn = random.random() < 0.03        # 3% chance
-            stun = random.random() < 0.03        # 3% chance
-            poison = random.random() < 0.025     # 2.5% chance
-            freeze = random.random() < 0.02      # 2% chance
+            # Special mechanics (chance rolls)
+            dodge = random.random() < 0.04        # 4% chance
+            burn = random.random() < 0.03         # 3% chance
+            stun = random.random() < 0.03         # 3% chance
+            poison = random.random() < 0.025      # 2.5% chance
+            freeze = random.random() < 0.02       # 2% chance
             shield_break = random.random() < 0.02 # 2% chance
             lifesteal = random.random() < 0.015   # 1.5% chance
             paralyze = random.random() < 0.015    # 1.5% chance
@@ -290,9 +288,9 @@ class DeathBattle(commands.Cog):
                 stunned_players[defender] = True
                 special_text += f"{STUN_EMOJI} __**{defender.name}**__ is stunned and will miss their next turn!\n"
 
-            # Poison (damage over time, e.g. 3 dmg for 3 turns)
+            # Poison (3 dmg for 3 turns)
             if poison:
-                poison_effects[defender] = 3  # 3 turns
+                poison_effects[defender] = 3
                 special_text += f"{POISON_EMOJI} __**{defender.name}**__ is poisoned and will take 3 damage for 3 turns!\n"
 
             # Freeze (skip exactly one turn)
@@ -305,7 +303,7 @@ class DeathBattle(commands.Cog):
                 base_damage += 5
                 special_text += f"{SHIELD_BREAK_EMOJI} __**{attacker.name}**__ shattered {defender.name}’s defenses for +5 dmg!\n"
 
-            # Life Steal (drain HP)
+            # Life Steal (drain HP instantly)
             if lifesteal:
                 drain = 8
                 if defender == player1:
@@ -338,42 +336,81 @@ class DeathBattle(commands.Cog):
                 special_text += f"{EXPLOSION_EMOJI} __**{attacker.name}**__ exploded, dealing {extra} to {defender.name} and {self_dmg} to themselves!\n"
 
             # Double Strike (two small hits)
+            extra_double = 0
             if double_strike:
                 hit1 = random.randint(3, 6)
                 hit2 = random.randint(2, 5)
-                extra = hit1 + hit2
-                if defender == player1:
-                    hp1 = max(0, hp1 - extra)
-                else:
-                    hp2 = max(0, hp2 - extra)
-                special_text += f"{DOUBLE_STRIKE_EMOJI} __**{attacker.name}**__ strikes twice, hitting {hit1}+{hit2} for {extra} total!\n"
+                extra_double = hit1 + hit2
+                special_text += f"{DOUBLE_STRIKE_EMOJI} __**{attacker.name}**__ strikes twice, hitting {hit1}+{hit2} for {extra_double} total!\n"
 
-            # Curse (halve dmg for 2 turns)
+            # Curse (halve defender's damage for 2 turns)
             if curse:
                 cursed_players[defender] = 2
                 special_text += f"{CURSE_EMOJI} __**{defender.name}**__ is cursed! Their attacks deal half damage for 2 turns!\n"
 
-            # Thorns (reflect 3 dmg back for future hits)
+            # Thorns (reflect 3 dmg for next 3 hits)
             if thorns:
-                thorned_players[defender] = 3  # lasts 3 turns
-                special_text += f"{THORNS_EMOJI} __**{defender.name}**__ grows thorns! Attacks against them deal 3 dmg back.\n"
+                thorned_players[defender] = 3
+                special_text += f"{THORNS_EMOJI} __**{defender.name}**__ grows thorns! Attacks against them reflect 3 damage for 3 hits.\n"
 
-            # ✅ Apply total damage (base + burn)
-            total_damage = base_damage + burn_damage
-            if defender == player1:
-                hp1 = max(0, hp1 - total_damage)
-            else:
-                hp2 = max(0, hp2 - total_damage)
+            # ✅ Apply total damage (base + burn + double-strike)
+            total_damage = max(0, base_damage) + burn_damage + extra_double
+
+            # Main attack line
+            main_line = chosen_template.format(attacker=attacker.name, defender=defender.name, dmg=total_damage)
+            if crit and total_damage > 0:
+                main_line += f" {CRITICAL_EMOJI} **CRITICAL HIT!**"
+
+            # Apply to defender
+            if total_damage > 0:
+                if defender == player1:
+                    hp1 = max(0, hp1 - total_damage)
+                else:
+                    hp2 = max(0, hp2 - total_damage)
+
+                # Thorns reflect if defender has thorns active
+                if thorned_players.get(defender, 0) > 0:
+                    thorn_dmg = 3
+                    if attacker == player1:
+                        hp1 = max(0, hp1 - thorn_dmg)
+                    else:
+                        hp2 = max(0, hp2 - thorn_dmg)
+                    thorned_players[defender] -= 1
+                    special_text += f"{THORNS_EMOJI} **{attacker.name}** is pricked by thorns and takes **{thorn_dmg}** reflected damage!\n"
 
             total_stats[attacker]["damage"] += total_damage
 
+            # Compose and push turn log
+            await push_and_refresh(f"{main_line}\n{special_text}".strip())
+            await asyncio.sleep(1.5)
 
+            # End if someone died
+            if hp1 <= 0 or hp2 <= 0:
+                break
+
+            turn += 1
 
         # Winner section
         winner = player1 if hp1 > 0 else player2
         loser = player2 if winner == player1 else player1
-        finishing_action = random.choice(["annihilated", "finished off", "destroyed", "ended", "humiliated", "obliterated", "eradicated", "crushed", "smashed", "terminated", "defeated", "wrecked", "ruined", "shattered", "demolished", "vanquished", "erased", "beaten", "trounced", "slain", "neutralized", "decimated", "flattened", "overpowered", "subdued", "leveled", "massacred", "slaughtered", "wiped out", "dismantled", "collapsed", "overthrown", "uprooted", "broken", "annexed", "smothered", "stomped", "snuffed out", "undone", "beheaded", "silenced", "overrun", "toppled", "axed", "liquidated", "extinguished", "deflated", "outclassed", "dethroned", "squashed", "wrecked beyond repair", "pulverized", "dominated", "ravaged", "trashed", "overwhelmed", "outmatched", "suffocated", "eradicated completely", "pummeled", "steamrolled", "humiliated utterly", "gutted", "dismembered", "wrecked utterly", "subjugated", "beaten down", "finished utterly", "torched", "ravished", "obliterated totally", "neutralized fully", "suppressed", "thrashed", "downtrodden", "laid waste", "cut down", "outdone", "snapped", "flattened completely", "taken apart", "rendered helpless", "beaten senseless", "dominated entirely", "reduced to nothing", "destroyed utterly", "eradicated fully", "pounded", "clobbered", "battered", "outstripped", "squelched", "terminated utterly", "sundered", "worn down", "left in ruins", "eliminated", "outshined", "obliterated brutally", "wrecked fully", "trampled", "beaten brutally", "leveled utterly", "finished mercilessly", "squashed flat"])
+        finishing_action = random.choice([
+            "annihilated", "finished off", "destroyed", "ended", "humiliated", "obliterated", "eradicated", "crushed",
+            "smashed", "terminated", "defeated", "wrecked", "ruined", "shattered", "demolished", "vanquished", "erased",
+            "beaten", "trounced", "slain", "neutralized", "decimated", "flattened", "overpowered", "subdued", "leveled",
+            "massacred", "slaughtered", "wiped out", "dismantled", "collapsed", "overthrown", "uprooted", "broken",
+            "annexed", "smothered", "stomped", "snuffed out", "undone", "beheaded", "silenced", "overrun", "toppled",
+            "axed", "liquidated", "extinguished", "deflated", "outclassed", "dethroned", "squashed", "wrecked beyond repair",
+            "pulverized", "dominated", "ravaged", "trashed", "overwhelmed", "outmatched", "suffocated", "eradicated completely",
+            "pummeled", "steamrolled", "humiliated utterly", "gutted", "dismembered", "wrecked utterly", "subjugated",
+            "beaten down", "finished utterly", "torched", "ravished", "obliterated totally", "neutralized fully", "suppressed",
+            "thrashed", "downtrodden", "laid waste", "cut down", "outdone", "snapped", "flattened completely", "taken apart",
+            "rendered helpless", "beaten senseless", "dominated entirely", "reduced to nothing", "destroyed utterly",
+            "eradicated fully", "pounded", "clobbered", "battered", "outstripped", "squelched", "terminated utterly",
+            "sundered", "worn down", "left in ruins", "eliminated", "outshined", "obliterated brutally", "wrecked fully",
+            "trampled", "beaten brutally", "leveled utterly", "finished mercilessly", "squashed flat"
+        ])
         finish_text = f"# {WINNER_EMOJI} {winner.name} {finishing_action} {loser.name} to claim victory!"
+
         embed = discord.Embed(
             title=f"{WINNER_EMOJI} {winner.name.upper()} WINS!!! {WINNER_EMOJI}",
             description=finish_text,
@@ -389,17 +426,18 @@ class DeathBattle(commands.Cog):
             value=f"{hp_bar(hp1 if loser == player1 else hp2)}",
             inline=True
         )
-        
+
         # Button for logs
         view = discord.ui.View()
+
         async def send_log(interaction: discord.Interaction):
             try:
                 chunk_size = 20
                 for i in range(0, len(full_log), chunk_size):
-                    chunk = full_log[i:i+chunk_size]
+                    chunk = full_log[i:i + chunk_size]
                     log_embed = discord.Embed(
                         title="📜 DeathBattle Log",
-                        description=f"Turns {i+1} → {i+len(chunk)}",
+                        description=f"Turns {i + 1} → {i + len(chunk)}",
                         color=discord.Color.purple()
                     )
                     for entry in chunk:
@@ -423,6 +461,7 @@ class DeathBattle(commands.Cog):
         button = discord.ui.Button(label="📜 Get Full Battle Log", style=discord.ButtonStyle.blurple)
         button.callback = send_log
         view.add_item(button)
+
         await msg.edit(embed=embed, view=view)
 
 
