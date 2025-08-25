@@ -113,14 +113,23 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
         ]
         for fmt in quality_options:
             ydl_opts = {
-                "format": fmt,
-                "merge_output_format": "mp4",
                 "outtmpl": filename,
+                "merge_output_format": "mp4",
+                "format": f"{fmt}/bestaudio[ext=m4a]/bestaudio[ext=webm]/bestvideo+bestaudio/best",
                 "noplaylist": True,
                 "quiet": True,
                 "no_warnings": True,
-                "progress_hooks": [ProgressHook(status_msg, loop).update],
+                "retries": 5,
+                "skip_unavailable_fragments": True,
+                "ignoreerrors": True,
                 "cookiefile": "cookies.txt",
+                "cachedir": False,
+                "extractor_args": {
+                    "youtube": {
+                        "player_client": ["android"],
+                    }
+                },
+                "progress_hooks": [ProgressHook(status_msg, loop).update],
             }
 
             if os.path.exists(filename):
