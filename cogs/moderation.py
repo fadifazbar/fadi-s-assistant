@@ -264,6 +264,165 @@ class Moderation(commands.Cog):
         except Exception as e:
             logger.error(f"Error banning user: {e}")
             await self._send_response(ctx_or_interaction, "❌ An error occurred while banning the member!")
+
+    @commands.command(name="vcmute")
+    @commands.has_permissions(mute_members=True)
+    @commands.guild_only()
+    async def vcmute_prefix(self, ctx, member: discord.Member):
+        """Mute a member in a voice channel"""
+        if member.top_role >= ctx.author.top_role:
+            return await ctx.send("❌ You cannot mute someone with an equal or higher role.")
+
+        try:
+            await member.edit(mute=True, reason=f"Muted by {ctx.author}")
+            await ctx.send(f"✅ Muted {member.display_name}")
+        except:
+            await ctx.send("❌ Failed to mute. Are they in a VC?")
+
+    @discord.app_commands.command(name="vcmute", description="Mute a member in voice channel")
+    @discord.app_commands.describe(member="The member to mute")
+    async def vcmute_slash(self, interaction: discord.Interaction, member: discord.Member):
+        if member.top_role >= interaction.user.top_role:
+            return await interaction.response.send_message("❌ You cannot mute someone with an equal or higher role.", ephemeral=True)
+
+        try:
+            await member.edit(mute=True, reason=f"Muted by {interaction.user}")
+            await interaction.response.send_message(f"✅ Muted {member.display_name}")
+        except:
+            await interaction.response.send_message("❌ Failed to mute. Are they in a VC?", ephemeral=True)
+
+    @commands.command(name="vcunmute")
+    @commands.has_permissions(mute_members=True)
+    @commands.guild_only()
+    async def unmute_prefix(self, ctx, member: discord.Member):
+        """Unmute a member in a voice channel"""
+        if member.top_role >= ctx.author.top_role:
+            return await ctx.send("❌ You cannot unmute someone with an equal or higher role.")
+
+        try:
+            await member.edit(mute=False, reason=f"Unmuted by {ctx.author}")
+            await ctx.send(f"✅ Unmuted {member.display_name}")
+        except:
+            await ctx.send("❌ Failed to unmute. Are they in a VC?")
+
+    @discord.app_commands.command(name="vcunmute", description="Unmute a member in voice channel")
+    @discord.app_commands.describe(member="The member to unmute")
+    async def unmute_slash(self, interaction: discord.Interaction, member: discord.Member):
+        if member.top_role >= interaction.user.top_role:
+            return await interaction.response.send_message("❌ You cannot unmute someone with an equal or higher role.", ephemeral=True)
+
+        try:
+            await member.edit(mute=False, reason=f"Unmuted by {interaction.user}")
+            await interaction.response.send_message(f"✅ Unmuted {member.display_name}")
+        except:
+            await interaction.response.send_message("❌ Failed to unmute. Are they in a VC?", ephemeral=True)
+
+    @commands.command(name="deafen")
+    @commands.has_permissions(deafen_members=True)
+    @commands.guild_only()
+    async def deafen_prefix(self, ctx, member: discord.Member):
+        """Deafen a member in a voice channel"""
+        if member.top_role >= ctx.author.top_role:
+            return await ctx.send("❌ You cannot deafen someone with an equal or higher role.")
+
+        try:
+            await member.edit(deafen=True, reason=f"Deafened by {ctx.author}")
+            await ctx.send(f"✅ Deafened {member.display_name}")
+        except:
+            await ctx.send("❌ Failed to deafen. Are they in a VC?")
+
+    @discord.app_commands.command(name="deafen", description="Deafen a member in voice channel")
+    @discord.app_commands.describe(member="The member to deafen")
+    async def deafen_slash(self, interaction: discord.Interaction, member: discord.Member):
+        if member.top_role >= interaction.user.top_role:
+            return await interaction.response.send_message("❌ You cannot deafen someone with an equal or higher role.", ephemeral=True)
+
+        try:
+            await member.edit(deafen=True, reason=f"Deafened by {interaction.user}")
+            await interaction.response.send_message(f"✅ Deafened {member.display_name}")
+        except:
+            await interaction.response.send_message("❌ Failed to deafen. Are they in a VC?", ephemeral=True)
+
+    @commands.command(name="undeafen")
+    @commands.has_permissions(deafen_members=True)
+    @commands.guild_only()
+    async def undeafen_prefix(self, ctx, member: discord.Member):
+        """Undeafen a member in a voice channel"""
+        if member.top_role >= ctx.author.top_role:
+            return await ctx.send("❌ You cannot undeafen someone with an equal or higher role.")
+
+        try:
+            await member.edit(deafen=False, reason=f"Undeafened by {ctx.author}")
+            await ctx.send(f"✅ Undeafened {member.display_name}")
+        except:
+            await ctx.send("❌ Failed to undeafen. Are they in a VC?")
+
+    @discord.app_commands.command(name="undeafen", description="Undeafen a member in voice channel")
+    @discord.app_commands.describe(member="The member to undeafen")
+    async def undeafen_slash(self, interaction: discord.Interaction, member: discord.Member):
+        if member.top_role >= interaction.user.top_role:
+            return await interaction.response.send_message("❌ You cannot undeafen someone with an equal or higher role.", ephemeral=True)
+
+        try:
+            await member.edit(deafen=False, reason=f"Undeafened by {interaction.user}")
+            await interaction.response.send_message(f"✅ Undeafened {member.display_name}")
+        except:
+            await interaction.response.send_message("❌ Failed to undeafen. Are they in a VC?", ephemeral=True)
+
+    @commands.command(name="disconnect")
+    @commands.has_permissions(move_members=True)
+    @commands.guild_only()
+    async def disconnect_prefix(self, ctx, member: discord.Member):
+        """Disconnect a member from voice channel"""
+        if member.top_role >= ctx.author.top_role:
+            return await ctx.send("❌ You cannot disconnect someone with an equal or higher role.")
+
+        try:
+            await member.move_to(None, reason=f"Disconnected by {ctx.author}")
+            await ctx.send(f"✅ Disconnected {member.display_name}")
+        except:
+            await ctx.send("❌ Failed to disconnect. Are they in a VC?")
+
+    @discord.app_commands.command(name="disconnect", description="Disconnect a member from voice channel")
+    @discord.app_commands.describe(member="The member to disconnect")
+    async def disconnect_slash(self, interaction: discord.Interaction, member: discord.Member):
+        if member.top_role >= interaction.user.top_role:
+            return await interaction.response.send_message("❌ You cannot disconnect someone with an equal or higher role.", ephemeral=True)
+
+        try:
+            await member.move_to(None, reason=f"Disconnected by {interaction.user}")
+            await interaction.response.send_message(f"✅ Disconnected {member.display_name}")
+        except:
+            await interaction.response.send_message("❌ Failed to disconnect. Are they in a VC?", ephemeral=True)
+
+    @commands.command(name="move")
+    @commands.has_permissions(move_members=True)
+    @commands.guild_only()
+    async def move_prefix(self, ctx, member: discord.Member, channel: discord.VoiceChannel):
+        """Move a member to another voice channel"""
+        if member.top_role >= ctx.author.top_role:
+            return await ctx.send("❌ You cannot move someone with an equal or higher role.")
+
+        try:
+            await member.move_to(channel, reason=f"Moved by {ctx.author}")
+            await ctx.send(f"✅ Moved {member.display_name} to {channel.name}")
+        except:
+            await ctx.send("❌ Failed to move. Are they in a VC?")
+
+    @discord.app_commands.command(name="move", description="Move a member to another voice channel")
+    @discord.app_commands.describe(
+        member="The member to move",
+        channel="The voice channel to move them to"
+    )
+    async def move_slash(self, interaction: discord.Interaction, member: discord.Member, channel: discord.VoiceChannel):
+        if member.top_role >= interaction.user.top_role:
+            return await interaction.response.send_message("❌ You cannot move someone with an equal or higher role.", ephemeral=True)
+
+        try:
+            await member.move_to(channel, reason=f"Moved by {interaction.user}")
+            await interaction.response.send_message(f"✅ Moved {member.display_name} to {channel.name}")
+        except:
+            await interaction.response.send_message("❌ Failed to move. Are they in a VC?", ephemeral=True)
     
 
     # Prefix command
