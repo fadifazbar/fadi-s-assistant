@@ -1,6 +1,9 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+from PIL import image
+import io
+import aiohttp
 import random
 import asyncio
 
