@@ -124,7 +124,7 @@ class DeathBattle(commands.Cog):
         frozen_players = {player1: False, player2: False}    # skip exactly next turn
         paralyzed_players = {player1: 0, player2: 0}         # N turns with 50% fail chance
         cursed_players = {player1: 0, player2: 0}            # N turns of halved damage when attacking
-        poison_effects = {player1: 0, player20}            # N turns remaining, 3 dmg per turn at start of their turn
+        poison_effects = {player1: 0, player2: 0}            # N turns remaining, 3 dmg per turn at start of their turn
         thorned_players = {player1: 0, player2: 0}           # N hits will reflect 3 dmg
         # (kept var name from your code, though not used for DOT here)
         burn_damage_next_turn = {player1: 0, player2: 0}
