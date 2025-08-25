@@ -17,22 +17,23 @@ NP_EMOJI = "<a:music_note:1408941536044908684>"
 # yt-dlp & ffmpeg config
 # ======================
 YTDL_BASE = {
-    "format": "bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best",
-    "noplaylist": False,
+    # Always prefer audio-only formats for music bots
+    "format": "bestaudio/best",
+    "noplaylist": True,  # avoid whole playlist spam
     "quiet": True,
     "no_warnings": True,
-    "default_search": "auto",
+    "default_search": "auto",  # allows searching by name, not just URLs
     "source_address": "0.0.0.0",
     "retries": 5,
     "skip_unavailable_fragments": True,
-    "ignoreerrors": True,  # or "only_download" if playlist
+    "ignoreerrors": True,
     "extractor_args": {
         "youtube": {
-            "player_client": ["android"],
+            "player_client": ["android"],  # bypasses some age/region restrictions
         }
     },
     "cachedir": False,
-    "cookiefile": "cookies.txt",
+    "cookiefile": "cookies.txt",  # keeps login sessions
 }
 
 # Main YDL (full extraction)
