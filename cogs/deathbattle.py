@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from PIL import image
+from PIL import Image
 import io
 import aiohttp
 import random
