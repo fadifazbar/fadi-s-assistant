@@ -79,8 +79,8 @@ async def create_battle_image(player1, player2):
     background = background.resize((1500, 500))  # adjust size if needed
 
     # Paste avatars
-    background.paste(avatar1, (40, 122), avatar1)
-    background.paste(avatar2, (1204, 122), avatar2)
+    background.paste(avatar1, (40, 90), avatar1)
+    background.paste(avatar2, (1104, 90), avatar2)
 
     # Save to buffer
     buffer = io.BytesIO()
