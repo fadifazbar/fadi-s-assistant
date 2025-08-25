@@ -357,7 +357,7 @@ class DeathBattle(commands.Cog):
             total_damage = max(0, base_damage) + burn_damage + extra_double
 
             # Main attack line
-            main_line = chosen_template.format(attacker=attacker.name, defender=defender.name, dmg=total_damage)
+            main_line = {BATTLE_EMOJI} chosen_template.format(attacker=attacker.name, defender=defender.name, dmg=total_damage)
             if crit and total_damage > 0:
                 main_line += f" {CRITICAL_EMOJI} **CRITICAL HIT!**"
 
