@@ -206,8 +206,13 @@ class DeathBattle(commands.Cog):
         embed.add_field(name=player1.name, value=f"{hp_bar(hp1)}", inline=True)
         embed.add_field(name=player2.name, value=f"{hp_bar(hp2)}", inline=True)
 
+        buffer = await create_battle_image(player1, player2)  # your BytesIO image
+        file = discord.File(fp=buffer, filename="battle.png")
+
+
+
         
-        msg = await send(embed=embed)
+        msg = await send(embed=embed, file=file)
         if is_interaction:
             msg = await ctx_or_interaction.original_response()
 
