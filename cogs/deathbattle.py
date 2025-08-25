@@ -33,7 +33,7 @@ CURSE_EMOJI = "<:curse:1409341540106506372>"
 def hp_bar(hp: int, max_hp: int = 100) -> str:
     total_bars = 10
     if hp > 0:
-        filled_bars = (hp * total_bars) // max_hp  # each 10 HP = 1 bar
+        filled_bars = (hp * total_bars) // max_hp  # proportional to max_hp
         if filled_bars == 0:  # 👈 ensure at least 1 bar if hp > 0
             filled_bars = 1
     else:
@@ -42,14 +42,15 @@ def hp_bar(hp: int, max_hp: int = 100) -> str:
     empty_bars = total_bars - filled_bars
 
     # Decide bar color
-    if hp > 60:
+    if hp > max_hp * 0.6:
         bar = "🟩" * filled_bars
-    elif hp > 30:
+    elif hp > max_hp * 0.3:
         bar = "🟨" * filled_bars
     else:
         bar = "🟥" * filled_bars
 
-    return bar + "⬛" * empty_bars + f"\n{HEALTH_EMOJI}  {hp}/100 Health"
+    return bar + "⬛" * empty_bars + f"\n{HEALTH_EMOJI}  {hp}/{max_hp} Health"
+
 
 # ✅ IMAGE GENERATION FUNCTION
 async def create_battle_image(player1, player2):
@@ -95,13 +96,13 @@ class DeathBattle(commands.Cog):
 
     # Slash command
     @app_commands.command(name="deathbattle", description="Start a deathbattle between two players!")
-    async def deathbattle_slash(self, interaction: discord.Interaction, player1: discord.Member, player2: discord.Member):
-        await self.start_battle(interaction, player1, player2)
+    async def deathbattle_slash(self, interaction: discord.Interaction, player1: discord.Member, player2: discord.Member, hp: int = 100):
+        await self.start_battle(interaction, player1, player2, hp)
 
     # Prefix command
     @commands.command(name="deathbattle")
-    async def deathbattle_prefix(self, ctx, player1: discord.Member, player2: discord.Member):
-        await self.start_battle(ctx, player1, player2)
+    async def deathbattle_prefix(self, ctx, player1: discord.Member, player2: discord.Member, hp: int = 100):
+        await self.start_battle(ctx, player1, player2, hp)
 
     async def start_battle(self, ctx_or_interaction, player1, player2):
         # Detect ctx or interaction
@@ -109,7 +110,7 @@ class DeathBattle(commands.Cog):
         send = ctx_or_interaction.response.send_message if is_interaction else ctx_or_interaction.send
 
         # Constants / initial stats
-        max_hp = 100
+        max_hp = hp
         hp1, hp2 = max_hp, max_hp
         turn = 1
         log = []
@@ -302,6 +303,33 @@ class DeathBattle(commands.Cog):
             if crit:
                 base_damage *= 2
 
+            special_text = ""
+
+            # --- Mending Heart (heals instead of attacking) ---
+            mending = random.random() < 0.05  # 5% chance
+            if mending:
+                heal = random.randint(10, 20)
+
+                golden = random.random() < 0.02  # 2% chance
+                if golden:
+                    heal *= 2
+                    special_text += f"{GOLDEN_HEART} __**{attacker.name}**__ unleashed the Golden Mending Heart and healed __**{heal}**__ HP!\n"
+                else:
+                    special_text += f"{HEAL_EMOJI} __**{attacker.name}**__ used Mending Heart and healed __**{heal}**__ HP!\n"
+
+                if attacker == player1:
+                    hp1 = min(max_hp, hp1 + heal)
+                    total_stats[player1]["healing"] += heal
+                else:
+                    hp2 = min(max_hp, hp2 + heal)
+                    total_stats[player2]["healing"] += heal
+
+                # Log the healing and skip the attack completely
+                await push_and_refresh(special_text.strip())
+                await asyncio.sleep(1.5)
+                turn += 1
+                continue
+
             # Special mechanics (chance rolls)
             dodge = random.random() < 0.04        # 4% chance
             burn = random.random() < 0.03         # 3% chance
@@ -315,8 +343,6 @@ class DeathBattle(commands.Cog):
             double_strike = random.random() < 0.015 # 1.5% chance
             curse = random.random() < 0.01        # 1% chance
             thorns = random.random() < 0.015      # 1.5% chance
-
-            special_text = ""
 
             # If defender dodges → no damage
             if dodge:
@@ -435,6 +461,7 @@ class DeathBattle(commands.Cog):
                 break
 
             turn += 1
+
 
         # Winner section
         winner = player1 if hp1 > 0 else player2
