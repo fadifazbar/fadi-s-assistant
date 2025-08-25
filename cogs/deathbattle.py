@@ -71,16 +71,16 @@ async def create_battle_image(player1, player2):
     avatar2 = Image.open(io.BytesIO(avatar2_bytes)).convert("RGBA")
 
     # Resize avatars
-    avatar1 = avatar1.resize((128, 128))
-    avatar2 = avatar2.resize((128, 128))
+    avatar1 = avatar1.resize((320, 320))
+    avatar2 = avatar2.resize((320, 320))
 
     # Open background
     background = Image.open(io.BytesIO(background_bytes)).convert("RGBA")
     background = background.resize((1500, 500))  # adjust size if needed
 
     # Paste avatars
-    background.paste(avatar1, (20, 36), avatar1)
-    background.paste(avatar2, (350, 36), avatar2)
+    background.paste(avatar1, (40, 122), avatar1)
+    background.paste(avatar2, (1204, 122), avatar2)
 
     # Save to buffer
     buffer = io.BytesIO()
