@@ -64,11 +64,14 @@ async def create_battle_image(player1, player2):
     avatar2 = Image.open(io.BytesIO(avatar2_bytes)).convert("RGBA")
 
     # Resize avatars
-    avatar1 = avatar1.resize((128, 128))
-    avatar2 = avatar2.resize((128, 128))
+    avatar1 = avatar1.resize((64, 64))
+    avatar2 = avatar2.resize((64, 64))
 
     # Create background
-    background = Image.new("RGBA", (400, 200), (255, 0, 0, 255))  # red background, adjust size
+    background = Image.open("https://cdn.discordapp.com/attachments/1175126911018606773/1409352927730208890/Picsart_25-08-25_02-44-59-583.jpg?ex=68ad11b2&is=68abc032&hm=5d295d17aed1a3fdf66529127fd6ef52a16db8069d4a451ddc65c54a5122547b&").convert("RGBA")
+
+    # background size
+    background = background.resize((1500, 500))
 
     # Paste avatars
     background.paste(avatar1, (50, 36), avatar1)
@@ -203,13 +206,8 @@ class DeathBattle(commands.Cog):
         embed.add_field(name=player1.name, value=f"{hp_bar(hp1)}", inline=True)
         embed.add_field(name=player2.name, value=f"{hp_bar(hp2)}", inline=True)
 
-        buffer = await create_battle_image(player1, player2)
-        file = discord.File(fp=buffer, filename="battle.png")
-        embed.set_image(url="https://cdn.discordapp.com/attachments/1175126911018606773/1409352927730208890/Picsart_25-08-25_02-44-59-583.jpg?ex=68ad11b2&is=68abc032&hm=5d295d17aed1a3fdf66529127fd6ef52a16db8069d4a451ddc65c54a5122547b&")
-
-
         
-        msg = await send(embed=embed, file=file)
+        msg = await send(embed=embed)
         if is_interaction:
             msg = await ctx_or_interaction.original_response()
 
@@ -395,7 +393,7 @@ class DeathBattle(commands.Cog):
             total_damage = max(0, base_damage) + burn_damage + extra_double
 
             # Main attack line
-            main_line = f"{BATTLE_EMOJI} chosen_template.format(attacker=attacker.name, defender=defender.name, dmg=total_damage)"
+            main_line = f"{BATTLE_EMOJI} {chosen_template.format(attacker=attacker.name, defender=defender.name, dmg=total_damage)}"
             if crit and total_damage > 0:
                 main_line += f" {CRITICAL_EMOJI} **CRITICAL HIT!**"
 
