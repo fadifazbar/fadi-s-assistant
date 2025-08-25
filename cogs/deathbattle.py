@@ -61,7 +61,7 @@ async def create_battle_image(player1, player2):
             avatar2_bytes = await resp.read()
 
         # Download background image
-        background_url = "https://cdn.discordapp.com/attachments/1175126911018606773/1409352927730208890/Picsart_25-08-25_02-44-59-583.jpg"
+        background_url = "https://i.postimg.cc/G2nh3f9r/Picsart-25-08-25-02-44-59-583.jpg"
         async with session.get(background_url) as resp:
             if resp.status != 200:
                 raise Exception(f"Failed to download background image: {resp.status}")
