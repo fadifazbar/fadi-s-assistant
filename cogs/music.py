@@ -17,7 +17,7 @@ NP_EMOJI = "<a:music_note:1408941536044908684>"
 # yt-dlp & ffmpeg config
 # ======================
 YTDL_BASE = {
-    "format": "bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best",  # prefer opus/webm, then m4a, fallback best
+    "format": "bestaudio/best",
     "noplaylist": False,  # prevent grabbing full playlists
     "quiet": True,
     "no_warnings": True,
