@@ -60,6 +60,13 @@ async def create_battle_image(player1, player2):
         async with session.get(player2.display_avatar.url) as resp:
             avatar2_bytes = await resp.read()
 
+        # Download background image
+        background_url = "https://cdn.discordapp.com/attachments/1175126911018606773/1409352927730208890/Picsart_25-08-25_02-44-59-583.jpg"
+        async with session.get(background_url) as resp:
+            if resp.status != 200:
+                raise Exception(f"Failed to download background image: {resp.status}")
+            background_bytes = await resp.read()
+
     avatar1 = Image.open(io.BytesIO(avatar1_bytes)).convert("RGBA")
     avatar2 = Image.open(io.BytesIO(avatar2_bytes)).convert("RGBA")
 
@@ -67,11 +74,9 @@ async def create_battle_image(player1, player2):
     avatar1 = avatar1.resize((64, 64))
     avatar2 = avatar2.resize((64, 64))
 
-    # Create background
-    background = Image.open("https://cdn.discordapp.com/attachments/1175126911018606773/1409352927730208890/Picsart_25-08-25_02-44-59-583.jpg?ex=68ad11b2&is=68abc032&hm=5d295d17aed1a3fdf66529127fd6ef52a16db8069d4a451ddc65c54a5122547b&").convert("RGBA")
-
-    # background size
-    background = background.resize((1500, 500))
+    # Open background
+    background = Image.open(io.BytesIO(background_bytes)).convert("RGBA")
+    background = background.resize((1500, 500))  # adjust size if needed
 
     # Paste avatars
     background.paste(avatar1, (50, 36), avatar1)
@@ -119,7 +124,7 @@ class DeathBattle(commands.Cog):
         frozen_players = {player1: False, player2: False}    # skip exactly next turn
         paralyzed_players = {player1: 0, player2: 0}         # N turns with 50% fail chance
         cursed_players = {player1: 0, player2: 0}            # N turns of halved damage when attacking
-        poison_effects = {player1: 0, player2: 0}            # N turns remaining, 3 dmg per turn at start of their turn
+        poison_effects = {player1: 0, player20}            # N turns remaining, 3 dmg per turn at start of their turn
         thorned_players = {player1: 0, player2: 0}           # N hits will reflect 3 dmg
         # (kept var name from your code, though not used for DOT here)
         burn_damage_next_turn = {player1: 0, player2: 0}
