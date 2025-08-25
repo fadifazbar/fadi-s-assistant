@@ -17,18 +17,20 @@ NP_EMOJI = "<a:music_note:1408941536044908684>"
 # yt-dlp & ffmpeg config
 # ======================
 YTDL_BASE = {
-    # Prefer direct audio streams (m4a/webm). Helps avoid SABR/HLS issues.
-    "format": "bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best",
+    "format": "bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best/best",
     "noplaylist": False,
     "quiet": True,
     "no_warnings": True,
     "default_search": "auto",
     "source_address": "0.0.0.0",
-    "retries": 3,
+    "retries": 5,
     "skip_unavailable_fragments": True,
-    "ignoreerrors": "only_download",
-    # Use a client profile less likely to hit SABR-only formats
-    "extractor_args": {"youtube": {"player_client": ["android"]}},
+    "ignoreerrors": True,  # just True here
+    "extractor_args": {
+        "youtube": {
+            "player_client": ["android"],
+        }
+    },
     "cachedir": False,
     "cookiefile": "cookies.txt",
 }
