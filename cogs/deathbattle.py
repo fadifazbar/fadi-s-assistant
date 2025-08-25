@@ -104,7 +104,7 @@ class DeathBattle(commands.Cog):
     async def deathbattle_prefix(self, ctx, player1: discord.Member, player2: discord.Member, hp: int = 100):
         await self.start_battle(ctx, player1, player2, hp)
 
-    async def start_battle(self, ctx_or_interaction, player1, player2):
+    async def start_battle(self, ctx_or_interaction, player1, player2, hp: int = 100):
         # Detect ctx or interaction
         is_interaction = isinstance(ctx_or_interaction, discord.Interaction)
         send = ctx_or_interaction.response.send_message if is_interaction else ctx_or_interaction.send
