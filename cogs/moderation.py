@@ -294,7 +294,7 @@ class Moderation(commands.Cog):
     @commands.command(name="vcunmute")
     @commands.has_permissions(mute_members=True)
     @commands.guild_only()
-    async def unmute_prefix(self, ctx, member: discord.Member):
+    async def vcunmute_prefix(self, ctx, member: discord.Member):
         """Unmute a member in a voice channel"""
         if member.top_role >= ctx.author.top_role:
             return await ctx.send("❌ You cannot unmute someone with an equal or higher role.")
@@ -307,7 +307,7 @@ class Moderation(commands.Cog):
 
     @discord.app_commands.command(name="vcunmute", description="Unmute a member in voice channel")
     @discord.app_commands.describe(member="The member to unmute")
-    async def unmute_slash(self, interaction: discord.Interaction, member: discord.Member):
+    async def vcunmute_slash(self, interaction: discord.Interaction, member: discord.Member):
         if member.top_role >= interaction.user.top_role:
             return await interaction.response.send_message("❌ You cannot unmute someone with an equal or higher role.", ephemeral=True)
 
