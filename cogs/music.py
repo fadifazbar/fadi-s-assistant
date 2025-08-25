@@ -17,7 +17,7 @@ NP_EMOJI = "<a:music_note:1408941536044908684>"
 # yt-dlp & ffmpeg config
 # ======================
 YTDL_BASE = {
-    "format": "bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best/best",
+    "format": "bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best",
     "noplaylist": False,
     "quiet": True,
     "no_warnings": True,
@@ -25,7 +25,7 @@ YTDL_BASE = {
     "source_address": "0.0.0.0",
     "retries": 5,
     "skip_unavailable_fragments": True,
-    "ignoreerrors": True,  # just True here
+    "ignoreerrors": True,  # or "only_download" if playlist
     "extractor_args": {
         "youtube": {
             "player_client": ["android"],
