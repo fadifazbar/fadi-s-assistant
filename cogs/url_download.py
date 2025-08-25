@@ -119,7 +119,8 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
                 "noplaylist": True,
                 "quiet": True,
                 "no_warnings": True,
-                "progress_hooks": [ProgressHook(status_msg, loop).update]
+                "progress_hooks": [ProgressHook(status_msg, loop).update],
+                "cookiefile": "cookies.txt",
             }
 
             if os.path.exists(filename):
