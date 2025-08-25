@@ -100,7 +100,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
         final_size = 0
         final_quality = ""
 
-        # HD -> lower quality fallback
+# HD -> lower quality fallback
         quality_options = [
             "bestvideo[height<=2160]+bestaudio/best",
             "bestvideo[height<=1440]+bestaudio/best",
@@ -116,13 +116,19 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
                 "outtmpl": filename,
                 "merge_output_format": "mp4",
                 "format": f"{fmt}/bestaudio[ext=m4a]/bestaudio[ext=webm]/bestvideo+bestaudio/best",
+                
+                # ✅ makes sure only the single video is downloaded
                 "noplaylist": True,
+                
                 "quiet": True,
                 "no_warnings": True,
                 "retries": 5,
                 "skip_unavailable_fragments": True,
                 "ignoreerrors": True,
-                "cookiefile": "cookies.txt",
+                
+                # ✅ make sure cookies are used
+                "cookiefile": "cookies.json",  # <-- you said your cookies are JSON, not .txt
+                
                 "cachedir": False,
                 "extractor_args": {
                     "youtube": {
