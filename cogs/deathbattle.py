@@ -544,6 +544,12 @@ class DeathBattle(commands.Cog):
 
         # Button for logs
         view = discord.ui.View()
+        button = discord.ui.Button(label="📜 Get Full Battle Log", style=discord.ButtonStyle.blurple)
+        button.callback = send_log
+        view.add_item(button)
+
+        
+        await msg.edit(embed=embed, view=view)
 
 async def send_log(interaction: discord.Interaction):
     data = load_log(interaction.message.id)
@@ -587,16 +593,6 @@ async def send_log(interaction: discord.Interaction):
         await interaction.response.send_message("📩 Check your DMs! Full battle log + totals sent.", ephemeral=True)
     except discord.Forbidden:
         await interaction.response.send_message("❌ I couldn't DM you! Enable DMs from server members.", ephemeral=True)
-
-
-        # Button for logs
-        view = discord.ui.View()
-        button = discord.ui.Button(label="📜 Get Full Battle Log", style=discord.ButtonStyle.blurple)
-        button.callback = send_log
-        view.add_item(button)
-
-        await msg.edit(embed=embed, view=view)
-
 
 
 async def setup(bot):
