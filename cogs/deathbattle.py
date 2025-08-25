@@ -203,11 +203,12 @@ class DeathBattle(commands.Cog):
         embed.add_field(name=player1.name, value=f"{hp_bar(hp1)}", inline=True)
         embed.add_field(name=player2.name, value=f"{hp_bar(hp2)}", inline=True)
 
-        buffer = await
-        creat_battle_image(player1, player2)
+        buffer = await creat_battle_image(player1, player2)
         file = discord.File(fp=buffer, filename="battle.png")
         embed.set_image(url="https://cdn.discordapp.com/attachments/1175126911018606773/1409352927730208890/Picsart_25-08-25_02-44-59-583.jpg?ex=68ad11b2&is=68abc032&hm=5d295d17aed1a3fdf66529127fd6ef52a16db8069d4a451ddc65c54a5122547b&")
 
+
+        
         msg = await send(embed=embed, file=file)
         if is_interaction:
             msg = await ctx_or_interaction.original_response()
