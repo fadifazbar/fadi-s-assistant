@@ -249,9 +249,19 @@ class DeathBattle(commands.Cog):
                 base_damage *= 2
 
             # Special mechanics
-            dodge = random.random() < 0.04
-            burn = random.random() < 0.03
-            stun = random.random() < 0.03
+            dodge = random.random() < 0.04       # 4% chance
+            burn = random.random() < 0.03        # 3% chance
+            stun = random.random() < 0.03        # 3% chance
+            poison = random.random() < 0.025     # 2.5% chance
+            freeze = random.random() < 0.02      # 2% chance
+            shield_break = random.random() < 0.02 # 2% chance
+            lifesteal = random.random() < 0.015   # 1.5% chance
+            paralyze = random.random() < 0.015    # 1.5% chance
+            explosion = random.random() < 0.01    # 1% chance
+            double_strike = random.random() < 0.015 # 1.5% chance
+            curse = random.random() < 0.01        # 1% chance
+            thorns = random.random() < 0.015      # 1.5% chance
+
             special_text = ""
 
             # If defender dodges → no damage
@@ -259,16 +269,84 @@ class DeathBattle(commands.Cog):
                 base_damage = 0
                 special_text += f"{DODGE_EMOI} __**{defender.name}**__ dodged __**{attacker.name}'s**__ attack!\n"
 
-            # If burn triggers → extra dmg added THIS turn
+            # Burn (extra dmg same turn)
             burn_damage = 0
             if burn:
                 burn_damage = random.randint(5, 10)
                 special_text += f"{BURN_EMOJI} __**{defender.name}**__ is burned and suffers __**{burn_damage}**__ extra damage!\n"
 
-            # If stun triggers → affects NEXT turn
+            # Stun (skip next turn)
             if stun:
                 stunned_players[defender] = True
                 special_text += f"{STUN_EMOJI} __**{defender.name}**__ is stunned and will miss their next turn!\n"
+
+            # Poison (damage over time, e.g. 3 dmg for 3 turns)
+            if poison:
+                poison_effects[defender] = 3  # 3 turns
+                special_text += f"{POISON_EMOJI} __**{defender.name}**__ is poisoned and will take 3 damage for 3 turns!\n"
+
+            # Freeze (skip exactly one turn)
+            if freeze:
+                frozen_players[defender] = True
+                special_text += f"{FREEZE_EMOJI} __**{defender.name}**__ is frozen solid and will skip their next turn!\n"
+
+            # Shield Break (extra +5 dmg now)
+            if shield_break:
+                base_damage += 5
+                special_text += f"{SHIELD_BREAK_EMOJI} __**{attacker.name}**__ shattered {defender.name}’s defenses for +5 dmg!\n"
+
+            # Life Steal (drain HP)
+            if lifesteal:
+                drain = 8
+                if defender == player1:
+                    hp1 = max(0, hp1 - drain)
+                else:
+                    hp2 = max(0, hp2 - drain)
+                if attacker == player1:
+                    hp1 = min(max_hp, hp1 + drain)
+                else:
+                    hp2 = min(max_hp, hp2 + drain)
+                special_text += f"{LIFESTEAL_EMOJI} __**{attacker.name}**__ drains {drain} HP from {defender.name}!\n"
+
+            # Paralyze (50% fail chance for 2 turns)
+            if paralyze:
+                paralyzed_players[defender] = 2
+                special_text += f"{PARALYZE_EMOJI} __**{defender.name}**__ is paralyzed and may fail to act for 2 turns!\n"
+
+            # Explosion (big dmg to both)
+            if explosion:
+                extra = 15
+                self_dmg = 5
+                if defender == player1:
+                    hp1 = max(0, hp1 - extra)
+                else:
+                    hp2 = max(0, hp2 - extra)
+                if attacker == player1:
+                    hp1 = max(0, hp1 - self_dmg)
+                else:
+                    hp2 = max(0, hp2 - self_dmg)
+                special_text += f"{EXPLOSION_EMOJI} __**{attacker.name}**__ exploded, dealing {extra} to {defender.name} and {self_dmg} to themselves!\n"
+
+            # Double Strike (two small hits)
+            if double_strike:
+                hit1 = random.randint(3, 6)
+                hit2 = random.randint(2, 5)
+                extra = hit1 + hit2
+                if defender == player1:
+                    hp1 = max(0, hp1 - extra)
+                else:
+                    hp2 = max(0, hp2 - extra)
+                special_text += f"{DOUBLE_STRIKE_EMOJI} __**{attacker.name}**__ strikes twice, hitting {hit1}+{hit2} for {extra} total!\n"
+
+            # Curse (halve dmg for 2 turns)
+            if curse:
+                cursed_players[defender] = 2
+                special_text += f"{CURSE_EMOJI} __**{defender.name}**__ is cursed! Their attacks deal half damage for 2 turns!\n"
+
+            # Thorns (reflect 3 dmg back for future hits)
+            if thorns:
+                thorned_players[defender] = 3  # lasts 3 turns
+                special_text += f"{THORNS_EMOJI} __**{defender.name}**__ grows thorns! Attacks against them deal 3 dmg back.\n"
 
             # ✅ Apply total damage (base + burn)
             total_damage = base_damage + burn_damage
@@ -279,34 +357,6 @@ class DeathBattle(commands.Cog):
 
             total_stats[attacker]["damage"] += total_damage
 
-            # Build attack message
-            attack_text = (
-                f"{BATTLE_EMOJI} " +
-                chosen_template.format(attacker=attacker.name, defender=defender.name, dmg=base_damage, chance=chosen_percent)
-            )
-
-            if burn_damage > 0:
-                attack_text += f" (+__**{burn_damage}**__ burn dmg)"
-            if crit:
-                attack_text += f" {CRITICAL_EMOJI} **CRITICAL HIT!**"
-            if special_text:
-                attack_text += "\n" + special_text
-
-            # Add to log
-            log.append((turn, attack_text))
-            full_log.append(f"Turn {turn}: {attack_text}")
-            if len(log) > 3:
-                log.pop(0)
-
-            # Update embed
-            embed.clear_fields()
-            for t, entry in log:
-                embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-            embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
-            embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
-            await msg.edit(embed=embed)
-            await asyncio.sleep(1.5)
-            turn += 1
 
 
         # Winner section
