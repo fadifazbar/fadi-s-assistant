@@ -28,11 +28,7 @@ YTDL_BASE = {
     "ignoreerrors": True,
     "cookiefile": "cookies.txt",  # must be Netscape format
     "cachedir": False,
-    "extractor_args": {
-        "youtube": {
-            "player_client": ["android"],
-        }
-    },
+    # remove extractor_args entirely
 }
 
 # Main YDL (full extraction)
