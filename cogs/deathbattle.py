@@ -505,6 +505,9 @@ class DeathBattle(commands.Cog):
         # Winner section
         winner = player1 if hp1 > 0 else player2
         loser = player2 if winner == player1 else player1
+        # Compute their current HP for display
+        winner_hp = hp1 if winner == player1 else hp2
+        loser_hp = if winner == player1 else hp2
         finishing_action = random.choice([
             "annihilated", "finished off", "destroyed", "ended", "humiliated", "obliterated", "eradicated", "crushed",
             "smashed", "terminated", "defeated", "wrecked", "ruined", "shattered", "demolished", "vanquished", "erased",
