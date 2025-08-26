@@ -564,8 +564,8 @@ async def send_log(interaction: discord.Interaction):
     player1 = interaction.client.get_user(p1_id)
     player2 = interaction.client.get_user(p2_id)
 
-    try:
-    chunk_size = 15  # smaller chunks to avoid hitting 6000 chars
+try:
+    chunk_size = 5  # or whatever number works
     for i in range(0, len(full_log), chunk_size):
         chunk = full_log[i:i + chunk_size]
         log_embed = discord.Embed(
@@ -575,11 +575,17 @@ async def send_log(interaction: discord.Interaction):
         )
         for entry in chunk:
             turn_num, text = entry.split(": ", 1)
-            # truncate very long text
+            # truncate if too long
             if len(text) > 1000:
                 text = text[:997] + "..."
             log_embed.add_field(name=turn_num, value=text, inline=False)
         await interaction.user.send(embed=log_embed)
+except discord.Forbidden:
+    await interaction.response.send_message(
+        "❌ I couldn't DM you! Enable DMs from server members.",
+        ephemeral=True
+    )
+
 
         totals_text = (
             f"**{player1.name if player1 else 'Player 1'}** → "
