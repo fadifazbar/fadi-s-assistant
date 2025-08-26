@@ -273,8 +273,8 @@ class DeathBattle(commands.Cog):
             embed.clear_fields()
             for t, entry in log:
                 embed.add_field(name=f"Turn {t}", value=entry, inline=False)
-            embed.add_field(name=player1.name, value=hp_bar(hp1), inline=True)
-            embed.add_field(name=player2.name, value=hp_bar(hp2), inline=True)
+            embed.add_field(name=player1.name, value=hp_bar(hp1, hp), inline=True)
+            embed.add_field(name=player2.name, value=hp_bar(hp2, hp), inline=True)
             await msg.edit(embed=embed)
 
         # Fight loop
