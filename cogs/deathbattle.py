@@ -561,10 +561,8 @@ class DeathBattle(commands.Cog):
     button.callback = send_log
     view.add_item(button)
 
-    # Update the message with embed and view
-await msg.edit(embed=embed, view=view)
-
-
+    await msg.embed(embed=embed, view=view)
+    
 
 async def setup(bot):
     await bot.add_cog(DeathBattle(bot))
