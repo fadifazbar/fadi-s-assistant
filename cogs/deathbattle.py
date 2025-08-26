@@ -554,7 +554,9 @@ class DeathBattle(commands.Cog):
 async def send_log(interaction: discord.Interaction):
     data = load_log(interaction.message.id)
     if not data:
-        await interaction.response.send_message("⚠️ Log not found (maybe purged after restart).", ephemeral=True)
+        await interaction.response.send_message(
+            "⚠️ Log not found (maybe purged after restart).", ephemeral=True
+        )
         return
 
     full_log = data["full_log"]
@@ -564,29 +566,25 @@ async def send_log(interaction: discord.Interaction):
     player1 = interaction.client.get_user(p1_id)
     player2 = interaction.client.get_user(p2_id)
 
-try:
-    chunk_size = 5  # or whatever number works
-    for i in range(0, len(full_log), chunk_size):
-        chunk = full_log[i:i + chunk_size]
-        log_embed = discord.Embed(
-            title="📜 DeathBattle Log",
-            description=f"Turns {i + 1} → {i + len(chunk)}",
-            color=discord.Color.purple()
-        )
-        for entry in chunk:
-            turn_num, text = entry.split(": ", 1)
-            # truncate if too long
-            if len(text) > 1000:
-                text = text[:997] + "..."
-            log_embed.add_field(name=turn_num, value=text, inline=False)
-        await interaction.user.send(embed=log_embed)
-except discord.Forbidden:
-    await interaction.response.send_message(
-        "❌ I couldn't DM you! Enable DMs from server members.",
-        ephemeral=True
-    )
+    try:
+        chunk_size = 15  # you can adjust this
+        for i in range(0, len(full_log), chunk_size):
+            chunk = full_log[i:i + chunk_size]
+            log_embed = discord.Embed(
+                title="📜 DeathBattle Log",
+                description=f"Turns {i + 1} → {i + len(chunk)}",
+                color=discord.Color.purple()
+            )
+            for entry in chunk:
+                turn_num, text = entry.split(": ", 1)
+                # truncate text if too long for Discord
+                if len(text) > 1000:
+                    text = text[:997] + "..."
+                log_embed.add_field(name=turn_num, value=text, inline=False)
 
+            await interaction.user.send(embed=log_embed)
 
+        # Totals embed
         totals_text = (
             f"**{player1.name if player1 else 'Player 1'}** → "
             f"Damage: {total_stats[str(p1_id)]['damage']} | Healing: {total_stats[str(p1_id)]['healing']}\n"
@@ -599,9 +597,15 @@ except discord.Forbidden:
             color=discord.Color.gold()
         )
         await interaction.user.send(embed=totals_embed)
-        await interaction.response.send_message("📩 Check your DMs! Full battle log + totals sent.", ephemeral=True)
+        await interaction.response.send_message(
+            "📩 Check your DMs! Full battle log + totals sent.", ephemeral=True
+        )
+
     except discord.Forbidden:
-        await interaction.response.send_message("❌ I couldn't DM you! Enable DMs from server members.", ephemeral=True)
+        await interaction.response.send_message(
+            "❌ I couldn't DM you! Enable DMs from server members.", ephemeral=True
+        )
+
 
 
 async def setup(bot):
