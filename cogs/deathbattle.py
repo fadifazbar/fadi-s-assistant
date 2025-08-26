@@ -536,53 +536,54 @@ class DeathBattle(commands.Cog):
         # ✅ Save the log
         save_log(msg.id, full_log, total_stats, player1, player2)
 
-        # Button for logs
-        view = discord.ui.View()
+    # Button + send_log inside deathbattle
+    view = discord.ui.View()
 
-async def send_log(interaction: discord.Interaction):
-    data = load_log(interaction.message.id)
-    if not data:
-        await interaction.response.send_message(
-            "⚠️ Log not found (maybe purged after restart).", ephemeral=True
-        )
-        return
-
-    full_log = data["full_log"]
-    total_stats = data["total_stats"]
-    p1_id, p2_id = data["players"]["p1"], data["players"]["p2"]
-
-    # Send an ephemeral confirmation in the channel
-    await interaction.response.send_message("📬 Check your DMs for the battle log!", ephemeral=True)
-
-    # Split logs into chunks (Discord embed field limit = 1024 chars, description limit = 4096)
-    chunks = []
-    chunk = ""
-    for line in full_log:
-        if len(chunk) + len(line) + 1 > 1024:  # Prevent overflow
-            chunks.append(chunk)
-            chunk = line + "\n"
-        else:
-            chunk += line + "\n"
-    if chunk:
-        chunks.append(chunk)
-
-    # Send embeds to the user’s DM
-    user = interaction.user
-    try:
-        for i, chunk in enumerate(chunks, start=1):
-            embed = discord.Embed(
-                title=f"📜 Battle Log (Part {i}/{len(chunks)})",
-                description=chunk,
-                color=discord.Color.blurple()
+    async def send_log(interaction: discord.Interaction):
+        data = load_log(interaction.message.id)
+        if not data:
+            await interaction.response.send_message(
+                "⚠️ Log not found (maybe purged after restart).", ephemeral=True
             )
-            embed.set_footer(text=f"{user.name} vs {interaction.guild.get_member(p2_id).name}")
-            await user.send(embed=embed)
-    except discord.Forbidden:
-        await interaction.followup.send("⚠️ I couldn't DM you. Please enable DMs from server members.", ephemeral=True)
+            return
 
-        button = discord.ui.Button(label="📜 Get Full Battle Log", style=discord.ButtonStyle.blurple)
-        button.callback = send_log
-        view.add_item(button)
+        full_log = data["full_log"]
+        total_stats = data["total_stats"]
+        p1_id, p2_id = data["players"]["p1"], data["players"]["p2"]
+
+        await interaction.response.send_message("📬 Check your DMs for the battle log!", ephemeral=True)
+
+        # Split logs into chunks
+        chunks, chunk = [], ""
+        for line in full_log:
+            if len(chunk) + len(line) + 1 > 4096:  # 4096 = embed description limit
+                chunks.append(chunk)
+                chunk = line + "\n"
+            else:
+                chunk += line + "\n"
+        if chunk:
+            chunks.append(chunk)
+
+        # Send embeds to the user’s DM
+        user = interaction.user
+        try:
+            for i, chunk in enumerate(chunks, start=1):
+                embed = discord.Embed(
+                    title=f"📜 Battle Log (Part {i}/{len(chunks)})",
+                    description=chunk,
+                    color=discord.Color.blurple()
+                )
+                embed.set_footer(text=f"{user.name} vs {interaction.guild.get_member(p2_id).name}")
+                await user.send(embed=embed)
+        except discord.Forbidden:
+            await interaction.followup.send(
+                "⚠️ I couldn't DM you. Please enable DMs from server members.", ephemeral=True
+            )
+
+    # Create the button
+    button = discord.ui.Button(label="📜 Get Full Battle Log", style=discord.ButtonStyle.blurple)
+    button.callback = send_log
+    view.add_item(button)
 
         # Update the message with embed and view
         await msg.edit(embed=embed, view=view)
