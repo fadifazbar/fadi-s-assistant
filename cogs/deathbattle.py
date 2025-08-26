@@ -562,7 +562,7 @@ class DeathBattle(commands.Cog):
     view.add_item(button)
 
     # Update the message with embed and view
-    await msg.edit(embed=embed, view=view)
+await msg.edit(embed=embed, view=view)
 
 
 
