@@ -500,7 +500,8 @@ class DeathBattle(commands.Cog):
                 break
 
             turn += 1
-# Winner section
+
+    # Winner section
     winner = player1 if hp1 > 0 else player2
     loser = player2 if winner == player1 else player1
     winner_hp = hp1 if winner == player1 else hp2
@@ -550,7 +551,6 @@ class DeathBattle(commands.Cog):
         total_stats = data["total_stats"]
         p1_id, p2_id = data["players"]["p1"], data["players"]["p2"]
 
-        # send full log as file
         log_text = f"Battle Log between <@{p1_id}> and <@{p2_id}>\n\n{full_log}"
         file = discord.File(io.BytesIO(log_text.encode()), filename="battle_log.txt")
         await interaction.response.send_message(
@@ -561,8 +561,8 @@ class DeathBattle(commands.Cog):
     button.callback = send_log
     view.add_item(button)
 
-    await msg.embed(embed=embed, view=view)
-    
+    # Update the message with embed and view
+    await msg.edit(embed=embed, view=view)
 
 async def setup(bot):
     await bot.add_cog(DeathBattle(bot))
