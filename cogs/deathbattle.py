@@ -502,57 +502,56 @@ class DeathBattle(commands.Cog):
             turn += 1
 
 
-        # Winner section
-        winner = player1 if hp1 > 0 else player2
-        loser = player2 if winner == player1 else player1
-        # Compute their current HP for display
-        winner_hp = hp1 if winner == player1 else hp2
-        loser_hp = if winner == player1 else hp2
-        finishing_action = random.choice([
-            "annihilated", "finished off", "destroyed", "ended", "humiliated", "obliterated", "eradicated", "crushed",
-            "smashed", "terminated", "defeated", "wrecked", "ruined", "shattered", "demolished", "vanquished", "erased",
-            "beaten", "trounced", "slain", "neutralized", "decimated", "flattened", "overpowered", "subdued", "leveled",
-            "massacred", "slaughtered", "wiped out", "dismantled", "collapsed", "overthrown", "uprooted", "broken",
-            "annexed", "smothered", "stomped", "snuffed out", "undone", "beheaded", "silenced", "overrun", "toppled",
-            "axed", "liquidated", "extinguished", "deflated", "outclassed", "dethroned", "squashed", "wrecked beyond repair",
-            "pulverized", "dominated", "ravaged", "trashed", "overwhelmed", "outmatched", "suffocated", "eradicated completely",
-            "pummeled", "steamrolled", "humiliated utterly", "gutted", "dismembered", "wrecked utterly", "subjugated",
-            "beaten down", "finished utterly", "torched", "ravished", "obliterated totally", "neutralized fully", "suppressed",
-            "thrashed", "downtrodden", "laid waste", "cut down", "outdone", "snapped", "flattened completely", "taken apart",
-            "rendered helpless", "beaten senseless", "dominated entirely", "reduced to nothing", "destroyed utterly",
-            "eradicated fully", "pounded", "clobbered", "battered", "outstripped", "squelched", "terminated utterly",
-            "sundered", "worn down", "left in ruins", "eliminated", "outshined", "obliterated brutally", "wrecked fully",
-            "trampled", "beaten brutally", "leveled utterly", "finished mercilessly", "squashed flat"
-        ])
-        finish_text = f"# {WINNER_EMOJI} {winner.name} {finishing_action} {loser.name} to claim victory!"
+# Winner section
+    winner = player1 if hp1 > 0 else player2
+    loser = player2 if winner == player1 else player1
+    winner_hp = hp1 if winner == player1 else hp2
+    loser_hp = hp1 if loser == player1 else hp2
 
-        embed = discord.Embed(
-            title=f"{WINNER_EMOJI} {winner.name.upper()} WINS!!! {WINNER_EMOJI}",
-            description=finish_text,
-            color=discord.Color.gold()
-        )
-        embed.add_field(
-            name=winner.name,
-            value=hp_bar(winner_hp, hp),
-            inline=True
-        )
-        embed.add_field(
-            name=loser.name,
-            value=hp_bar(loser_hp, hp),
-            inline=True
-        )
+    finishing_action = random.choice([
+        "annihilated", "finished off", "destroyed", "ended", "humiliated", "obliterated", "eradicated", "crushed",
+        "smashed", "terminated", "defeated", "wrecked", "ruined", "shattered", "demolished", "vanquished", "erased",
+        "beaten", "trounced", "slain", "neutralized", "decimated", "flattened", "overpowered", "subdued", "leveled",
+        "massacred", "slaughtered", "wiped out", "dismantled", "collapsed", "overthrown", "uprooted", "broken",
+        "annexed", "smothered", "stomped", "snuffed out", "undone", "beheaded", "silenced", "overrun", "toppled",
+        "axed", "liquidated", "extinguished", "deflated", "outclassed", "dethroned", "squashed", "wrecked beyond repair",
+        "pulverized", "dominated", "ravaged", "trashed", "overwhelmed", "outmatched", "suffocated", "eradicated completely",
+        "pummeled", "steamrolled", "humiliated utterly", "gutted", "dismembered", "wrecked utterly", "subjugated",
+        "beaten down", "finished utterly", "torched", "ravished", "obliterated totally", "neutralized fully", "suppressed",
+        "thrashed", "downtrodden", "laid waste", "cut down", "outdone", "snapped", "flattened completely", "taken apart",
+        "rendered helpless", "beaten senseless", "dominated entirely", "reduced to nothing", "destroyed utterly",
+        "eradicated fully", "pounded", "clobbered", "battered", "outstripped", "squelched", "terminated utterly",
+        "sundered", "worn down", "left in ruins", "eliminated", "outshined", "obliterated brutally", "wrecked fully",
+        "trampled", "beaten brutally", "leveled utterly", "finished mercilessly", "squashed flat"
+    ])
+    finish_text = f"# {WINNER_EMOJI} {winner.name} {finishing_action} {loser.name} to claim victory!"
 
-        # ✅ Save the log here
-        save_log(msg.id, full_log, total_stats, player1, player2)
+    embed = discord.Embed(
+        title=f"{WINNER_EMOJI} {winner.name.upper()} WINS!!! {WINNER_EMOJI}",
+        description=finish_text,
+        color=discord.Color.gold()
+    )
+    embed.add_field(
+        name=winner.name,
+        value=hp_bar(winner_hp, hp),
+        inline=True
+    )
+    embed.add_field(
+        name=loser.name,
+        value=hp_bar(loser_hp, hp),
+        inline=True
+    )
 
-        # Button for logs
-        view = discord.ui.View()
-        button = discord.ui.Button(label="📜 Get Full Battle Log", style=discord.ButtonStyle.blurple)
-        button.callback = send_log
-        view.add_item(button)
+    # ✅ Save the log
+    save_log(msg.id, full_log, total_stats, player1, player2)
 
-        
-        await msg.edit(embed=embed, view=view)
+    # Button for logs
+    view = discord.ui.View()
+    button = discord.ui.Button(label="📜 Get Full Battle Log", style=discord.ButtonStyle.blurple)
+    button.callback = send_log
+    view.add_item(button)
+
+    await msg.edit(embed=embed, view=view)
 
 async def send_log(interaction: discord.Interaction):
     data = load_log(interaction.message.id)
