@@ -500,8 +500,6 @@ class DeathBattle(commands.Cog):
                 break
 
             turn += 1
-
-
     # Winner section
     winner = player1 if hp1 > 0 else player2
     loser = player2 if winner == player1 else player1
@@ -546,6 +544,7 @@ class DeathBattle(commands.Cog):
 
     # Update the message with embed and view
     await msg.edit(embed=embed, view=view)
+
 
 async def send_log(interaction: discord.Interaction):
     data = load_log(interaction.message.id)
