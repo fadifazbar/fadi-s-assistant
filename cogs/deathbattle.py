@@ -248,8 +248,8 @@ class DeathBattle(commands.Cog):
             color=discord.Color.red()
         )
 
-        embed.add_field(name=player1.name, value=f"{hp_bar(hp1)}", inline=True)
-        embed.add_field(name=player2.name, value=f"{hp_bar(hp2)}", inline=True)
+        embed.add_field(name=player1.name, value=hp_bar(hp1, hp), inline=True)
+        embed.add_field(name=player2.name, value=hp_bar(hp2, hp), inline=True)
 
         buffer = await create_battle_image(player1, player2)  # your BytesIO image
         file = discord.File(fp=buffer, filename="battle.png")
@@ -530,12 +530,12 @@ class DeathBattle(commands.Cog):
         )
         embed.add_field(
             name=winner.name,
-            value=f"{hp_bar(hp1 if winner == player1 else hp2)}",
+            value=hp_bar(winner_hp, hp),
             inline=True
         )
         embed.add_field(
             name=loser.name,
-            value=f"{hp_bar(hp1 if loser == player1 else hp2)}",
+            value=hp_bar(loser_hp, hp),
             inline=True
         )
 
