@@ -502,12 +502,12 @@ class DeathBattle(commands.Cog):
             turn += 1
 
 
-# Winner section
+    # Winner section
     winner = player1 if hp1 > 0 else player2
     loser = player2 if winner == player1 else player1
     winner_hp = hp1 if winner == player1 else hp2
     loser_hp = hp1 if loser == player1 else hp2
-
+    
     finishing_action = random.choice([
         "annihilated", "finished off", "destroyed", "ended", "humiliated", "obliterated", "eradicated", "crushed",
         "smashed", "terminated", "defeated", "wrecked", "ruined", "shattered", "demolished", "vanquished", "erased",
@@ -524,6 +524,7 @@ class DeathBattle(commands.Cog):
         "sundered", "worn down", "left in ruins", "eliminated", "outshined", "obliterated brutally", "wrecked fully",
         "trampled", "beaten brutally", "leveled utterly", "finished mercilessly", "squashed flat"
     ])
+    finishing_action = random.choice([...])
     finish_text = f"# {WINNER_EMOJI} {winner.name} {finishing_action} {loser.name} to claim victory!"
 
     embed = discord.Embed(
@@ -531,16 +532,8 @@ class DeathBattle(commands.Cog):
         description=finish_text,
         color=discord.Color.gold()
     )
-    embed.add_field(
-        name=winner.name,
-        value=hp_bar(winner_hp, hp),
-        inline=True
-    )
-    embed.add_field(
-        name=loser.name,
-        value=hp_bar(loser_hp, hp),
-        inline=True
-    )
+    embed.add_field(name=winner.name, value=hp_bar(winner_hp, hp), inline=True)
+    embed.add_field(name=loser.name, value=hp_bar(loser_hp, hp), inline=True)
 
     # ✅ Save the log
     save_log(msg.id, full_log, total_stats, player1, player2)
@@ -553,7 +546,6 @@ class DeathBattle(commands.Cog):
 
     # Update the message with embed and view
     await msg.edit(embed=embed, view=view)
-
 
 async def send_log(interaction: discord.Interaction):
     data = load_log(interaction.message.id)
