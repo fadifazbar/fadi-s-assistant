@@ -6,9 +6,6 @@ import io
 import aiohttp
 import random
 import asyncio
-import os, json
-
-LOG_FILE = "/data/deathbattle_logs.json"
 
 # Hardcoded emojis (kept EXACTLY as provided)
 BATTLE_EMOJI = "<:battle_emoji:1408620699349946572>"
@@ -533,60 +530,42 @@ class DeathBattle(commands.Cog):
         embed.add_field(name=winner.name, value=hp_bar(winner_hp, hp), inline=True)
         embed.add_field(name=loser.name, value=hp_bar(loser_hp, hp), inline=True)
 
-        # ✅ Save the log
-        save_log(msg.id, full_log, total_stats, player1, player2)
+        # Button for logs
+        view = discord.ui.View()
 
-    # Button + send_log inside deathbattle
-    view = discord.ui.View()
-
-    async def send_log(interaction: discord.Interaction):
-        data = load_log(interaction.message.id)
-        if not data:
-            await interaction.response.send_message(
-                "⚠️ Log not found (maybe purged after restart).", ephemeral=True
-            )
-            return
-
-        full_log = data["full_log"]
-        total_stats = data["total_stats"]
-        p1_id, p2_id = data["players"]["p1"], data["players"]["p2"]
-
-        await interaction.response.send_message("📬 Check your DMs for the battle log!", ephemeral=True)
-
-        # Split logs into chunks
-        chunks, chunk = [], ""
-        for line in full_log:
-            if len(chunk) + len(line) + 1 > 4096:  # 4096 = embed description limit
-                chunks.append(chunk)
-                chunk = line + "\n"
-            else:
-                chunk += line + "\n"
-        if chunk:
-            chunks.append(chunk)
-
-        # Send embeds to the user’s DM
-        user = interaction.user
-        try:
-            for i, chunk in enumerate(chunks, start=1):
-                embed = discord.Embed(
-                    title=f"📜 Battle Log (Part {i}/{len(chunks)})",
-                    description=chunk,
-                    color=discord.Color.blurple()
+        async def send_log(interaction: discord.Interaction):
+            try:
+                chunk_size = 20
+                for i in range(0, len(full_log), chunk_size):
+                    chunk = full_log[i:i + chunk_size]
+                    log_embed = discord.Embed(
+                        title="📜 DeathBattle Log",
+                        description=f"Turns {i + 1} → {i + len(chunk)}",
+                        color=discord.Color.purple()
+                    )
+                    for entry in chunk:
+                        turn_num, text = entry.split(": ", 1)
+                        log_embed.add_field(name=turn_num, value=text, inline=False)
+                    await interaction.user.send(embed=log_embed)
+                totals_text = (
+                    f"**{player1.name}** → Damage: {total_stats[player1]['damage']} | Healing: {total_stats[player1]['healing']}\n"
+                    f"**{player2.name}** → Damage: {total_stats[player2]['damage']} | Healing: {total_stats[player2]['healing']}"
                 )
-                embed.set_footer(text=f"{user.name} vs {interaction.guild.get_member(p2_id).name}")
-                await user.send(embed=embed)
-        except discord.Forbidden:
-            await interaction.followup.send(
-                "⚠️ I couldn't DM you. Please enable DMs from server members.", ephemeral=True
-            )
+                totals_embed = discord.Embed(
+                    title="📊 Final Battle Totals",
+                    description=totals_text,
+                    color=discord.Color.gold()
+                )
+                await interaction.user.send(embed=totals_embed)
+                await interaction.response.send_message("📩 Check your DMs! Full battle log + totals sent as embeds.", ephemeral=True)
+            except discord.Forbidden:
+                await interaction.response.send_message("❌ I couldn't DM you! Enable DMs from server members.", ephemeral=True)
 
-    # Create the button
-    button = discord.ui.Button(label="📜 Get Full Battle Log", style=discord.ButtonStyle.blurple)
-    button.callback = send_log
-    view.add_item(button)
+        button = discord.ui.Button(label="📜 Get Full Battle Log", style=discord.ButtonStyle.blurple)
+        button.callback = send_log
+        view.add_item(button)
 
-    # ✅ Update the final winner message with embed + button
-    await msg.edit(embed=embed, view=view)
+        await msg.edit(embed=embed, view=view)
 
 async def setup(bot):
     await bot.add_cog(DeathBattle(bot))
