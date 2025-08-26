@@ -69,7 +69,7 @@ def load_log(message_id):
 
 
 # ✅ HP BAR FUNCTION
-def hp_bar(hp: int, max_hp: int = 100) -> str:
+def hp_bar(hp: int, max_hp: int) -> str:
     total_bars = 10
     if hp > 0:
         filled_bars = (hp * total_bars) // max_hp  # proportional to max_hp
@@ -565,18 +565,21 @@ async def send_log(interaction: discord.Interaction):
     player2 = interaction.client.get_user(p2_id)
 
     try:
-        chunk_size = 20
-        for i in range(0, len(full_log), chunk_size):
-            chunk = full_log[i:i + chunk_size]
-            log_embed = discord.Embed(
-                title="📜 DeathBattle Log",
-                description=f"Turns {i + 1} → {i + len(chunk)}",
-                color=discord.Color.purple()
-            )
-            for entry in chunk:
-                turn_num, text = entry.split(": ", 1)
-                log_embed.add_field(name=turn_num, value=text, inline=False)
-            await interaction.user.send(embed=log_embed)
+    chunk_size = 15  # smaller chunks to avoid hitting 6000 chars
+    for i in range(0, len(full_log), chunk_size):
+        chunk = full_log[i:i + chunk_size]
+        log_embed = discord.Embed(
+            title="📜 DeathBattle Log",
+            description=f"Turns {i + 1} → {i + len(chunk)}",
+            color=discord.Color.purple()
+        )
+        for entry in chunk:
+            turn_num, text = entry.split(": ", 1)
+            # truncate very long text
+            if len(text) > 1000:
+                text = text[:997] + "..."
+            log_embed.add_field(name=turn_num, value=text, inline=False)
+        await interaction.user.send(embed=log_embed)
 
         totals_text = (
             f"**{player1.name if player1 else 'Player 1'}** → "
