@@ -539,23 +539,46 @@ class DeathBattle(commands.Cog):
         # Button for logs
         view = discord.ui.View()
 
-        async def send_log(interaction: discord.Interaction):
-            data = load_log(interaction.message.id)
-            if not data:
-                await interaction.response.send_message(
-                    "⚠️ Log not found (maybe purged after restart).", ephemeral=True
-                )
-                return
+async def send_log(interaction: discord.Interaction):
+    data = load_log(interaction.message.id)
+    if not data:
+        await interaction.response.send_message(
+            "⚠️ Log not found (maybe purged after restart).", ephemeral=True
+        )
+        return
 
-            full_log = data["full_log"]
-            total_stats = data["total_stats"]
-            p1_id, p2_id = data["players"]["p1"], data["players"]["p2"]
+    full_log = data["full_log"]
+    total_stats = data["total_stats"]
+    p1_id, p2_id = data["players"]["p1"], data["players"]["p2"]
 
-            log_text = f"Battle Log between <@{p1_id}> and <@{p2_id}>\n\n{full_log}"
-            file = discord.File(io.BytesIO(log_text.encode()), filename="battle_log.txt")
-            await interaction.response.send_message(
-                "📜 Here’s the full battle log:", file=file, ephemeral=True
+    # Send an ephemeral confirmation in the channel
+    await interaction.response.send_message("📬 Check your DMs for the battle log!", ephemeral=True)
+
+    # Split logs into chunks (Discord embed field limit = 1024 chars, description limit = 4096)
+    chunks = []
+    chunk = ""
+    for line in full_log:
+        if len(chunk) + len(line) + 1 > 1024:  # Prevent overflow
+            chunks.append(chunk)
+            chunk = line + "\n"
+        else:
+            chunk += line + "\n"
+    if chunk:
+        chunks.append(chunk)
+
+    # Send embeds to the user’s DM
+    user = interaction.user
+    try:
+        for i, chunk in enumerate(chunks, start=1):
+            embed = discord.Embed(
+                title=f"📜 Battle Log (Part {i}/{len(chunks)})",
+                description=chunk,
+                color=discord.Color.blurple()
             )
+            embed.set_footer(text=f"{user.name} vs {interaction.guild.get_member(p2_id).name}")
+            await user.send(embed=embed)
+    except discord.Forbidden:
+        await interaction.followup.send("⚠️ I couldn't DM you. Please enable DMs from server members.", ephemeral=True)
 
         button = discord.ui.Button(label="📜 Get Full Battle Log", style=discord.ButtonStyle.blurple)
         button.callback = send_log
