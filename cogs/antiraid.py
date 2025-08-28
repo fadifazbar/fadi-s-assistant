@@ -466,31 +466,37 @@ async def on_member_ban(guild, user):
         return
     await enforce_if_needed(guild, guild.get_member(executor.id) or executor, "member_ban")
 
-# Member join (join-raid detection + verified/unverified bot handling)
+# Member join (join-raid detection + verified/unverified bot handling with debug)
 @bot.event
 async def on_member_join(member: discord.Member):
     guild = member.guild
     cfg = ensure_guild_cfg(guild.id)
 
+    print(f"[DEBUG] Member joined: {member} (ID: {member.id}, Bot: {member.bot})")
+
     if not cfg.get("enabled", True):
+        print("[DEBUG] Anti-nuke is disabled for this guild.")
         return
 
     # ---------------- Bot checks ----------------
     if member.bot:
+        print("[DEBUG] Member is a bot.")
+
         # Always allow whitelisted bots
         if member.id in cfg.get("whitelist", []):
-            print(f"Whitelisted bot joined: {member}")
+            print(f"[DEBUG] Bot is whitelisted: {member}")
             return
 
         # Allow verified bots (checkmark)
-        if hasattr(member, "public_flags") and member.public_flags.verified_bot:
-            print(f"Verified bot joined and allowed: {member}")
+        verified = getattr(member.public_flags, "verified_bot", False)
+        if verified:
+            print(f"[DEBUG] Bot is verified: {member}")
             return
 
         # Kick all other bots (unverified and not whitelisted)
         try:
             await guild.kick(member, reason="Unverified bot not whitelisted")
-            print(f"Kicked unverified bot not whitelisted: {member}")
+            print(f"[DEBUG] Kicked unverified bot not whitelisted: {member}")
             cfg["blacklist"].append(member.id)
             save_all(GLOBAL_CFG)
             await dm_owner_if_allowed(
@@ -499,14 +505,17 @@ async def on_member_join(member: discord.Member):
                 f"Unverified bot {member} kicked and added to blacklist"
             )
         except Exception as e:
-            print(f"Failed to kick unverified bot: {member} -> {e}")
+            print(f"[DEBUG] Failed to kick unverified bot: {member} -> {e}")
         return
+    else:
+        print("[DEBUG] Member is not a bot, proceeding to join-raid detection.")
 
     # ---------------- Join-raid detection ----------------
     gid = str(guild.id)
     rt = trackers[gid]["__joins__"]
     now_ts = datetime.utcnow().timestamp()
     rt.append(now_ts)
+    print(f"[DEBUG] Current join timestamps: {list(rt)}")
 
     jc = cfg.get("thresholds", {}).get("member_join", {"limit": 12, "time": 10})
     window = int(jc.get("time", 10))
@@ -514,10 +523,12 @@ async def on_member_join(member: discord.Member):
 
     # prune older timestamps
     while rt and (now_ts - rt[0]) > window:
-        rt.popleft()
+        removed = rt.popleft()
+        print(f"[DEBUG] Pruned old timestamp: {removed}")
 
     # trigger auto-lockdown if join-raid detected
     if len(rt) >= limit:
+        print(f"[DEBUG] Join-raid detected! {len(rt)} joins in {window}s.")
         punishment = jc.get("punishment", "lockdown")
         cfg["lockdown"] = True
         save_all(GLOBAL_CFG)
@@ -531,14 +542,16 @@ async def on_member_join(member: discord.Member):
                     overwrite=ow,
                     reason="Auto-lockdown triggered by join raid"
                 )
-            except Exception:
-                pass
+                print(f"[DEBUG] Channel lockdown applied: {ch.name}")
+            except Exception as e:
+                print(f"[DEBUG] Failed to set lockdown on {ch.name}: {e}")
 
         await dm_owner_if_allowed(
             guild,
             "auto_lockdown",
             f"Auto-lockdown activated: {len(rt)} joins in {window}s."
         )
+
 
 
 
