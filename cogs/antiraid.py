@@ -667,28 +667,5 @@ class AdminCog(commands.Cog):
 
 # ---------------- Setup cogs & background prune task ----------------
 
-@tasks.loop(seconds=8)
-async def _prune_task():
-    await prune_once()
-
-@bot.event
-async def on_ready():
-    # sync slash commands
-    try:
-        await bot.tree.sync()
-    except Exception:
-        pass
-    if not _prune_task.is_running():
-        _prune_task.start()
-
-# add cog
-bot.add_cog(AdminCog(bot))
-bot.add_cog(commands.Cog())  # placeholder to keep structure (not required)
-
-# ---------------- Run ----------------
-# NOTE: user should set DISCORD_TOKEN in env
-TOKEN = os.getenv("DISCORD_TOKEN")
-if not TOKEN:
-    print("Missing DISCORD_TOKEN environment variable. Exiting.")
-else:
-    bot.run(TOKEN)
+async def setup(bot):
+    await bot.add_cog(AdminCog(bot))
