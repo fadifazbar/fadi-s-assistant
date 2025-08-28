@@ -482,29 +482,43 @@ async def on_member_remove(member):
         return
     await enforce_if_needed(guild, guild.get_member(executor.id) or executor, "member_kick")
 
-# Member join (join-raid detection)
+# Member join (join-raid detection + auto-kick unverified bots)
 @bot.event
 async def on_member_join(member):
     guild = member.guild
     cfg = ensure_guild_cfg(guild.id)
     if not cfg.get("enabled", True):
         return
-    # track join timestamps (store in cfg->violations under special key or in runtime tracker)
+
+    # -------------------- Auto-kick unverified or blacklisted bots --------------------
+    if member.bot:
+        # Kick if bot is blacklisted
+        if member.id in cfg.get("blacklist", []):
+            try:
+                await member.kick(reason="Blacklisted bot")
+                channel = guild.system_channel or next(iter(guild.text_channels), None)
+                if channel:
+                    await channel.send(f"⚠️ Kicked blacklisted bot: {member}")
+            except Exception as e:
+                print(f"Failed to kick blacklisted bot {member}: {e}")
+            return  # exit early for bots
+
+    # -------------------- Join-raid tracking --------------------
     gid = str(guild.id)
-    # use runtime tracker for joins
     rt = trackers[gid]["__joins__"]
     now_ts = datetime.utcnow().timestamp()
     rt.append(now_ts)
-    # prune older than window
-    jc = cfg.get("thresholds", {}).get("member_join", {"limit":12,"time":10})
+
+    # Prune older than window
+    jc = cfg.get("thresholds", {}).get("member_join", {"limit": 12, "time": 10})
     window = int(jc.get("time", 10))
     limit = int(jc.get("limit", 12))
     while rt and (now_ts - rt[0]) > window:
         rt.popleft()
+
+    # Check if limit exceeded → trigger lockdown
     if len(rt) >= limit:
-        # trigger action against... joiners? Usually lock server
-        punishment = jc.get("punishment", jc.get("punishment", "lockdown")) if isinstance(jc, dict) else "lockdown"
-        # set lockdown
+        punishment = jc.get("punishment", "lockdown")
         cfg["lockdown"] = True
         save_all(GLOBAL_CFG)
         for ch in guild.text_channels:
@@ -559,21 +573,60 @@ class AdminCog(commands.Cog):
 
     # ---------- Set Threshold ----------
     @app_commands.command(name="setthreshold", description="Set threshold for an action")
-    @app_commands.describe(action="Action name", limit="Limit count", time="Window seconds", punishment="Type of punishment")
-    @app_commands.choices(punishment=[
-        app_commands.Choice(name="ban", value="ban"),
-        app_commands.Choice(name="kick", value="kick"),
-        app_commands.Choice(name="remove_roles", value="remove_roles"),
-        app_commands.Choice(name="lockdown", value="lockdown"),
-        app_commands.Choice(name="none", value="none")
-    ])
+    @app_commands.describe(
+        action="Action name",
+        limit="Limit count",
+        time="Window seconds",
+        punishment="Type of punishment"
+    )
+    @app_commands.choices(
+        action=[
+            app_commands.Choice(name="channel_delete", value="channel_delete"),
+            app_commands.Choice(name="channel_create", value="channel_create"),
+            app_commands.Choice(name="role_delete", value="role_delete"),
+            app_commands.Choice(name="role_create", value="role_create"),
+            app_commands.Choice(name="emoji_delete", value="emoji_delete"),
+            app_commands.Choice(name="sticker_delete", value="sticker_delete"),
+            app_commands.Choice(name="member_ban", value="member_ban"),
+            app_commands.Choice(name="member_kick", value="member_kick"),
+            app_commands.Choice(name="webhook_create", value="webhook_create"),
+            app_commands.Choice(name="member_join", value="member_join"),
+        ]
+    )
+    @app_commands.choices(
+        punishment=[
+            app_commands.Choice(name="ban", value="ban"),
+            app_commands.Choice(name="kick", value="kick"),
+            app_commands.Choice(name="remove_roles", value="remove_roles"),
+            app_commands.Choice(name="lockdown", value="lockdown"),
+            app_commands.Choice(name="none", value="none")
+        ]
+    )
     @app_commands.default_permissions(administrator=True)
-    async def setthreshold(self, interaction: discord.Interaction, action: str, limit: int, time: int, punishment: str):
+    async def setthreshold(
+        self,
+        interaction: discord.Interaction,
+        action: app_commands.Choice[str],
+        limit: int,
+        time: int,
+        punishment: app_commands.Choice[str]
+    ):
         cfg = ensure_guild_cfg(interaction.guild.id)
-        cfg.setdefault("thresholds", {})[action] = {"limit": limit, "time": time, "punishment": punishment}
+        cfg.setdefault("thresholds", {})[action.value] = {
+            "limit": limit,
+            "time": time,
+            "punishment": punishment.value
+        }
         save_all(GLOBAL_CFG)
-        await interaction.response.send_message(f"✅ Threshold set for `{action}`: {limit} per {time}s → {punishment}")
-        await dm_owner_if_allowed(interaction.guild, "config_change", f"Threshold changed by {interaction.user}: {action} → {limit}/{time}s → {punishment}")
+        await interaction.response.send_message(
+            f"✅ Threshold set for `{action.value}`: {limit} per {time}s → {punishment.value}"
+        )
+        await dm_owner_if_allowed(
+            interaction.guild,
+            "config_change",
+            f"Threshold changed by {interaction.user}: {action.value} → {limit}/{time}s → {punishment.value}"
+        )
+
 
     # ---------- Whitelist ----------
     @app_commands.command(name="whitelist", description="Show or manage whitelist IDs")
@@ -601,6 +654,51 @@ class AdminCog(commands.Cog):
         cfg = ensure_guild_cfg(interaction.guild.id)
         if id not in cfg.get("whitelist", []):
             return await interaction
+
+    # ---------- Blacklist ----------
+    @app_commands.command(name="blacklist", description="Show all blacklisted IDs")
+    @app_commands.default_permissions(administrator=True)
+    async def blacklist(self, interaction: discord.Interaction):
+        cfg = ensure_guild_cfg(interaction.guild.id)
+        await interaction.response.send_message(
+            "Blacklist: " + (", ".join(str(x) for x in cfg.get("blacklist", [])) or "None"),
+            ephemeral=True
+        )
+
+    @app_commands.command(name="blacklist_add", description="Add ID to blacklist")
+    @app_commands.describe(id="User ID to blacklist")
+    @app_commands.default_permissions(administrator=True)
+    async def blacklist_add(self, interaction: discord.Interaction, id: int):
+        cfg = ensure_guild_cfg(interaction.guild.id)
+        if id in cfg.get("blacklist", []):
+            return await interaction.response.send_message("ID already blacklisted.", ephemeral=True)
+
+        cfg["blacklist"].append(id)
+        save_all(GLOBAL_CFG)
+        await interaction.response.send_message(f"✅ Added `{id}` to blacklist", ephemeral=True)
+        await dm_owner_if_allowed(interaction.guild, "blacklist_change", f"{interaction.user} added {id} to blacklist")
+
+        # Auto-kick bot if present
+        member = interaction.guild.get_member(id)
+        if member and member.bot:
+            try:
+                await member.kick(reason="Blacklisted bot")
+                await interaction.followup.send(f"⚠️ Kicked blacklisted bot: {member}", ephemeral=True)
+            except:
+                await interaction.followup.send(f"❌ Failed to kick blacklisted bot: {member}", ephemeral=True)
+
+    @app_commands.command(name="blacklist_remove", description="Remove ID from blacklist")
+    @app_commands.describe(id="User ID to remove from blacklist")
+    @app_commands.default_permissions(administrator=True)
+    async def blacklist_remove(self, interaction: discord.Interaction, id: int):
+        cfg = ensure_guild_cfg(interaction.guild.id)
+        if id not in cfg.get("blacklist", []):
+            return await interaction.response.send_message("ID not in blacklist.", ephemeral=True)
+
+        cfg["blacklist"].remove(id)
+        save_all(GLOBAL_CFG)
+        await interaction.response.send_message(f"❌ Removed `{id}` from blacklist", ephemeral=True)
+        await dm_owner_if_allowed(interaction.guild, "blacklist_change", f"{interaction.user} removed {id} from blacklist")
 
 # ---------------- Setup cogs & background prune task ----------------
 
