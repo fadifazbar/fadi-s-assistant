@@ -490,55 +490,56 @@ async def on_member_remove(member):
         return
     await enforce_if_needed(guild, guild.get_member(executor.id) or executor, "member_kick")
 
-# Member join (join-raid detection + auto-kick unverified bots)
+# Member join (join-raid detection + blacklisted bots)
 @bot.event
-async def on_member_join(member):
+async def on_member_join(member: discord.Member):
     guild = member.guild
     cfg = ensure_guild_cfg(guild.id)
+
     if not cfg.get("enabled", True):
         return
 
-    # -------------------- Auto-kick unverified bots --------------------
+    # Auto-kick blacklisted bots
     if member.bot:
-        if member.id not in cfg.get("whitelist", []) and member.id not in cfg.get("blacklist", []):
-            try:
-                await member.kick(reason="Unverified bot")
-                channel = guild.system_channel or next(iter(guild.text_channels), None)
-                if channel:
-                    await channel.send(f"⚠️ Kicked unverified bot: {member}")
-            except Exception as e:
-                print(f"Failed to kick unverified bot {member}: {e}")
-            return  # exit early for bots
-
-        # Kick if bot is blacklisted
         if member.id in cfg.get("blacklist", []):
             try:
                 await member.kick(reason="Blacklisted bot")
-                channel = guild.system_channel or next(iter(guild.text_channels), None)
-                if channel:
-                    await channel.send(f"⚠️ Kicked blacklisted bot: {member}")
+                print(f"Kicked blacklisted bot: {member}")
             except Exception as e:
-                print(f"Failed to kick blacklisted bot {member}: {e}")
-            return  # exit early for bots
+                print(f"Failed to kick blacklisted bot: {member} -> {e}")
+            return
+        else:
+            # Optional: automatically add unverified bots to blacklist
+            cfg["blacklist"].append(member.id)
+            save_all(GLOBAL_CFG)
+            try:
+                await member.kick(reason="Unverified bot added to blacklist")
+                print(f"Added unverified bot to blacklist and kicked: {member}")
+            except Exception as e:
+                print(f"Failed to kick unverified bot: {member} -> {e}")
+            await dm_owner_if_allowed(guild, "blacklist_change", f"Unverified bot {member} auto-blacklisted and kicked")
+            return
 
-    # -------------------- Join-raid tracking --------------------
+    # ---------------- Join-raid detection ----------------
     gid = str(guild.id)
     rt = trackers[gid]["__joins__"]
     now_ts = datetime.utcnow().timestamp()
     rt.append(now_ts)
 
-    # Prune older than window
-    jc = cfg.get("thresholds", {}).get("member_join", {"limit": 12, "time": 10})
+    jc = cfg.get("thresholds", {}).get("member_join", {"limit":12,"time":10})
     window = int(jc.get("time", 10))
     limit = int(jc.get("limit", 12))
+
+    # prune older timestamps
     while rt and (now_ts - rt[0]) > window:
         rt.popleft()
 
-    # Check if limit exceeded → trigger lockdown
+    # trigger auto-lockdown if join-raid detected
     if len(rt) >= limit:
         punishment = jc.get("punishment", "lockdown")
         cfg["lockdown"] = True
         save_all(GLOBAL_CFG)
+
         for ch in guild.text_channels:
             ow = ch.overwrites_for(guild.default_role)
             ow.send_messages = False
@@ -546,8 +547,8 @@ async def on_member_join(member):
                 await ch.set_permissions(guild.default_role, overwrite=ow, reason="Auto-lockdown triggered by join raid")
             except Exception:
                 pass
-        await dm_owner_if_allowed(guild, "auto_lockdown", f"Auto-lockdown activated: {len(rt)} joins in {window}s.")
 
+        await dm_owner_if_allowed(guild, "auto_lockdown", f"Auto-lockdown activated: {len(rt)} joins in {window}s.")
 
 # ---------------- Commands (slash commands reworked) ----------------
 
