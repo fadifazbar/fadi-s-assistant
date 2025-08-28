@@ -466,30 +466,6 @@ async def on_member_ban(guild, user):
         return
     await enforce_if_needed(guild, guild.get_member(executor.id) or executor, "member_ban")
 
-@bot.event
-async def on_member_remove(member):
-    # member_remove triggers for leave or kick. Check audit logs whether a kick happened.
-    guild = member.guild
-    cfg = ensure_guild_cfg(guild.id)
-    if not cfg.get("enabled", True):
-        return
-    try:
-        executor, entry = await get_audit_executor(guild, discord.AuditLogAction.kick, target_id=member.id)
-    except Exception:
-        return
-    if not executor:
-        return
-    if executor.id in cfg.get("whitelist", []):
-        return
-    if executor.id in cfg.get("blacklist", []):
-        try:
-            await guild.ban(executor, reason="Blacklisted triggered kick action")
-        except:
-            pass
-        await dm_owner_if_allowed(guild, "blacklist_change", f"Blacklisted executor {executor} kicked {member} and was banned.")
-        return
-    await enforce_if_needed(guild, guild.get_member(executor.id) or executor, "member_kick")
-
 # Member join (join-raid detection + blacklisted/unverified bots)
 @bot.event
 async def on_member_join(member: discord.Member):
@@ -501,33 +477,35 @@ async def on_member_join(member: discord.Member):
 
     # ---------------- Bot checks ----------------
     if member.bot:
+        # Whitelist check
+        if member.id in cfg.get("whitelist", []):
+            print(f"Whitelisted bot joined: {member}")
+            return
+
         # Kick if blacklisted
         if member.id in cfg.get("blacklist", []):
             try:
-                await member.kick(reason="Blacklisted bot")
+                fetched = await guild.fetch_member(member.id)
+                await fetched.kick(reason="Blacklisted bot")
                 print(f"Kicked blacklisted bot: {member}")
             except Exception as e:
                 print(f"Failed to kick blacklisted bot: {member} -> {e}")
             return
 
-        # Allow verified bots
-        if member.public_flags.verified_bot:
-            print(f"Verified bot joined and allowed: {member}")
-            return
-
-        # Kick unverified bots, add to blacklist
-        cfg["blacklist"].append(member.id)
-        save_all(GLOBAL_CFG)
+        # Kick unverified bot and add to blacklist
         try:
-            await member.kick(reason="Unverified bot auto-blacklisted")
+            fetched = await guild.fetch_member(member.id)
+            await fetched.kick(reason="Unverified bot auto-blacklisted")
             print(f"Added unverified bot to blacklist and kicked: {member}")
+            cfg["blacklist"].append(member.id)
+            save_all(GLOBAL_CFG)
+            await dm_owner_if_allowed(
+                guild,
+                "blacklist_change",
+                f"Unverified bot {member} auto-blacklisted and kicked"
+            )
         except Exception as e:
             print(f"Failed to kick unverified bot: {member} -> {e}")
-        await dm_owner_if_allowed(
-            guild,
-            "blacklist_change",
-            f"Unverified bot {member} auto-blacklisted and kicked"
-        )
         return
 
     # ---------------- Join-raid detection ----------------
@@ -567,8 +545,6 @@ async def on_member_join(member: discord.Member):
             "auto_lockdown",
             f"Auto-lockdown activated: {len(rt)} joins in {window}s."
         )
-
-
 
 
 # ---------------- Commands (slash commands reworked) ----------------
