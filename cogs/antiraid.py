@@ -490,7 +490,7 @@ async def on_member_remove(member):
         return
     await enforce_if_needed(guild, guild.get_member(executor.id) or executor, "member_kick")
 
-# Member join (join-raid detection + blacklisted bots)
+# Member join (join-raid detection + blacklisted/unverified bots)
 @bot.event
 async def on_member_join(member: discord.Member):
     guild = member.guild
@@ -499,8 +499,9 @@ async def on_member_join(member: discord.Member):
     if not cfg.get("enabled", True):
         return
 
-    # Auto-kick blacklisted bots
+    # ---------------- Bot checks ----------------
     if member.bot:
+        # Kick if blacklisted
         if member.id in cfg.get("blacklist", []):
             try:
                 await member.kick(reason="Blacklisted bot")
@@ -508,17 +509,26 @@ async def on_member_join(member: discord.Member):
             except Exception as e:
                 print(f"Failed to kick blacklisted bot: {member} -> {e}")
             return
-        else:
-            # Optional: automatically add unverified bots to blacklist
-            cfg["blacklist"].append(member.id)
-            save_all(GLOBAL_CFG)
-            try:
-                await member.kick(reason="Unverified bot added to blacklist")
-                print(f"Added unverified bot to blacklist and kicked: {member}")
-            except Exception as e:
-                print(f"Failed to kick unverified bot: {member} -> {e}")
-            await dm_owner_if_allowed(guild, "blacklist_change", f"Unverified bot {member} auto-blacklisted and kicked")
+
+        # Allow verified bots
+        if member.public_flags.verified_bot:
+            print(f"Verified bot joined and allowed: {member}")
             return
+
+        # Kick unverified bots, add to blacklist
+        cfg["blacklist"].append(member.id)
+        save_all(GLOBAL_CFG)
+        try:
+            await member.kick(reason="Unverified bot auto-blacklisted")
+            print(f"Added unverified bot to blacklist and kicked: {member}")
+        except Exception as e:
+            print(f"Failed to kick unverified bot: {member} -> {e}")
+        await dm_owner_if_allowed(
+            guild,
+            "blacklist_change",
+            f"Unverified bot {member} auto-blacklisted and kicked"
+        )
+        return
 
     # ---------------- Join-raid detection ----------------
     gid = str(guild.id)
@@ -526,7 +536,7 @@ async def on_member_join(member: discord.Member):
     now_ts = datetime.utcnow().timestamp()
     rt.append(now_ts)
 
-    jc = cfg.get("thresholds", {}).get("member_join", {"limit":12,"time":10})
+    jc = cfg.get("thresholds", {}).get("member_join", {"limit": 12, "time": 10})
     window = int(jc.get("time", 10))
     limit = int(jc.get("limit", 12))
 
@@ -544,11 +554,22 @@ async def on_member_join(member: discord.Member):
             ow = ch.overwrites_for(guild.default_role)
             ow.send_messages = False
             try:
-                await ch.set_permissions(guild.default_role, overwrite=ow, reason="Auto-lockdown triggered by join raid")
+                await ch.set_permissions(
+                    guild.default_role,
+                    overwrite=ow,
+                    reason="Auto-lockdown triggered by join raid"
+                )
             except Exception:
                 pass
 
-        await dm_owner_if_allowed(guild, "auto_lockdown", f"Auto-lockdown activated: {len(rt)} joins in {window}s.")
+        await dm_owner_if_allowed(
+            guild,
+            "auto_lockdown",
+            f"Auto-lockdown activated: {len(rt)} joins in {window}s."
+        )
+
+
+
 
 # ---------------- Commands (slash commands reworked) ----------------
 
@@ -655,25 +676,47 @@ class AdminCog(commands.Cog):
         cfg = ensure_guild_cfg(interaction.guild.id)
         await interaction.response.send_message("Whitelist: " + (", ".join(str(x) for x in cfg.get("whitelist", [])) or "None"), ephemeral=True)
 
-    @app_commands.command(name="whitelist_add", description="Add ID to whitelist")
-    @app_commands.describe(id="User or role ID to whitelist")
+    @app_commands.command(name="whitelist_add", description="Add user ID to whitelist")
+    @app_commands.describe(user_id="User ID to whitelist (numbers only)")
     @app_commands.default_permissions(administrator=True)
-    async def whitelist_add(self, interaction: discord.Interaction, id: int):
-        cfg = ensure_guild_cfg(interaction.guild.id)
-        if id in cfg.get("whitelist", []):
-            return await interaction.response.send_message("ID already whitelisted.", ephemeral=True)
-        cfg["whitelist"].append(id)
-        save_all(GLOBAL_CFG)
-        await interaction.response.send_message(f"✅ Added `{id}` to whitelist", ephemeral=True)
-        await dm_owner_if_allowed(interaction.guild, "whitelist_change", f"{interaction.user} added {id} to whitelist")
+    async def whitelist_add(self, interaction: discord.Interaction, user_id: str):
+        try:
+            uid = int(user_id)
+        except ValueError:
+            return await interaction.response.send_message(
+                "❌ Please provide a valid user ID (numbers only).", ephemeral=True
+            )
 
-    @app_commands.command(name="whitelist_remove", description="Remove ID from whitelist")
-    @app_commands.describe(id="User or role ID to remove")
-    @app_commands.default_permissions(administrator=True)
-    async def whitelist_remove(self, interaction: discord.Interaction, id: int):
         cfg = ensure_guild_cfg(interaction.guild.id)
-        if id not in cfg.get("whitelist", []):
-            return await interaction
+        if uid in cfg.get("whitelist", []):
+            return await interaction.response.send_message("User already whitelisted.", ephemeral=True)
+
+        cfg["whitelist"].append(uid)
+        save_all(GLOBAL_CFG)
+        await interaction.response.send_message(f"✅ Added `{uid}` to whitelist", ephemeral=True)
+        await dm_owner_if_allowed(interaction.guild, "whitelist_change", f"{interaction.user} added `{uid}` to whitelist")
+
+
+    @app_commands.command(name="whitelist_remove", description="Remove user ID from whitelist")
+    @app_commands.describe(user_id="User ID to remove from whitelist (numbers only)")
+    @app_commands.default_permissions(administrator=True)
+    async def whitelist_remove(self, interaction: discord.Interaction, user_id: str):
+        try:
+            uid = int(user_id)
+        except ValueError:
+            return await interaction.response.send_message(
+                "❌ Please provide a valid user ID (numbers only).", ephemeral=True
+            )
+
+        cfg = ensure_guild_cfg(interaction.guild.id)
+        if uid not in cfg.get("whitelist", []):
+            return await interaction.response.send_message("User not in whitelist.", ephemeral=True)
+
+        cfg["whitelist"].remove(uid)
+        save_all(GLOBAL_CFG)
+        await interaction.response.send_message(f"✅ Removed `{uid}` from whitelist", ephemeral=True)
+        await dm_owner_if_allowed(interaction.guild, "whitelist_change", f"{interaction.user} removed `{uid}` from whitelist")
+
 
     # ---------- Blacklist ----------
     @app_commands.command(name="blacklist", description="Show all blacklisted IDs")
@@ -685,40 +728,47 @@ class AdminCog(commands.Cog):
             ephemeral=True
         )
 
-    @app_commands.command(name="blacklist_add", description="Add ID to blacklist")
-    @app_commands.describe(id="User ID to blacklist")
+    @app_commands.command(name="blacklist_add", description="Add user ID to blacklist")
+    @app_commands.describe(user_id="User ID to blacklist (numbers only)")
     @app_commands.default_permissions(administrator=True)
-    async def blacklist_add(self, interaction: discord.Interaction, id: int):
+    async def blacklist_add(self, interaction: discord.Interaction, user_id: str):
+        try:
+            uid = int(user_id)
+        except ValueError:
+            return await interaction.response.send_message(
+                "❌ Please provide a valid user ID (numbers only).", ephemeral=True
+            )
+
         cfg = ensure_guild_cfg(interaction.guild.id)
-        if id in cfg.get("blacklist", []):
-            return await interaction.response.send_message("ID already blacklisted.", ephemeral=True)
+        if uid in cfg.get("blacklist", []):
+            return await interaction.response.send_message("User already blacklisted.", ephemeral=True)
 
-        cfg["blacklist"].append(id)
+        cfg["blacklist"].append(uid)
         save_all(GLOBAL_CFG)
-        await interaction.response.send_message(f"✅ Added `{id}` to blacklist", ephemeral=True)
-        await dm_owner_if_allowed(interaction.guild, "blacklist_change", f"{interaction.user} added {id} to blacklist")
+        await interaction.response.send_message(f"✅ Added `{uid}` to blacklist", ephemeral=True)
+        await dm_owner_if_allowed(interaction.guild, "blacklist_change", f"{interaction.user} added `{uid}` to blacklist")
 
-        # Auto-kick bot if present
-        member = interaction.guild.get_member(id)
-        if member and member.bot:
-            try:
-                await member.kick(reason="Blacklisted bot")
-                await interaction.followup.send(f"⚠️ Kicked blacklisted member: {member}", ephemeral=True)
-            except:
-                await interaction.followup.send(f"❌ Failed to kick blacklisted member: {member}", ephemeral=True)
 
-    @app_commands.command(name="blacklist_remove", description="Remove ID from blacklist")
-    @app_commands.describe(id="User ID to remove from blacklist")
+    @app_commands.command(name="blacklist_remove", description="Remove user ID from blacklist")
+    @app_commands.describe(user_id="User ID to remove from blacklist (numbers only)")
     @app_commands.default_permissions(administrator=True)
-    async def blacklist_remove(self, interaction: discord.Interaction, id: int):
-        cfg = ensure_guild_cfg(interaction.guild.id)
-        if id not in cfg.get("blacklist", []):
-            return await interaction.response.send_message("ID not in blacklist.", ephemeral=True)
+    async def blacklist_remove(self, interaction: discord.Interaction, user_id: str):
+        try:
+            uid = int(user_id)
+        except ValueError:
+            return await interaction.response.send_message(
+                "❌ Please provide a valid user ID (numbers only).", ephemeral=True
+            )
 
-        cfg["blacklist"].remove(id)
+        cfg = ensure_guild_cfg(interaction.guild.id)
+        if uid not in cfg.get("blacklist", []):
+            return await interaction.response.send_message("User not in blacklist.", ephemeral=True)
+
+        cfg["blacklist"].remove(uid)
         save_all(GLOBAL_CFG)
-        await interaction.response.send_message(f"❌ Removed `{id}` from blacklist", ephemeral=True)
-        await dm_owner_if_allowed(interaction.guild, "blacklist_change", f"{interaction.user} removed {id} from blacklist")
+        await interaction.response.send_message(f"✅ Removed `{uid}` from blacklist", ephemeral=True)
+        await dm_owner_if_allowed(interaction.guild, "blacklist_change", f"{interaction.user} removed `{uid}` from blacklist")
+
 
 # ---------------- Setup cogs & background prune task ----------------
 
