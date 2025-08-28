@@ -165,17 +165,25 @@ async def on_command_error(ctx, error):
         # You can comment this out in prod
         print("Command error:", error)
 
-# ---------------- Owner DM helper (uses per-guild dm_config) ----------------
-async def _dmconfig_logic(self, guild, user, key: str, value: bool, respond):
-    if user.id != guild.owner_id:
-        return await respond("❌ Only the server owner can change DM preferences.", ephemeral=True)
+# ---------------- DM Owner if Allowed ----------------
+async def dm_owner_if_allowed(guild: discord.Guild, key: str, message: str):
+    """
+    Sends a DM to the guild owner if the guild's dm_config allows it.
+    key: the config key in cfg["dm_config"] (e.g., "config_change")
+    message: the text to send
+    """
     cfg = ensure_guild_cfg(guild.id)
-    if key not in cfg.get("dm_config", {}):
-        return await respond(f"Unknown key. Options: {', '.join(cfg.get('dm_config',{}).keys())}", ephemeral=True)
-    cfg["dm_config"][key] = value
-    save_all(GLOBAL_CFG)
-    await respond(f"✅ Owner DM preference `{key}` set to `{value}`", ephemeral=True)
+    if not cfg.get("dm_config", {}).get(key, False):
+        return  # DM not allowed
 
+    owner = guild.owner
+    if not owner:
+        return
+
+    try:
+        await owner.send(message)
+    except Exception:
+        pass
 
 # ---------------- Violation logging & enforcement ----------------
 def record_violation(guild_id: int, user_id: int, action_name: str):
@@ -490,8 +498,18 @@ async def on_member_join(member):
     if not cfg.get("enabled", True):
         return
 
-    # -------------------- Auto-kick unverified or blacklisted bots --------------------
+    # -------------------- Auto-kick unverified bots --------------------
     if member.bot:
+        if member.id not in cfg.get("whitelist", []) and member.id not in cfg.get("blacklist", []):
+            try:
+                await member.kick(reason="Unverified bot")
+                channel = guild.system_channel or next(iter(guild.text_channels), None)
+                if channel:
+                    await channel.send(f"⚠️ Kicked unverified bot: {member}")
+            except Exception as e:
+                print(f"Failed to kick unverified bot {member}: {e}")
+            return  # exit early for bots
+
         # Kick if bot is blacklisted
         if member.id in cfg.get("blacklist", []):
             try:
@@ -529,6 +547,7 @@ async def on_member_join(member):
             except Exception:
                 pass
         await dm_owner_if_allowed(guild, "auto_lockdown", f"Auto-lockdown activated: {len(rt)} joins in {window}s.")
+
 
 # ---------------- Commands (slash commands reworked) ----------------
 
@@ -683,9 +702,9 @@ class AdminCog(commands.Cog):
         if member and member.bot:
             try:
                 await member.kick(reason="Blacklisted bot")
-                await interaction.followup.send(f"⚠️ Kicked blacklisted bot: {member}", ephemeral=True)
+                await interaction.followup.send(f"⚠️ Kicked blacklisted member: {member}", ephemeral=True)
             except:
-                await interaction.followup.send(f"❌ Failed to kick blacklisted bot: {member}", ephemeral=True)
+                await interaction.followup.send(f"❌ Failed to kick blacklisted member: {member}", ephemeral=True)
 
     @app_commands.command(name="blacklist_remove", description="Remove ID from blacklist")
     @app_commands.describe(id="User ID to remove from blacklist")
