@@ -516,154 +516,91 @@ async def on_member_join(member):
                 pass
         await dm_owner_if_allowed(guild, "auto_lockdown", f"Auto-lockdown activated: {len(rt)} joins in {window}s.")
 
-# ---------------- Commands (prefix + slash equivalents) ----------------
+# ---------------- Commands (slash commands reworked) ----------------
 
 class AdminCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     # ---------- Security Dashboard ----------
-    @commands.command(name="security")
-    @admin_check()
-    @commands.guild_only()
-    async def security_prefix(self, ctx):
-        cfg = ensure_guild_cfg(ctx.guild.id)
+    @app_commands.command(name="security", description="Show security dashboard")
+    @app_commands.default_permissions(administrator=True)
+    async def security(self, interaction: discord.Interaction):
+        cfg = ensure_guild_cfg(interaction.guild.id)
         embed = discord.Embed(
-            title=f"Security Dashboard — {ctx.guild.name}",
+            title=f"Security Dashboard — {interaction.guild.name}",
             color=discord.Color.blue(),
             timestamp=datetime.utcnow()
         )
         embed.add_field(name="Enabled", value=str(cfg.get("enabled", True)), inline=True)
         embed.add_field(name="Lockdown", value=str(cfg.get("lockdown", False)), inline=True)
-        th_lines = [f"{k}: {v.get('limit')} per {v.get('time')}s → {v.get('punishment')}" for k, v in cfg.get("thresholds", {}).items()]
+        th_lines = [f"{k}: {v.get('limit')} per {v.get('time')}s → {v.get('punishment')}" 
+                    for k, v in cfg.get("thresholds", {}).items()]
         embed.add_field(name="Thresholds", value="\n".join(th_lines) or "None", inline=False)
         embed.add_field(name="Whitelist (IDs)", value=", ".join(str(x) for x in cfg.get("whitelist", [])) or "None", inline=False)
         embed.add_field(name="Blacklist (IDs)", value=", ".join(str(x) for x in cfg.get("blacklist", [])) or "None", inline=False)
-        await ctx.reply(embed=embed)
-
-    @app_commands.command(name="security", description="Show security dashboard")
-    @app_commands.default_permissions(administrator=True)
-    async def security_slash(self, interaction: discord.Interaction):
-        await self.security_prefix(interaction)  # reuse prefix logic with interaction conversion
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
     # ---------- Enable/Disable Anti-Nuke ----------
-    @commands.command(name="antinuke")
-    @admin_check()
-    @commands.guild_only()
-    async def antinuke_prefix(self, ctx, mode: str):
-        cfg = ensure_guild_cfg(ctx.guild.id)
-        mode = mode.lower()
-        if mode not in ("enable", "disable"):
-            return await ctx.reply("Usage: !antinuke enable | disable")
+    @app_commands.command(name="antinuke", description="Enable or disable anti-nuke")
+    @app_commands.describe(mode="Choose enable or disable")
+    @app_commands.choices(mode=[
+        app_commands.Choice(name="enable", value="enable"),
+        app_commands.Choice(name="disable", value="disable")
+    ])
+    @app_commands.default_permissions(administrator=True)
+    async def antinuke(self, interaction: discord.Interaction, mode: str):
+        cfg = ensure_guild_cfg(interaction.guild.id)
         cfg["enabled"] = mode == "enable"
         save_all(GLOBAL_CFG)
         msg = "✅ Anti-Nuke enabled" if cfg["enabled"] else "❌ Anti-Nuke disabled"
-        await ctx.reply(msg)
-        await dm_owner_if_allowed(ctx.guild, "config_change", f"Anti-Nuke {mode}d by {ctx.author} ({ctx.author.id})")
-
-    @app_commands.command(name="antinuke", description="Enable or disable anti-nuke")
-    @app_commands.describe(mode="enable or disable")
-    @app_commands.default_permissions(administrator=True)
-    async def antinuke_slash(self, interaction: discord.Interaction, mode: str):
-        await self.antinuke_prefix(interaction, mode)  # reuse prefix logic
+        await interaction.response.send_message(msg)
+        await dm_owner_if_allowed(interaction.guild, "config_change", f"Anti-Nuke {mode}d by {interaction.user} ({interaction.user.id})")
 
     # ---------- Set Threshold ----------
-    @commands.command(name="setthreshold")
-    @admin_check()
-    @commands.guild_only()
-    async def setthreshold_prefix(self, ctx, action: str, limit: int, time: int, punishment: str):
-        punishment = punishment.lower()
-        if punishment not in ("ban", "kick", "remove_roles", "lockdown", "none"):
-            return await ctx.reply("Invalid punishment. Choose: ban, kick, remove_roles, lockdown, none")
-        cfg = ensure_guild_cfg(ctx.guild.id)
+    @app_commands.command(name="setthreshold", description="Set threshold for an action")
+    @app_commands.describe(action="Action name", limit="Limit count", time="Window seconds", punishment="Type of punishment")
+    @app_commands.choices(punishment=[
+        app_commands.Choice(name="ban", value="ban"),
+        app_commands.Choice(name="kick", value="kick"),
+        app_commands.Choice(name="remove_roles", value="remove_roles"),
+        app_commands.Choice(name="lockdown", value="lockdown"),
+        app_commands.Choice(name="none", value="none")
+    ])
+    @app_commands.default_permissions(administrator=True)
+    async def setthreshold(self, interaction: discord.Interaction, action: str, limit: int, time: int, punishment: str):
+        cfg = ensure_guild_cfg(interaction.guild.id)
         cfg.setdefault("thresholds", {})[action] = {"limit": limit, "time": time, "punishment": punishment}
         save_all(GLOBAL_CFG)
-        await ctx.reply(f"✅ Threshold set for `{action}`: {limit} per {time}s → {punishment}")
-        await dm_owner_if_allowed(ctx.guild, "config_change", f"Threshold changed by {ctx.author}: {action} → {limit}/{time}s → {punishment}")
-
-    @app_commands.command(name="setthreshold", description="Set threshold for an action")
-    @app_commands.describe(action="Action name", limit="Limit count", time="Window seconds", punishment="ban|kick|remove_roles|lockdown|none")
-    @app_commands.default_permissions(administrator=True)
-    async def setthreshold_slash(self, interaction: discord.Interaction, action: str, limit: int, time: int, punishment: str):
-        await self.setthreshold_prefix(interaction, action, limit, time, punishment)  # reuse prefix logic
+        await interaction.response.send_message(f"✅ Threshold set for `{action}`: {limit} per {time}s → {punishment}")
+        await dm_owner_if_allowed(interaction.guild, "config_change", f"Threshold changed by {interaction.user}: {action} → {limit}/{time}s → {punishment}")
 
     # ---------- Whitelist ----------
-    @commands.group(name="whitelist", invoke_without_command=True)
-    @admin_check()
-    @commands.guild_only()
-    async def whitelist_prefix(self, ctx):
-        cfg = ensure_guild_cfg(ctx.guild.id)
-        await ctx.reply("Whitelist: " + (", ".join(str(x) for x in cfg.get("whitelist", [])) or "None"))
+    @app_commands.command(name="whitelist", description="Show or manage whitelist IDs")
+    @app_commands.default_permissions(administrator=True)
+    async def whitelist(self, interaction: discord.Interaction):
+        cfg = ensure_guild_cfg(interaction.guild.id)
+        await interaction.response.send_message("Whitelist: " + (", ".join(str(x) for x in cfg.get("whitelist", [])) or "None"), ephemeral=True)
 
-    @whitelist_prefix.command(name="add")
-    @admin_check()
-    async def whitelist_add_prefix(self, ctx, id: int):
-        cfg = ensure_guild_cfg(ctx.guild.id)
+    @app_commands.command(name="whitelist_add", description="Add ID to whitelist")
+    @app_commands.describe(id="User or role ID to whitelist")
+    @app_commands.default_permissions(administrator=True)
+    async def whitelist_add(self, interaction: discord.Interaction, id: int):
+        cfg = ensure_guild_cfg(interaction.guild.id)
         if id in cfg.get("whitelist", []):
-            return await ctx.reply("ID already whitelisted.")
+            return await interaction.response.send_message("ID already whitelisted.", ephemeral=True)
         cfg["whitelist"].append(id)
         save_all(GLOBAL_CFG)
-        await ctx.reply(f"✅ Added `{id}` to whitelist")
-        await dm_owner_if_allowed(ctx.guild, "whitelist_change", f"{ctx.author} added {id} to whitelist")
+        await interaction.response.send_message(f"✅ Added `{id}` to whitelist", ephemeral=True)
+        await dm_owner_if_allowed(interaction.guild, "whitelist_change", f"{interaction.user} added {id} to whitelist")
 
-    @whitelist_prefix.command(name="remove")
-    @admin_check()
-    async def whitelist_remove_prefix(self, ctx, id: int):
-        cfg = ensure_guild_cfg(ctx.guild.id)
+    @app_commands.command(name="whitelist_remove", description="Remove ID from whitelist")
+    @app_commands.describe(id="User or role ID to remove")
+    @app_commands.default_permissions(administrator=True)
+    async def whitelist_remove(self, interaction: discord.Interaction, id: int):
+        cfg = ensure_guild_cfg(interaction.guild.id)
         if id not in cfg.get("whitelist", []):
-            return await ctx.reply("ID not in whitelist.")
-        cfg["whitelist"].remove(id)
-        save_all(GLOBAL_CFG)
-        await ctx.reply(f"❌ Removed `{id}` from whitelist")
-        await dm_owner_if_allowed(ctx.guild, "whitelist_change", f"{ctx.author} removed {id} from whitelist")
-
-    # ---------- Blacklist ----------
-    @commands.group(name="blacklist", invoke_without_command=True)
-    @admin_check()
-    @commands.guild_only()
-    async def blacklist_prefix(self, ctx):
-        cfg = ensure_guild_cfg(ctx.guild.id)
-        await ctx.reply("Blacklist: " + (", ".join(str(x) for x in cfg.get("blacklist", [])) or "None"))
-
-    @blacklist_prefix.command(name="add")
-    @admin_check()
-    async def blacklist_add_prefix(self, ctx, id: int):
-        cfg = ensure_guild_cfg(ctx.guild.id)
-        if id in cfg.get("blacklist", []):
-            return await ctx.reply("ID already blacklisted.")
-        cfg["blacklist"].append(id)
-        save_all(GLOBAL_CFG)
-        await ctx.reply(f"✅ Added `{id}` to blacklist")
-        await dm_owner_if_allowed(ctx.guild, "blacklist_change", f"{ctx.author} added {id} to blacklist")
-
-    @blacklist_prefix.command(name="remove")
-    @admin_check()
-    async def blacklist_remove_prefix(self, ctx, id: int):
-        cfg = ensure_guild_cfg(ctx.guild.id)
-        if id not in cfg.get("blacklist", []):
-            return await ctx.reply("ID not in blacklist.")
-        cfg["blacklist"].remove(id)
-        save_all(GLOBAL_CFG)
-        await ctx.reply(f"❌ Removed `{id}` from blacklist")
-        await dm_owner_if_allowed(ctx.guild, "blacklist_change", f"{ctx.author} removed {id} from blacklist")
-
-    # ---------- DM Config (Owner only) ----------
-    @commands.command(name="dmconfig")
-    @commands.guild_only()
-    async def dmconfig_prefix(self, ctx, key: str, value: bool):
-        if ctx.author.id != ctx.guild.owner_id:
-            return await ctx.reply("❌ Only the server owner can change DM preferences.")
-        cfg = ensure_guild_cfg(ctx.guild.id)
-        if key not in cfg.get("dm_config", {}):
-            return await ctx.reply(f"Unknown key. Options: {', '.join(cfg.get('dm_config',{}).keys())}")
-        cfg["dm_config"][key] = value
-        save_all(GLOBAL_CFG)
-        await ctx.reply(f"✅ Owner DM preference `{key}` set to `{value}`")
-
-    @app_commands.command(name="dmconfig", description="Configure which events DM the server owner (owner only)")
-    @app_commands.describe(key="dm config key", value="true or false")
-    async def dmconfig_slash(self, interaction: discord.Interaction, key: str, value: bool):
-        await self.dmconfig_prefix(interaction, key, value)
+            return await interaction
 
 # ---------------- Setup cogs & background prune task ----------------
 
