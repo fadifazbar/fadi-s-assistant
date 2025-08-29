@@ -242,32 +242,57 @@ class Warnings(commands.Cog):
             emb.add_field(name="Duration", value=entry['duration'], inline=True)
         await ctx.send(embed=emb)
 
-    # ---------------- Timeout Checker ----------------
+    # ---------------- Resume & Timeout Checker ----------------
     @tasks.loop(minutes=1)
     async def check_timeouts(self):
         now = datetime.utcnow()
         expired = []
+
         for user_id, info in list(data["timeouts"].items()):
             try:
-                until = datetime.fromisoformat(info["until"])
-            except Exception:
-                expired.append(user_id)
-                continue
-            guild = self.bot.get_guild(int(info["guild"]))
-            member = guild.get_member(int(user_id)) if guild else None
+                until_str = info.get("until")
+                guild_id = info.get("guild")
+                if not until_str or not guild_id:
+                    # Invalid entry, remove it
+                    expired.append(user_id)
+                    continue
 
-            if until <= now:
-                if member:
+                until = datetime.fromisoformat(until_str)
+                guild = self.bot.get_guild(int(guild_id))
+                member = guild.get_member(int(user_id)) if guild else None
+
+                # Resume timeout if missing (bot restarted)
+                if member and not member.is_timed_out() and until > now:
                     try:
-                        await member.edit(timed_out_until=None, reason="Timeout expired")
+                        await member.edit(timed_out_until=until, reason="Resuming active timeout after bot restart")
                     except Exception:
                         pass
+
+                # Check if timeout expired
+                if until <= now:
+                    if member:
+                        try:
+                            await member.edit(timed_out_until=None, reason="Timeout expired")
+                        except Exception:
+                            pass
+                    expired.append(user_id)
+
+            except Exception:
+                # Corrupted entry, remove it
                 expired.append(user_id)
 
+        # Remove expired or invalid entries
         for uid in expired:
             data["timeouts"].pop(uid, None)
+
         if expired:
             save_data(data)
+
+    @check_timeouts.before_loop
+    async def before_check_timeouts(self):
+        # Wait until bot is ready
+        await self.bot.wait_until_ready()
+
 
 async def setup(bot):
     await bot.add_cog(Warnings(bot))
