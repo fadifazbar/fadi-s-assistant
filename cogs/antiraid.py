@@ -4,20 +4,25 @@ from discord import app_commands
 import json, os, asyncio
 from datetime import datetime, timedelta
 
-DATA_FILE = "warns.json"
+import os, json
+
+DATA_FILE = "/data/warns.json"  # Railway persistent volume
 
 def load_data():
     if not os.path.exists(DATA_FILE):
+        os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
         with open(DATA_FILE, "w") as f:
             json.dump({"warnings": {}, "punishments": {}, "timeouts": {}}, f)
     with open(DATA_FILE, "r") as f:
         return json.load(f)
 
 def save_data(data):
+    os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
 data = load_data()
+
 
 class Warnings(commands.Cog):
     def __init__(self, bot):
@@ -152,7 +157,7 @@ class Warnings(commands.Cog):
             )
         await ctx.send(embed=emb)
 
-    @warnings.command(name="clear", description="Clear a member's specific warning by ID")
+    @warnings.command(name="clearwarn", description="Clear a member's specific warning by ID")
     @commands.has_permissions(manage_messages=True)
     async def clear_warnings(self, ctx, member: discord.Member, warn_id: int):
         guild_id = str(ctx.guild.id)
