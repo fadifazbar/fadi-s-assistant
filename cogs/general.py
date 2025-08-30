@@ -9,13 +9,13 @@ import pilmoji
 import asyncio
 import os
 import random
-import difflib
 import aiohttp
 import io
 import textwrap
 from datetime import datetime
 from config import Config
 from googletrans import Translator, LANGUAGES
+from difflib import get_close_matches
 
 translator = Translator()
 
@@ -27,8 +27,14 @@ class General(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-@commands.command(name="translate", aliases=["tr"])
+ @commands.command(name="translate", aliases=["tr"])
     async def translate(self, ctx, *, lang=None):
+        """
+        Translate the message you replied to.
+        Defaults to English if no language is provided.
+        Usage: Reply to a message and type $tr or $translate
+               Optionally: $tr <language> or $translate <language>
+        """
         if ctx.message.reference is None:
             await ctx.reply("❌ You need to reply to a message to translate it!", mention_author=True)
             return
@@ -39,24 +45,17 @@ class General(commands.Cog):
                 lang_code = "en"
             else:
                 lang = lang.lower()
-
-                # Try direct match first
                 if lang in LANGUAGES:
-                    lang_code = lang
+                    lang_code = lang  # exact code
                 else:
-                    # Build list of possible names (like "english", "french", "chinese")
-                    possible_names = list(LANGUAGES.values())
-
                     # Fuzzy match against language names
-                    closest = difflib.get_close_matches(lang, possible_names, n=1, cutoff=0.5)
-
+                    names = list(LANGUAGES.values())
+                    closest = get_close_matches(lang, names, n=1, cutoff=0.4)
                     if closest:
-                        # Find code for that language name
-                        lang_code = next(
-                            code for code, name in LANGUAGES.items() if name.lower() == closest[0].lower()
-                        )
+                        # Find the code for the closest match
+                        lang_code = next((code for code, name in LANGUAGES.items() if name == closest[0]), "en")
                     else:
-                        lang_code = "en"  # default if nothing matches
+                        lang_code = "en"  # default to English if nothing close
 
             # Fetch the replied-to message
             replied_msg = await ctx.channel.fetch_message(ctx.message.reference.message_id)
