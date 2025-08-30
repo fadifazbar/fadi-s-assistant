@@ -14,6 +14,9 @@ import io
 import textwrap
 from datetime import datetime
 from config import Config
+from googletrans import Translator, LANGUAGES
+
+translator = Translator()
 
 logger = logging.getLogger(__name__)
 
@@ -375,6 +378,62 @@ class General(commands.Cog):
 
         embed = self.build_userinfo_embed(member, interaction.user)
         await interaction.response.send_message(embed=embed)
+
+@bot.command(name="translate", aliases=["tr"])
+async def translate(ctx, *, lang=None):
+    """
+    Translate the message you replied to.
+    Usage: Reply to a message and type $tr or $translate
+           Optionally: $tr <language> or $translate <language>
+    Example: $tr en  OR $translate spanish
+    """
+    if ctx.message.reference is None:
+        await ctx.reply("❌ You need to reply to a message to translate it!", mention_author=True)
+        return
+
+    try:
+        # Default to English if no language is given
+        if not lang:
+            lang_code = "en"
+        else:
+            lang = lang.lower()
+            if lang in LANGUAGES:
+                lang_code = lang  # It's already a code like 'en', 'es'
+            else:
+                # Try to find code by full language name
+                lang_code = None
+                for code, name in LANGUAGES.items():
+                    if name.lower() == lang:
+                        lang_code = code
+                        break
+                if lang_code is None:
+                    lang_code = "en"  # default to English if unknown
+
+        # Get the replied-to message
+        replied_msg = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+        original_text = replied_msg.content
+
+        if not original_text:
+            await ctx.reply("❌ The replied message has no text to translate.", mention_author=True)
+            return
+
+        # Translate text
+        translated = translator.translate(original_text, dest=lang_code)
+
+        # Create embed
+        embed = discord.Embed(
+            title=f"🌍 Translation ({translated.src} → {lang_code})",
+            color=discord.Color.blurple()
+        )
+        embed.add_field(name="Original", value=original_text, inline=False)
+        embed.add_field(name="Translated", value=translated.text, inline=False)
+        embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
+
+        # Reply with embed
+        await ctx.reply(embed=embed, mention_author=True)
+
+    except Exception as e:
+        await ctx.reply(f"❌ Error: {e}", mention_author=True)
 
 
 
