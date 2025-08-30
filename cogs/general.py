@@ -379,7 +379,7 @@ class General(commands.Cog):
         embed = self.build_userinfo_embed(member, interaction.user)
         await interaction.response.send_message(embed=embed)
 
-@bot.command(name="translate", aliases=["tr"])
+@commands.command(name="translate", aliases=["tr"])
 async def translate(ctx, *, lang=None):
     """
     Translate the message you replied to.
