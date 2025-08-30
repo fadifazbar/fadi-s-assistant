@@ -27,7 +27,7 @@ class General(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
- @commands.command(name="translate", aliases=["tr"])
+   @commands.command(name="translate", aliases=["tr"])
     async def translate(self, ctx, *, lang=None):
         """
         Translate the message you replied to.
@@ -53,7 +53,9 @@ class General(commands.Cog):
                     closest = get_close_matches(lang, names, n=1, cutoff=0.4)
                     if closest:
                         # Find the code for the closest match
-                        lang_code = next((code for code, name in LANGUAGES.items() if name == closest[0]), "en")
+                        lang_code = next(
+                            (code for code, name in LANGUAGES.items() if name == closest[0]), "en"
+                        )
                     else:
                         lang_code = "en"  # default to English if nothing close
 
@@ -85,7 +87,6 @@ class General(commands.Cog):
         except Exception as e:
             logger.error(f"Translate command error: {e}")
             await ctx.reply(f"❌ Error: {e}", mention_author=True)
-
 
     # Say command (Prefix)
     @commands.command(name="say")
