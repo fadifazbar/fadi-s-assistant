@@ -27,69 +27,65 @@ class General(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-
-
-    
-
 @commands.command(name="translate", aliases=["tr"])
-async def translate(self, ctx, *, lang=None):
-    if ctx.message.reference is None:
-        await ctx.reply("❌ You need to reply to a message to translate it!", mention_author=True)
-        return
-
-    try:
-        # Determine target language
-        if not lang:
-            lang_code = "en"
-        else:
-            lang = lang.lower()
-
-            # Try direct match first
-            if lang in LANGUAGES:
-                lang_code = lang
-            else:
-                # Build list of possible names (like "english", "french", "chinese")
-                possible_names = list(LANGUAGES.values())
-
-                # Fuzzy match against language names
-                closest = difflib.get_close_matches(lang, possible_names, n=1, cutoff=0.5)
-
-                if closest:
-                    # Find code for that language name
-                    lang_code = next(
-                        code for code, name in LANGUAGES.items() if name.lower() == closest[0].lower()
-                    )
-                else:
-                    lang_code = "en"  # default if nothing matches
-
-        # Fetch the replied-to message
-        replied_msg = await ctx.channel.fetch_message(ctx.message.reference.message_id)
-        original_text = replied_msg.content
-
-        if not original_text:
-            await ctx.reply("❌ The replied message has no text to translate.", mention_author=True)
+    async def translate(self, ctx, *, lang=None):
+        if ctx.message.reference is None:
+            await ctx.reply("❌ You need to reply to a message to translate it!", mention_author=True)
             return
 
-        # Translate the text
-        translated = translator.translate(original_text, dest=lang_code)
+        try:
+            # Determine target language
+            if not lang:
+                lang_code = "en"
+            else:
+                lang = lang.lower()
 
-        # Build embed
-        embed = discord.Embed(
-            title=f"🌍 Translation ({translated.src} → {lang_code})",
-            color=discord.Color.blurple()
-        )
-        embed.add_field(name="Original", value=original_text, inline=False)
-        embed.add_field(name="Translated", value=translated.text, inline=False)
-        embed.set_footer(
-            text=f"Requested by {ctx.author}",
-            icon_url=ctx.author.avatar.url if ctx.author.avatar else None
-        )
+                # Try direct match first
+                if lang in LANGUAGES:
+                    lang_code = lang
+                else:
+                    # Build list of possible names (like "english", "french", "chinese")
+                    possible_names = list(LANGUAGES.values())
 
-        await ctx.reply(embed=embed, mention_author=True)
+                    # Fuzzy match against language names
+                    closest = difflib.get_close_matches(lang, possible_names, n=1, cutoff=0.5)
 
-    except Exception as e:
-        logger.error(f"Translate command error: {e}")
-        await ctx.reply(f"❌ Error: {e}", mention_author=True)
+                    if closest:
+                        # Find code for that language name
+                        lang_code = next(
+                            code for code, name in LANGUAGES.items() if name.lower() == closest[0].lower()
+                        )
+                    else:
+                        lang_code = "en"  # default if nothing matches
+
+            # Fetch the replied-to message
+            replied_msg = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+            original_text = replied_msg.content
+
+            if not original_text:
+                await ctx.reply("❌ The replied message has no text to translate.", mention_author=True)
+                return
+
+            # Translate the text
+            translated = translator.translate(original_text, dest=lang_code)
+
+            # Build embed
+            embed = discord.Embed(
+                title=f"🌍 Translation ({translated.src} → {lang_code})",
+                color=discord.Color.blurple()
+            )
+            embed.add_field(name="Original", value=original_text, inline=False)
+            embed.add_field(name="Translated", value=translated.text, inline=False)
+            embed.set_footer(
+                text=f"Requested by {ctx.author}",
+                icon_url=ctx.author.avatar.url if ctx.author.avatar else None
+            )
+
+            await ctx.reply(embed=embed, mention_author=True)
+
+        except Exception as e:
+            logger.error(f"Translate command error: {e}")
+            await ctx.reply(f"❌ Error: {e}", mention_author=True)
 
 
     # Say command (Prefix)
