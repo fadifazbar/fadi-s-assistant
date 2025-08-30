@@ -126,17 +126,9 @@ class Warnings(commands.Cog):
         await ctx.send(embed=emb)
         await self.dm_warned_user(member, ctx.guild, warn_number, reason, action_taken_text)
 
-    # ---------------- Warnings Command Group ----------------
-    @commands.hybrid_group(name="warnings", description="Manage warnings")
-    async def warnings(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send(embed=discord.Embed(
-                description="Use `warnings list <member>` or `warnings clear <member> <warn_id>`",
-                color=discord.Color.blurple())
-            )
-
-    @warnings.command(name="list", description="List warnings for a member")
-    async def list_warnings(self, ctx, member: discord.Member):
+    # ---------------- Warnings Command ----------------
+    @commands.hybrid_command(name="warnings", description="List warnings for a member")
+    async def warnings(self, ctx, member: discord.Member):
         guild_id = str(ctx.guild.id)
         user_id = str(member.id)
 
@@ -157,9 +149,10 @@ class Warnings(commands.Cog):
             )
         await ctx.send(embed=emb)
 
-    @warnings.command(name="clearwarn", description="Clear a member's specific warning by ID")
+    # ---------------- ClearWarn Command ----------------
+    @commands.hybrid_command(name="clearwarn", description="Clear a member's specific warning by ID")
     @commands.has_permissions(manage_messages=True)
-    async def clear_warnings(self, ctx, member: discord.Member, warn_id: int):
+    async def clearwarn(self, ctx, member: discord.Member, warn_id: int):
         guild_id = str(ctx.guild.id)
         user_id = str(member.id)
 
@@ -200,6 +193,7 @@ class Warnings(commands.Cog):
         if undo_note:
             emb.add_field(name="Action", value=undo_note.lstrip(" • "), inline=False)
         await ctx.send(embed=emb)
+
 
     # ---------------- Warn Punishment ----------------
     @commands.hybrid_command(name="warnpunishment", description="Configure punishment for a warn count")
