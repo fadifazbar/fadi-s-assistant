@@ -199,38 +199,64 @@ class Moderation(commands.Cog):
             logger.error(f"Error kicking user: {e}")
             await self._send_response(ctx_or_interaction, "❌ An error occurred while kicking the member!")
     
-    # Ban command (Prefix)
+
+# Ban command (Prefix)
     @commands.command(name="ban")
     @has_mod_permissions()
     @commands.guild_only()
-    async def ban_prefix(self, ctx, member: discord.Member, *, reason: str = "No reason provided"):
-        """Ban a member from the server"""
+    async def ban_prefix(self, ctx, target: Union[discord.Member, discord.User, int], *, reason: str = "No reason provided"):
+        """Ban a member or user ID from the server"""
+        member = await self._resolve_target(target)
+        if not member:
+            return await ctx.send("❌ Could not find that user.")
         await self._ban_user(ctx, member, reason, ctx.author)
     
     # Ban command (Slash)
-    @discord.app_commands.command(name="ban", description="Ban a member from the server")
+    @discord.app_commands.command(name="ban", description="Ban a member or user ID from the server")
     @discord.app_commands.describe(
-        member="The member to ban",
+        user="The member or user ID to ban",
         reason="Reason for banning the member"
     )
     @discord.app_commands.default_permissions(ban_members=True)
-    async def ban_slash(self, interaction: discord.Interaction, member: discord.Member, reason: str = "No reason provided"):
-        """Ban a member from the server (slash command)"""
+    async def ban_slash(self, interaction: discord.Interaction, user: str, reason: str = "No reason provided"):
+        """Ban a member or user ID from the server (slash command)"""
+        # user could be mention, raw ID, or already a resolved member
+        target = None
+        if user.isdigit():
+            target = int(user)
+        else:
+            try:
+                target = await commands.MemberConverter().convert(interaction, user)
+            except:
+                try:
+                    target = await commands.UserConverter().convert(interaction, user)
+                except:
+                    target = None
+
+        member = await self._resolve_target(target)
+        if not member:
+            return await interaction.response.send_message("❌ Could not find that user.", ephemeral=True)
         await self._ban_user(interaction, member, reason, interaction.user)
     
-    async def _ban_user(self, ctx_or_interaction, member: discord.Member, reason: str, moderator):
+    async def _resolve_target(self, target: Union[discord.Member, discord.User, int]) -> Union[discord.Member, discord.User, None]:
+        if isinstance(target, (discord.Member, discord.User)):
+            return target
+        try:
+            return await self.bot.fetch_user(int(target))
+        except Exception:
+            return None
+    
+    async def _ban_user(self, ctx_or_interaction, member: Union[discord.Member, discord.User], reason: str, moderator):
         """Internal method to handle ban functionality"""
-        # Permission checks
-        can_mod, mod_reason = await can_moderate_target(moderator, member)
-        if not can_mod:
-            await self._send_response(ctx_or_interaction, f"❌ {mod_reason}")
-            return
-        
-        can_bot_mod, bot_reason = await can_bot_moderate_target(ctx_or_interaction.guild.me, member)
-        if not can_bot_mod:
-            await self._send_response(ctx_or_interaction, f"❌ {bot_reason}")
-            return
-        
+        if isinstance(member, discord.Member):
+            can_mod, mod_reason = await can_moderate_target(moderator, member)
+            if not can_mod:
+                return await self._send_response(ctx_or_interaction, f"❌ {mod_reason}")
+    
+            can_bot_mod, bot_reason = await can_bot_moderate_target(ctx_or_interaction.guild.me, member)
+            if not can_bot_mod:
+                return await self._send_response(ctx_or_interaction, f"❌ {bot_reason}")
+    
         try:
             # Send DM to user before banning
             try:
@@ -243,27 +269,35 @@ class Moderation(commands.Cog):
                 await member.send(embed=embed)
             except:
                 pass  # Ignore if DM fails
-            
+    
             # Ban the member
-            await member.ban(reason=f"Banned by {moderator}: {reason}", delete_message_days=1)
-            
+            await ctx_or_interaction.guild.ban(
+                member,
+                reason=f"Banned by {moderator}: {reason}",
+                delete_message_days=1
+            )
+    
             # Log the action
             logger.info(f"User {member} banned by {moderator} for: {reason}")
-            
+    
             # Send confirmation
             embed = discord.Embed(
                 title="🔨 Member Banned",
-                description=f"**Member:** {member.mention}\n**Reason:** {reason}\n**Moderator:** {moderator.mention}",
+                description=f"**User:** {getattr(member, 'mention', str(member))}\n"
+                            f"**Reason:** {reason}\n"
+                            f"**Moderator:** {moderator.mention}",
                 color=Config.COLORS["moderation"],
                 timestamp=datetime.utcnow()
             )
             await self._send_response(ctx_or_interaction, embed=embed)
-            
+    
         except discord.Forbidden:
-            await self._send_response(ctx_or_interaction, "❌ I don't have permission to ban this member!")
+            await self._send_response(ctx_or_interaction, "❌ I don't have permission to ban this user!")
         except Exception as e:
             logger.error(f"Error banning user: {e}")
-            await self._send_response(ctx_or_interaction, "❌ An error occurred while banning the member!")
+            await self._send_response(ctx_or_interaction, "❌ An error occurred while banning the user!")
+
+
 
     @commands.command(name="vcmute")
     @commands.has_permissions(mute_members=True)
