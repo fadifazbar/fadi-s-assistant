@@ -27,6 +27,17 @@ class General(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        # Ignore messages from the bot itself
+        if message.author.bot:
+            return  
+
+        # Check if the bot was mentioned
+        if self.bot.user.mentioned_in(message):
+            await message.reply(f"Hello {message.author.mention}, my prefix is `{Config.PREFIX}`")
+
+
     @commands.command(name="translate", aliases=["tr"])
     async def translate(self, ctx, *, lang=None):
         """
