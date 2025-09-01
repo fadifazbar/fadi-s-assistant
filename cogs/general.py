@@ -33,9 +33,11 @@ class General(commands.Cog):
         if message.author.bot:
             return  
 
-        # Check if the bot was mentioned
-        if self.bot.user.mentioned_in(message):
-            await message.reply(f"Hello {message.author.mention}, my prefix is `{Config.PREFIX}`")
+        # Check if the bot was directly mentioned (not in a reply)
+        if self.bot.user.mentioned_in(message) and not message.reference:
+            await message.reply(
+                f"{message.author.mention}, you can use my commands with **/** or **`{Config.PREFIX}`**"
+            )
 
 
     @commands.command(name="translate", aliases=["tr"])
