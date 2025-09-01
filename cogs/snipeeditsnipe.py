@@ -99,12 +99,24 @@ class Snipe(commands.Cog):
 
 # ---------- Buttons ----------
 class SnipeView(discord.ui.View):
-    def __init__(self, cog, channel_id, mode="deleted"):
+    def __init__(self, ctx, snipes, edited_snipes):
         super().__init__(timeout=60)
-        self.cog = cog
-        self.channel_id = channel_id
-        self.mode = mode  # "deleted" or "edited"
-        self.current_index = 0
+        self.ctx = ctx
+        self.snipes = snipes
+        self.edited_snipes = edited_snipes
+        self.index = 0
+        self.showing_deleted = True
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Only allow the command invoker to use the buttons"""
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message(
+                "❌ You can’t control this menu (only the command user can).", 
+                ephemeral=True
+            )
+            return False
+        return True
+
 
     @discord.ui.button(label="◀️", style=discord.ButtonStyle.secondary)
     async def previous_button(self, interaction: discord.Interaction, button: discord.ui.Button):
