@@ -63,6 +63,20 @@ class Warnings(commands.Cog):
     @commands.hybrid_command(name="warn", description="Warn a member")
     @commands.has_permissions(manage_messages=True)
     async def warn(self, ctx, member: discord.Member, *, reason: str = "No reason provided"):
+        # ---------------- Role hierarchy checks ----------------
+        if member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+            return await ctx.send(embed=discord.Embed(
+                description=f"❌ You cannot warn {member.mention} because they have an equal or higher role than you.",
+                color=discord.Color.red())
+            )
+
+        if member.top_role >= ctx.guild.me.top_role:
+            return await ctx.send(embed=discord.Embed(
+                description=f"❌ I cannot warn {member.mention} because their top role is higher than or equal to my role.",
+                color=discord.Color.red())
+            )
+
+        # ---------------- Normal warn logic ----------------
         guild_id = str(ctx.guild.id)
         user_id = str(member.id)
 
@@ -86,7 +100,7 @@ class Warnings(commands.Cog):
         emb.add_field(name="Reason", value=reason, inline=False)
         emb.add_field(name="Warned by", value=f"{ctx.author.mention} (`{ctx.author.id}`)", inline=False)
 
-        # Check punishments
+        # ---------------- Punishment checks ----------------
         action_taken_text = None
         punishments = data["punishments"].get(guild_id, {})
         p = punishments.get(str(warn_number))
@@ -126,6 +140,7 @@ class Warnings(commands.Cog):
         await ctx.send(embed=emb)
         await self.dm_warned_user(member, ctx.guild, warn_number, reason, action_taken_text)
 
+
     # ---------------- Warnings Command ----------------
     @commands.hybrid_command(name="warnings", description="List warnings for a member")
     async def warnings(self, ctx, member: discord.Member):
@@ -150,13 +165,52 @@ class Warnings(commands.Cog):
         await ctx.send(embed=emb)
 
     # ---------------- ClearWarn Command ----------------
-    @commands.hybrid_command(name="clearwarn", description="Clear a member's specific warning by ID")
+    @commands.hybrid_command(name="clearwarn", description="Clear a member's warning(s)")
     @commands.has_permissions(manage_messages=True)
-    async def clearwarn(self, ctx, member: discord.Member, warn_id: int):
+    async def clearwarn(self, ctx, member: discord.Member, warn_id: str):
         guild_id = str(ctx.guild.id)
         user_id = str(member.id)
 
         warns = data["warnings"].get(guild_id, {}).get(user_id, [])
+        if not warns:
+            return await ctx.send(embed=discord.Embed(
+                description=f"⚠️ {member.mention} has no warnings.",
+                color=discord.Color.red())
+            )
+
+        # Case 1: Clear all warnings
+        if warn_id.lower() == "all":
+            cleared = len(warns)
+            data["warnings"][guild_id][user_id] = []
+            save_data(data)
+
+            # Lift timeout if user is currently timed out
+            undo_note = ""
+            try:
+                if member.is_timed_out():
+                    await member.edit(timed_out_until=None, reason="All warnings cleared")
+                    data["timeouts"].pop(str(member.id), None)
+                    save_data(data)
+                    undo_note = " • Removed active timeout."
+            except Exception:
+                pass
+
+            emb = discord.Embed(title="✅ All Warnings Cleared", color=discord.Color.green(), timestamp=datetime.utcnow())
+            emb.add_field(name="User", value=f"{member.mention} (`{member.id}`)", inline=True)
+            emb.add_field(name="Warnings Removed", value=str(cleared), inline=True)
+            if undo_note:
+                emb.add_field(name="Action", value=undo_note.lstrip(" • "), inline=False)
+            return await ctx.send(embed=emb)
+
+        # Case 2: Clear one warning by ID
+        try:
+            warn_id = int(warn_id)
+        except ValueError:
+            return await ctx.send(embed=discord.Embed(
+                description="⚠️ Please provide a valid warning ID or 'all'.",
+                color=discord.Color.red())
+            )
+
         found = None
         for w in list(warns):
             if w["id"] == warn_id:
@@ -170,12 +224,12 @@ class Warnings(commands.Cog):
                 color=discord.Color.red())
             )
 
-        # Reindex remaining warnings so IDs stay 1..n
+        # Reindex remaining warnings
         for i, w in enumerate(warns, start=1):
             w["id"] = i
         save_data(data)
 
-        # If user is currently timed out, lift it
+        # Lift timeout if user is currently timed out
         undo_note = ""
         try:
             if member.is_timed_out():
@@ -193,6 +247,7 @@ class Warnings(commands.Cog):
         if undo_note:
             emb.add_field(name="Action", value=undo_note.lstrip(" • "), inline=False)
         await ctx.send(embed=emb)
+
 
 
     # ---------------- Warn Punishment ----------------
