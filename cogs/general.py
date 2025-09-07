@@ -31,6 +31,12 @@ class General(commands.Cog):
     async def on_message(self, message: discord.Message):
         # Ignore messages from the bot itself
         if message.author.bot:
+            return
+
+        if message.mention_everyone:
+            return
+
+        if message.mention_here:
             return  
 
         # Check if the bot was directly mentioned (not in a reply)
