@@ -10,7 +10,7 @@ class Config:
     PREFIX = "$"
     
     # Bot settings
-    MAX_MESSAGE_DELETE = 100  # Maximum messages to delete at once
+    MAX_MESSAGE_DELETE = 1000  # Maximum messages to delete at once
     DEFAULT_MUTE_DURATION = 3600  # Default mute duration in seconds (1 hour)
     
     # Logging settings
