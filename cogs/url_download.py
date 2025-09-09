@@ -134,7 +134,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
                 ],
                 
                 # ✅ make sure cookies are used
-                "cookiefile": "cookies.json",  # ⚠️ must be Netscape TXT format, not JSON
+                "cookiefile": "cookies.txt",  # ⚠️ must be Netscape TXT format, not JSON
                 
                 "cachedir": False,
                 "extractor_args": {
