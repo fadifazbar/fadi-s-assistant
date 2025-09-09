@@ -289,7 +289,7 @@ class Warnings(commands.Cog):
         ctx: commands.Context,
         count: int,
         action: app_commands.Choice[str],
-        mute_time: Optional[str] = None
+        mute_or_ban_time: Optional[str] = None
     ):
         guild_id = str(ctx.guild.id)
 
