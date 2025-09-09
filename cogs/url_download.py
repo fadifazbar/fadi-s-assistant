@@ -126,13 +126,15 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
                 "skip_unavailable_fragments": True,
                 "ignoreerrors": True,
 
-                "postprocessors": [{
-                    "key": "FFmpegVideoConvertor",
-                    "preferedformat": "mp4"
-                ]},
+                "postprocessors": [
+                    {
+                        "key": "FFmpegVideoConvertor",
+                        "preferedformat": "mp4"
+                    }
+                ],
                 
                 # ✅ make sure cookies are used
-                "cookiefile": "cookies.json",  # <-- you said your cookies are JSON, not .txt
+                "cookiefile": "cookies.json",  # ⚠️ must be Netscape TXT format, not JSON
                 
                 "cachedir": False,
                 "extractor_args": {
@@ -142,6 +144,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
                 },
                 "progress_hooks": [ProgressHook(status_msg, loop).update],
             }
+
 
             if os.path.exists(filename):
                 os.remove(filename)
