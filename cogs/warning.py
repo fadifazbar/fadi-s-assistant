@@ -337,28 +337,30 @@ class Warnings(commands.Cog):
             try:
                 until_str = info.get("until")
                 guild_id = info.get("guild")
-                ttype = info.get("type", "timeout")  # default to timeout
-
+                ptype = info.get("type", "timeout")  # default = mute/timeout
                 if not until_str or not guild_id:
-                    # Invalid entry, remove it
                     expired.append(user_id)
                     continue
 
                 until = datetime.fromisoformat(until_str)
                 guild = self.bot.get_guild(int(guild_id))
+                if not guild:
+                    expired.append(user_id)
+                    continue
 
-                # --- Normal timeout (mute) ---
-                if ttype == "timeout":
-                    member = guild.get_member(int(user_id)) if guild else None
+                member = guild.get_member(int(user_id))
 
-                    # Resume timeout if missing (bot restarted)
+                # --- Timeout (mute) ---
+                if ptype == "timeout":
                     if member and not member.is_timed_out() and until > now:
                         try:
-                            await member.edit(timed_out_until=until, reason="Resuming active timeout after bot restart")
+                            await member.edit(
+                                timed_out_until=until,
+                                reason="Resuming active timeout after bot restart"
+                            )
                         except Exception:
                             pass
 
-                    # Check if timeout expired
                     if until <= now:
                         if member:
                             try:
@@ -367,29 +369,29 @@ class Warnings(commands.Cog):
                                 pass
                         expired.append(user_id)
 
-                # --- Tempban ---
-                elif ttype == "tempban":
-                    if until <= now and guild:
+                # --- TempBan ---
+                elif ptype == "tempban":
+                    if until <= now:
                         try:
-                            bans = await guild.bans()
-                            for entry in bans:
-                                if entry.user.id == int(user_id):
-                                    await guild.unban(entry.user, reason="Tempban expired")
+                            bans = [entry async for entry in guild.bans()]
+                            for ban_entry in bans:
+                                if ban_entry.user.id == int(user_id):
+                                    await guild.unban(ban_entry.user, reason="TempBan expired")
                                     break
                         except Exception:
                             pass
                         expired.append(user_id)
 
             except Exception:
-                # Corrupted entry, remove it
                 expired.append(user_id)
 
-        # Remove expired or invalid entries
+        # cleanup
         for uid in expired:
             data["timeouts"].pop(uid, None)
 
         if expired:
             save_data(data)
+
 
     
     @check_timeouts.before_loop
