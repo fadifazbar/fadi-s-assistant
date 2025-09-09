@@ -45,6 +45,7 @@ class Warnings(commands.Cog):
         if a in ("mute", "timeout"): return "Mute"
         if a == "kick": return "Kick"
         if a == "ban": return "Ban"
+        if a in ("tempban", "temp ban"): return "TempBan"
         return None
 
     async def dm_warned_user(self, member: discord.Member, guild: discord.Guild, warn_no: int, reason: str, action_taken: str | None):
@@ -136,7 +137,28 @@ class Warnings(commands.Cog):
                     emb.add_field(name="Punishment", value=action_taken_text, inline=False)
                 except Exception as e:
                     emb.add_field(name="Punishment Error", value=f"Failed to ban: `{e}`", inline=False)
+            elif action == "TempBan":
+                if duration:
+                    try:
+                        seconds = self.parse_time(duration)
+                        until = discord.utils.utcnow() + timedelta(seconds=seconds)
 
+                        await member.ban(reason=f"Warn #{warn_number} punishment (tempban)")
+
+                        # Save tempban info
+                        data["timeouts"][str(member.id)] = {
+                            "guild": guild_id,
+                            "until": until.isoformat(),
+                            "type": "tempban"
+                        }
+                        save_data(data)
+
+                        action_taken_text = f"Banned for {duration}"
+                        emb.add_field(name="Punishment", value=action_taken_text, inline=False)
+                    except Exception as e:
+                        emb.add_field(name="Punishment Error", value=f"Failed to tempban: `{e}`", inline=False)
+
+                        
         await ctx.send(embed=emb)
         await self.dm_warned_user(member, ctx.guild, warn_number, reason, action_taken_text)
 
@@ -253,27 +275,40 @@ class Warnings(commands.Cog):
     # ---------------- Warn Punishment ----------------
     @commands.hybrid_command(name="warnpunishment", description="Configure punishment for a warn count")
     @commands.has_permissions(administrator=True)
-    async def warnpunishment(self, ctx, count: int, action: str, mute_time: str = None):
+    @app_commands.choices(
+        action=[
+            app_commands.Choice(name="Mute", value="mute"),
+            app_commands.Choice(name="Kick", value="kick"),
+            app_commands.Choice(name="Ban", value="ban"),
+            app_commands.Choice(name="TempBan", value="tempban"),
+        ]
+    )
+    async def warnpunishment(
+        self,
+        ctx: commands.Context,
+        count: int,
+        action: app_commands.Choice[str],
+        mute_time: Optional[str] = None
+    ):
         guild_id = str(ctx.guild.id)
-        data["punishments"].setdefault(guild_id, {})
 
-        norm = self.punishment_normalize(action)
+        # normalize action
+        norm = self.punishment_normalize(action.value)
         if not norm:
             return await ctx.send(embed=discord.Embed(
-                description="❌ Invalid action. Use `mute`, `kick`, or `ban`.",
+                description="❌ Invalid action. Use `mute`, `kick`, `ban`, or `tempban`.",
                 color=discord.Color.red())
             )
 
         entry = {"action": norm}
-        if norm == "Mute":
+        if norm in ("Mute", "TempBan"):
             if not mute_time:
                 return await ctx.send(embed=discord.Embed(
-                    description="❌ Mute requires a duration (e.g. `5m`, `1h`, `2d`, `1w`, `1mon`).",
+                    description="❌ This action requires a duration (e.g. `5m`, `1h`, `2d`, `1w`, `1mon`).",
                     color=discord.Color.red())
                 )
-            # Validate by parsing (store the original string)
             try:
-                _ = self.parse_time(mute_time)
+                _ = self.parse_time(mute_time)  # validate format
             except Exception:
                 return await ctx.send(embed=discord.Embed(
                     description="❌ Invalid time format. Use like `5m`, `1h`, `2d`, `1w`, `1mon`.",
@@ -281,13 +316,14 @@ class Warnings(commands.Cog):
                 )
             entry["duration"] = mute_time
 
+        data["punishments"].setdefault(guild_id, {})
         data["punishments"][guild_id][str(count)] = entry
         save_data(data)
 
-        emb = discord.Embed(title="⚙️ Punishment Configured", color=discord.Color.blurple(), timestamp=datetime.utcnow())
+        emb = discord.Embed(title="⚙️ Punishment Configured", color=discord.Color.blurple())
         emb.add_field(name="Warn Count", value=str(count), inline=True)
         emb.add_field(name="Action", value=entry['action'], inline=True)
-        if entry['action'] == "Mute":
+        if "duration" in entry:
             emb.add_field(name="Duration", value=entry['duration'], inline=True)
         await ctx.send(embed=emb)
 
@@ -301,6 +337,8 @@ class Warnings(commands.Cog):
             try:
                 until_str = info.get("until")
                 guild_id = info.get("guild")
+                ttype = info.get("type", "timeout")  # default to timeout
+
                 if not until_str or not guild_id:
                     # Invalid entry, remove it
                     expired.append(user_id)
@@ -308,23 +346,39 @@ class Warnings(commands.Cog):
 
                 until = datetime.fromisoformat(until_str)
                 guild = self.bot.get_guild(int(guild_id))
-                member = guild.get_member(int(user_id)) if guild else None
 
-                # Resume timeout if missing (bot restarted)
-                if member and not member.is_timed_out() and until > now:
-                    try:
-                        await member.edit(timed_out_until=until, reason="Resuming active timeout after bot restart")
-                    except Exception:
-                        pass
+                # --- Normal timeout (mute) ---
+                if ttype == "timeout":
+                    member = guild.get_member(int(user_id)) if guild else None
 
-                # Check if timeout expired
-                if until <= now:
-                    if member:
+                    # Resume timeout if missing (bot restarted)
+                    if member and not member.is_timed_out() and until > now:
                         try:
-                            await member.edit(timed_out_until=None, reason="Timeout expired")
+                            await member.edit(timed_out_until=until, reason="Resuming active timeout after bot restart")
                         except Exception:
                             pass
-                    expired.append(user_id)
+
+                    # Check if timeout expired
+                    if until <= now:
+                        if member:
+                            try:
+                                await member.edit(timed_out_until=None, reason="Timeout expired")
+                            except Exception:
+                                pass
+                        expired.append(user_id)
+
+                # --- Tempban ---
+                elif ttype == "tempban":
+                    if until <= now and guild:
+                        try:
+                            bans = await guild.bans()
+                            for entry in bans:
+                                if entry.user.id == int(user_id):
+                                    await guild.unban(entry.user, reason="Tempban expired")
+                                    break
+                        except Exception:
+                            pass
+                        expired.append(user_id)
 
             except Exception:
                 # Corrupted entry, remove it
@@ -337,6 +391,7 @@ class Warnings(commands.Cog):
         if expired:
             save_data(data)
 
+    
     @check_timeouts.before_loop
     async def before_check_timeouts(self):
         # Wait until bot is ready
