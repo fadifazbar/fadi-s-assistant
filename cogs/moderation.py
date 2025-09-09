@@ -1122,11 +1122,13 @@ class Moderation(commands.Cog):
     
     async def _unban_user(self, ctx_or_interaction, user_id: int, reason: str, moderator):
         """Internal method to handle unban functionality"""
-        guild = ctx_or_interaction.guild
         try:
-            # Fetch user
+            # Get the bot instance (works for ctx and interaction)
+            bot = getattr(ctx_or_interaction, "bot", None) or ctx_or_interaction.client
+
+            # Get the user object
             try:
-                user = await ctx_or_interaction.client.fetch_user(user_id)
+                user = await bot.fetch_user(user_id)
             except discord.NotFound:
                 await self._send_response(ctx_or_interaction, "❌ User not found! Please check the user ID.")
                 return
@@ -1134,27 +1136,27 @@ class Moderation(commands.Cog):
                 await self._send_response(ctx_or_interaction, "❌ Failed to fetch user information.")
                 return
 
-            # Check if user is banned
-            bans = [ban async for ban in guild.bans()]
-            if not any(ban.user.id == user.id for ban in bans):
+            # Get the guild
+            guild = getattr(ctx_or_interaction, "guild", None)
+            if guild is None:
+                await self._send_response(ctx_or_interaction, "❌ This command must be used in a server.")
+                return
+
+            # Check if user is actually banned
+            try:
+                await guild.fetch_ban(user)
+            except discord.NotFound:
                 await self._send_response(ctx_or_interaction, f"❌ {user.mention} is not banned!")
                 return
 
             # Unban the user
             await guild.unban(user, reason=f"Unbanned by {moderator}: {reason}")
 
-            # Log
-            logger.info(f"User {user} unbanned by {moderator} for: {reason}")
-
-            # Confirmation
+            # Confirmation embed
             embed = discord.Embed(
                 title="✅ Member Unbanned",
-                description=(
-                    f"**Member:** {user.mention} (`{user.id}`)\n"
-                    f"**Reason:** {reason}\n"
-                    f"**Moderator:** {moderator.mention}"
-                ),
-                color=Config.COLORS["success"],
+                description=f"**Member:** {user.mention} (`{user.id}`)\n**Reason:** {reason}\n**Moderator:** {moderator.mention}",
+                color=discord.Color.green(),
                 timestamp=datetime.utcnow()
             )
             await self._send_response(ctx_or_interaction, embed=embed)
@@ -1164,6 +1166,7 @@ class Moderation(commands.Cog):
         except Exception as e:
             logger.error(f"Error unbanning user: {e}")
             await self._send_response(ctx_or_interaction, "❌ An error occurred while unbanning the user!")
+
 
 
     
