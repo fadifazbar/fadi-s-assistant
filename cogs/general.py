@@ -36,9 +36,6 @@ class General(commands.Cog):
         if message.mention_everyone:
             return
 
-        if message.mention_here:
-            return  
-
         # Check if the bot was directly mentioned (not in a reply)
         if self.bot.user.mentioned_in(message) and not message.reference:
             await message.reply(
