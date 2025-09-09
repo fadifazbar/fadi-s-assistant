@@ -293,7 +293,6 @@ class Warnings(commands.Cog):
     ):
         guild_id = str(ctx.guild.id)
 
-        # normalize action
         norm = self.punishment_normalize(action.value)
         if not norm:
             return await ctx.send(embed=discord.Embed(
@@ -303,19 +302,19 @@ class Warnings(commands.Cog):
 
         entry = {"action": norm}
         if norm in ("Mute", "TempBan"):
-            if not mute_time:
+            if not mute_or_ban_time:
                 return await ctx.send(embed=discord.Embed(
                     description="❌ This action requires a duration (e.g. `5m`, `1h`, `2d`, `1w`, `1mon`).",
                     color=discord.Color.red())
                 )
             try:
-                _ = self.parse_time(mute_time)  # validate format
+                _ = self.parse_time(mute_or_ban_time)  # validate
             except Exception:
                 return await ctx.send(embed=discord.Embed(
                     description="❌ Invalid time format. Use like `5m`, `1h`, `2d`, `1w`, `1mon`.",
                     color=discord.Color.red())
                 )
-            entry["duration"] = mute_time
+            entry["duration"] = mute_or_ban_time
 
         data["punishments"].setdefault(guild_id, {})
         data["punishments"][guild_id][str(count)] = entry
