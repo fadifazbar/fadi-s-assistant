@@ -1,4 +1,5 @@
 import discord
+from typing import Optional
 from discord.ext import commands, tasks
 from discord import app_commands
 import json, os, asyncio
