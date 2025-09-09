@@ -337,7 +337,7 @@ class Warnings(commands.Cog):
             try:
                 until_str = info.get("until")
                 guild_id = info.get("guild")
-                ptype = info.get("type", "timeout")  # default = mute/timeout
+                ptype = info.get("type", "timeout")  # default to timeout
                 if not until_str or not guild_id:
                     expired.append(user_id)
                     continue
@@ -348,16 +348,12 @@ class Warnings(commands.Cog):
                     expired.append(user_id)
                     continue
 
-                member = guild.get_member(int(user_id))
-
-                # --- Timeout (mute) ---
+                # Handle mute/timeouts
                 if ptype == "timeout":
-                    if member and not member.is_timed_out() and until > now:
+                    member = guild.get_member(int(user_id))
+                    if member and until > now and not member.is_timed_out():
                         try:
-                            await member.edit(
-                                timed_out_until=until,
-                                reason="Resuming active timeout after bot restart"
-                            )
+                            await member.edit(timed_out_until=until, reason="Resuming timeout after bot restart")
                         except Exception:
                             pass
 
@@ -369,30 +365,27 @@ class Warnings(commands.Cog):
                                 pass
                         expired.append(user_id)
 
-                # --- TempBan ---
+                # Handle tempbans
                 elif ptype == "tempban":
                     if until <= now:
                         try:
-                            bans = [entry async for entry in guild.bans()]
-                            for ban_entry in bans:
-                                if ban_entry.user.id == int(user_id):
-                                    await guild.unban(ban_entry.user, reason="TempBan expired")
-                                    break
-                        except Exception:
-                            pass
+                            user = await self.bot.fetch_user(int(user_id))
+                            await guild.unban(user, reason="Tempban expired")
+                        except discord.NotFound:
+                            pass  # already unbanned
+                        except Exception as e:
+                            logger.error(f"Failed to unban {user_id} in guild {guild_id}: {e}")
                         expired.append(user_id)
 
-            except Exception:
+            except Exception as e:
+                logger.error(f"Error in check_timeouts for {user_id}: {e}")
                 expired.append(user_id)
 
-        # cleanup
         for uid in expired:
             data["timeouts"].pop(uid, None)
 
         if expired:
             save_data(data)
-
-
     
     @check_timeouts.before_loop
     async def before_check_timeouts(self):
