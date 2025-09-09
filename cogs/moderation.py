@@ -1121,45 +1121,50 @@ class Moderation(commands.Cog):
             await self._send_response(interaction, "❌ Invalid user ID! Please provide a valid Discord user ID.")
     
     async def _unban_user(self, ctx_or_interaction, user_id: int, reason: str, moderator):
-        """Internal method to handle unban functionality"""
+    """Internal method to handle unban functionality"""
+    guild = ctx_or_interaction.guild
+    try:
+        # Fetch user
         try:
-            # Get the user object
-            try:
-                user = await ctx_or_interaction.client.fetch_user(user_id)
-            except discord.NotFound:
-                await self._send_response(ctx_or_interaction, "❌ User not found! Please check the user ID.")
-                return
-            except discord.HTTPException:
-                await self._send_response(ctx_or_interaction, "❌ Failed to fetch user information.")
-                return
-            
-            # Check if user is actually banned
-            try:
-                ban_entry = await ctx_or_interaction.guild.fetch_ban(user)
-            except discord.NotFound:
-                await self._send_response(ctx_or_interaction, f"❌ {user.mention} is not banned!")
-                return
-            
-            # Unban the user
-            await ctx_or_interaction.guild.unban(user, reason=f"Unbanned by {moderator}: {reason}")
-            
-            # Log the action
-            logger.info(f"User {user} unbanned by {moderator} for: {reason}")
-            
-            # Send confirmation
-            embed = discord.Embed(
-                title="✅ Member Unbanned",
-                description=f"**Member:** {user.mention} (`{user.id}`)\n**Reason:** {reason}\n**Moderator:** {moderator.mention}",
-                color=Config.COLORS["success"],
-                timestamp=datetime.utcnow()
-            )
-            await self._send_response(ctx_or_interaction, embed=embed)
-            
-        except discord.Forbidden:
-            await self._send_response(ctx_or_interaction, "❌ I don't have permission to unban members!")
-        except Exception as e:
-            logger.error(f"Error unbanning user: {e}")
-            await self._send_response(ctx_or_interaction, "❌ An error occurred while unbanning the user!")
+            user = await ctx_or_interaction.client.fetch_user(user_id)
+        except discord.NotFound:
+            await self._send_response(ctx_or_interaction, "❌ User not found! Please check the user ID.")
+            return
+        except discord.HTTPException:
+            await self._send_response(ctx_or_interaction, "❌ Failed to fetch user information.")
+            return
+
+        # Check if user is banned
+        bans = [ban async for ban in guild.bans()]
+        if not any(ban.user.id == user.id for ban in bans):
+            await self._send_response(ctx_or_interaction, f"❌ {user.mention} is not banned!")
+            return
+
+        # Unban the user
+        await guild.unban(user, reason=f"Unbanned by {moderator}: {reason}")
+
+        # Log
+        logger.info(f"User {user} unbanned by {moderator} for: {reason}")
+
+        # Confirmation
+        embed = discord.Embed(
+            title="✅ Member Unbanned",
+            description=(
+                f"**Member:** {user.mention} (`{user.id}`)\n"
+                f"**Reason:** {reason}\n"
+                f"**Moderator:** {moderator.mention}"
+            ),
+            color=Config.COLORS["success"],
+            timestamp=datetime.utcnow()
+        )
+        await self._send_response(ctx_or_interaction, embed=embed)
+
+    except discord.Forbidden:
+        await self._send_response(ctx_or_interaction, "❌ I don't have permission to unban members!")
+    except Exception as e:
+        logger.error(f"Error unbanning user: {e}")
+        await self._send_response(ctx_or_interaction, "❌ An error occurred while unbanning the user!")
+
     
     # Add Role command (Prefix)
     @commands.command(name="giverole", aliases=["addrole"])
