@@ -132,6 +132,75 @@ class Moderation(commands.Cog):
         
         # Try to find by name (case insensitive)
         return discord.utils.find(lambda r: r.name.lower() == role_input.lower(), guild.roles)
+
+    # Say command (Prefix)
+    @commands.command(name="say")
+    @commands.has_permissions(manage_messages=True)
+    @commands.guild_only()
+    async def say_prefix(self, ctx, *, message: str):
+        """Make the bot say something"""
+        await self._say_message(ctx, message, ctx.author)
+
+    # Say command (Slash)
+    @discord.app_commands.command(name="say", description="Make the bot say something")
+    @discord.app_commands.describe(message="The message for the bot to say")
+    @discord.app_commands.default_permissions(manage_messages=True)
+    async def say_slash(self, interaction: discord.Interaction, message: str):
+        """Make the bot say something (slash command)"""
+        await self._say_message(interaction, message, interaction.user)
+
+    async def _say_message(self, ctx_or_interaction, message: str, author):
+        """Internal method to handle say functionality"""
+        # Basic content filtering
+        if "@everyone" in message.lower() or "@here" in message.lower():
+            await self._send_response(ctx_or_interaction, "❌ Cannot use everyone or here mentions!")
+            return
+
+        # Check message length
+        if len(message) > 2000:
+            await self.send_message(ctx_or_interaction, "❌ Message is too long! (Max 2000 characters)")
+            return
+
+        if len(message.strip()) == 0:
+            await self.send_message(ctx_or_interaction, "❌ Message cannot be empty!")
+            return
+
+        try:
+            # Delete the original command if it's a prefix command
+            if isinstance(ctx_or_interaction, commands.Context):
+                try:
+                    await ctx_or_interaction.message.delete()
+                except:
+                    pass
+
+            # Send the message to the channel
+            await ctx_or_interaction.channel.send(message)
+
+            # Log the action
+            channel_name = getattr(ctx_or_interaction.channel, 'name', 'DM')
+            logger.info(f"Say command used by {author} in #{channel_name}: {message[:50]}...")
+
+            # Send confirmation for slash command AFTER sending the message
+            if isinstance(ctx_or_interaction, discord.Interaction):
+                await ctx_or_interaction.response.send_message("✅ Message sent!", ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"Error in say command: {e}")
+            # Handle errors properly
+            if isinstance(ctx_or_interaction, discord.Interaction):
+                try:
+                    if not ctx_or_interaction.response.is_done():
+                        await ctx_or_interaction.response.send_message("❌ An error occurred while sending the message!", ephemeral=True)
+                    else:
+                        await ctx_or_interaction.followup.send("❌ An error occurred while sending the message!", ephemeral=True)
+                except:
+                    pass
+            else:
+                try:
+                    await ctx_or_interaction.send("❌ An error occurred while sending the message!")
+                except:
+                    pass
+
     
     # Kick command (Prefix)
     @commands.command(name="kick")
