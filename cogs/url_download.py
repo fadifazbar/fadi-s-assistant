@@ -115,7 +115,7 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
             ydl_opts = {
                 "outtmpl": filename,
                 "merge_output_format": "mp4",
-                "format": f"{fmt}/bestaudio[ext=m4a]/bestaudio[ext=webm]/bestvideo+bestaudio/best",
+                "format": "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best",
                 
                 # ✅ makes sure only the single video is downloaded
                 "noplaylist": True,
@@ -125,6 +125,11 @@ async def handle_download(bot, interaction_or_ctx, url: str, is_slash: bool):
                 "retries": 5,
                 "skip_unavailable_fragments": True,
                 "ignoreerrors": True,
+
+                "postprocessors": [{
+                    "key": "FFmpegVideoConvertor",
+                    "preferedformat": "mp4"
+                ]},
                 
                 # ✅ make sure cookies are used
                 "cookiefile": "cookies.json",  # <-- you said your cookies are JSON, not .txt
