@@ -171,7 +171,6 @@ class DeathBattle(commands.Cog):
             (40, 5,  "**__{attacker}__** slapped **__{defender}__** so hard that he farted dealing **__{dmg}__** damage"),
             (25, 10, "**__{attacker}__** punched **__{defender}__** straight in the face causing **__{dmg}__** damage"),
             (15, 15, "**__{attacker}__** kicked **__{defender}__** in the stomach for **__{dmg}__** damag"),
-            (27, 19,  "**__{attacker}__** got freaky in bed with **__{defender}__** which led to sex making him lose **__{dmg}%__** of his virginity 🙏😭"),
             (10, 20, "**__{attacker}__** sliced **__{defender}'s__** body parts taking **__{dmg}__** damage out of him"),
             (5, 25,  "**__{attacker}__** stabbed **__{defender}__** violently dealing **__{dmg}__** damage"),
             (5, 30,  "**__{attacker}__** decapitated **__{defender}__** removing **__{dmg}__** hp from them"),
