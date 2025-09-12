@@ -843,7 +843,7 @@ class Moderation(commands.Cog):
     
     # Clear messages command (Slash)
     @discord.app_commands.command(name="purge", description="Clear a specified number of messages")
-    @discord.app_commands.describe(amount="Number of messages to clear (max 100)")
+    @discord.app_commands.describe(amount="Number of messages to clear (max 1000)")
     @discord.app_commands.default_permissions(manage_messages=True)
     async def clear_slash(self, interaction: discord.Interaction, amount: int = 10):
         """Clear a specified number of messages (slash command)"""
