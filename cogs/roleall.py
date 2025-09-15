@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+import asyncio
 
 
 class RoleAll(commands.Cog):
@@ -9,10 +10,10 @@ class RoleAll(commands.Cog):
 
     # ---------------- Shared Logic ----------------
     async def _roleall(self, ctx_or_interaction, action: str, role: discord.Role, is_slash: bool = False):
-        """Shared logic for both prefix and slash versions of roleall."""
         guild = ctx_or_interaction.guild
         author = ctx_or_interaction.user if is_slash else ctx_or_interaction.author
 
+        # Determine members to process
         if action.lower() == "give":
             members = [m for m in guild.members if role not in m.roles]
         elif action.lower() == "remove":
@@ -32,6 +33,7 @@ class RoleAll(commands.Cog):
         total = len(members)
         changed = 0
 
+        # Initial embed
         embed = discord.Embed(
             title=f"⏳ {action.capitalize()}ing Role",
             description=f"Processing {role.mention} for {total} members...\n(0/{total})",
@@ -45,6 +47,10 @@ class RoleAll(commands.Cog):
         else:
             progress_msg = await ctx_or_interaction.send(embed=embed)
 
+        # ---------------- Processing ----------------
+        batch_size = 40   # number of members before pausing
+        pause_time = 1    # seconds to pause per batch
+
         for i, member in enumerate(members, start=1):
             try:
                 if action.lower() == "give":
@@ -53,16 +59,20 @@ class RoleAll(commands.Cog):
                     await member.remove_roles(role, reason=f"Mass role remove by {author}")
                 changed += 1
             except discord.Forbidden:
-                pass  # skip errors quietly
+                pass  # skip hierarchy errors silently
             except Exception:
-                pass
+                pass  # skip other errors
 
-            # Update every 5 members or at the end
+            # Update embed every 5 members
             if i % 5 == 0 or i == total:
                 embed.description = f"{action.capitalize()}ing {role.mention}...\n({changed}/{total})"
                 await progress_msg.edit(embed=embed)
 
-        # Final update
+            # Pause every batch_size members
+            if i % batch_size == 0:
+                await asyncio.sleep(pause_time)
+
+        # Final embed
         embed.title = f"✅ Finished {action.capitalize()}ing Role"
         embed.description = f"{action.capitalize()}ed {role.mention} for {changed}/{total} members."
         embed.color = discord.Color.green()
