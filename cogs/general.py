@@ -54,7 +54,9 @@ class General(commands.Cog):
             )
 
 # -------- Prefix command --------
-              @commands.command(name="servericon")
+              
+
+    @commands.command(name="servericon")
     async def servericon_prefix(self, ctx: commands.Context):
         def random_color():
             return discord.Color(random.randint(0x000000, 0xFFFFFF))
@@ -71,7 +73,6 @@ class General(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(General(bot))
-
 # -------- Slash command --------
  @app_commands.command(name="servericon", description="Shows the server's icon in an embed")
     async def servericon_slash(self, interaction: discord.Interaction):
