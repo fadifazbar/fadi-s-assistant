@@ -52,22 +52,21 @@ class General(commands.Cog):
                 f"{message.author.mention}, you can use my commands with **/** or **`{prefix}`**"
             )
 
-
 # -------- Prefix command --------
 @commands.command(name="servericon")
-async def servericon_prefix(ctx: commands.Context):
-    def random_color():
-        return discord.Color(random.randint(0x000000, 0xFFFFFF))
+    async def servericon_prefix(ctx: commands.Context):
+        def random_color():
+            return discord.Color(random.randint(0x000000, 0xFFFFFF))
 
-    if ctx.guild.icon:
-        embed = discord.Embed(
-            title=f"Here's The Icon Of **{ctx.guild.name}**!",
-            color=random_color()
-        )
-        embed.set_image(url=ctx.guild.icon.url)
-        await ctx.send(embed=embed)
-    else:
-        await ctx.send("This server has no icon!")
+        if ctx.guild.icon:
+            embed = discord.Embed(
+                title=f"Here's The Icon Of **{ctx.guild.name}**!",
+                color=random_color()
+            )
+            embed.set_image(url=ctx.guild.icon.url)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("This server has no icon!")
 
 # -------- Slash command --------
 class ServerIcon(commands.Cog):
