@@ -54,7 +54,7 @@ class General(commands.Cog):
 
 
 # -------- Prefix command --------
-@bot.command(name="servericon")
+@commands.command(name="servericon")
 async def servericon_prefix(ctx: commands.Context):
     def random_color():
         return discord.Color(random.randint(0x000000, 0xFFFFFF))
