@@ -101,12 +101,13 @@ class ReactionRole(commands.Cog):
 @app_commands.checks.has_permissions(manage_roles=True)
 async def reactionrole_slash(
     self,
-    interaction: discord.Interaction,
+    interaction: discord.Interaction,  # stays here, not exposed to Discord
     message_id: str,
     emoji: str,
     role: discord.Role
 ):
     """Create a reaction role using a slash command."""
+    ...
 
     # Check hierarchy against user
     if role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
