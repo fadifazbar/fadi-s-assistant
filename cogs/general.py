@@ -53,7 +53,8 @@ class General(commands.Cog):
                 f"{message.author.mention}, you can use my commands with **/** or **`{prefix}`**"
             )
 
-# -------- Prefix command --------              @commands.command(name="servericon")
+# -------- Prefix command --------
+              @commands.command(name="servericon")
     async def servericon_prefix(self, ctx: commands.Context):
         def random_color():
             return discord.Color(random.randint(0x000000, 0xFFFFFF))
