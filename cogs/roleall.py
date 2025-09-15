@@ -48,7 +48,7 @@ class RoleAll(commands.Cog):
             progress_msg = await ctx_or_interaction.send(embed=embed)
 
         # ---------------- Processing in concurrent batches ----------------
-        batch_size = 40
+        batch_size = 25
         pause_time = 1  # seconds
 
         for i in range(0, len(members), batch_size):
