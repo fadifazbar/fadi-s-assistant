@@ -1,93 +1,93 @@
-import asyncio
 import discord
-import time
 from discord.ext import commands
+from discord import app_commands
+
 
 class RoleAll(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="roleall")
-    @commands.has_permissions(manage_roles=True)
-    async def roleall(self, ctx, action: str, role: discord.Role):
-        """
-        Give or remove a role from all server members.
-        Usage: $roleall give @role OR $roleall remove @role
-        """
-        if action.lower() not in ["give", "remove"]:
-            return await ctx.send("❌ Invalid action! Use `give` or `remove`.")
+    # ---------------- Shared Logic ----------------
+    async def _roleall(self, ctx_or_interaction, action: str, role: discord.Role, is_slash: bool = False):
+        """Shared logic for both prefix and slash versions of roleall."""
+        guild = ctx_or_interaction.guild
+        author = ctx_or_interaction.user if is_slash else ctx_or_interaction.author
 
-        members = ctx.guild.members
+        if action.lower() == "give":
+            members = [m for m in guild.members if role not in m.roles]
+        elif action.lower() == "remove":
+            members = [m for m in guild.members if role in m.roles]
+        else:
+            msg = "❌ Invalid action. Use `give` or `remove`."
+            if is_slash:
+                return await ctx_or_interaction.response.send_message(msg, ephemeral=True)
+            return await ctx_or_interaction.send(msg)
+
+        if not members:
+            msg = f"⚠️ No members to {action} the role {role.mention}."
+            if is_slash:
+                return await ctx_or_interaction.response.send_message(msg, ephemeral=True)
+            return await ctx_or_interaction.send(msg)
+
         total = len(members)
-        done = 0
-        batch = []
-        batch_size = 5   # members per batch
-        pause_time = 2   # seconds pause between batches
-        start_time = time.time()
-        batch_counter = 0
+        changed = 0
 
-        # Start embed
         embed = discord.Embed(
-            title="🔄 Processing RoleAll",
-            description=(
-                f"{'Giving' if action.lower() == 'give' else 'Removing'} {role.mention} "
-                f"for **{total} members**...\n\n"
-                "⚠️ On large servers, this may take some time due to Discord rate limits."
-            ),
+            title=f"⏳ {action.capitalize()}ing Role",
+            description=f"Processing {role.mention} for {total} members...\n(0/{total})",
             color=discord.Color.yellow()
         )
-        msg = await ctx.send(embed=embed)
+        embed.set_footer(text=f"Requested by {author}", icon_url=author.display_avatar.url)
 
-        for member in members:
+        if is_slash:
+            await ctx_or_interaction.response.send_message(embed=embed)
+            progress_msg = await ctx_or_interaction.original_response()
+        else:
+            progress_msg = await ctx_or_interaction.send(embed=embed)
+
+        for i, member in enumerate(members, start=1):
             try:
                 if action.lower() == "give":
-                    batch.append(member.add_roles(role, reason="RoleAll command"))
+                    await member.add_roles(role, reason=f"Mass role give by {author}")
                 else:
-                    batch.append(member.remove_roles(role, reason="RoleAll command"))
+                    await member.remove_roles(role, reason=f"Mass role remove by {author}")
+                changed += 1
+            except discord.Forbidden:
+                pass  # skip errors quietly
             except Exception:
                 pass
 
-            done += 1
+            # Update every 5 members or at the end
+            if i % 5 == 0 or i == total:
+                embed.description = f"{action.capitalize()}ing {role.mention}...\n({changed}/{total})"
+                await progress_msg.edit(embed=embed)
 
-            if len(batch) >= batch_size:
-                await asyncio.gather(*batch, return_exceptions=True)
-                batch.clear()
-                batch_counter += 1
+        # Final update
+        embed.title = f"✅ Finished {action.capitalize()}ing Role"
+        embed.description = f"{action.capitalize()}ed {role.mention} for {changed}/{total} members."
+        embed.color = discord.Color.green()
+        await progress_msg.edit(embed=embed)
 
-                # Update ETA every 5 batches
-                if batch_counter % 5 == 0:
-                    elapsed = time.time() - start_time
-                    avg_per_member = elapsed / done if done > 0 else 0
-                    remaining = (total - done) * avg_per_member
-                    eta = time.strftime("%M:%S", time.gmtime(remaining))
+    # ---------------- Prefix Command ----------------
+    @commands.command(name="roleall")
+    @commands.has_permissions(manage_roles=True)
+    async def roleall_prefix(self, ctx, action: str, role: discord.Role):
+        """Mass give/remove a role (prefix)."""
+        await self._roleall(ctx, action, role, is_slash=False)
 
-                    progress_embed = discord.Embed(
-                        title="🔄 Processing RoleAll",
-                        description=(
-                            f"{'Giving' if action.lower() == 'give' else 'Removing'} {role.mention}\n\n"
-                            f"**Progress:** {done}/{total} members done ✅\n"
-                            f"⏳ Estimated time left: ~{eta}"
-                        ),
-                        color=discord.Color.orange()
-                    )
-                    await msg.edit(embed=progress_embed)
-
-                await asyncio.sleep(pause_time)
-
-        if batch:
-            await asyncio.gather(*batch, return_exceptions=True)
-
-        # Final embed
-        final_embed = discord.Embed(
-            title="✅ RoleAll Completed",
-            description=(
-                f"{'Gave' if action.lower() == 'give' else 'Removed'} {role.mention} "
-                f"for **{done}/{total} members**!\n\n"
-                f"⏱️ Total time: {time.strftime('%M:%S', time.gmtime(time.time() - start_time))}"
-            ),
-            color=discord.Color.green()
-        )
-        await msg.edit(embed=final_embed)
+    # ---------------- Slash Command ----------------
+    @app_commands.command(
+        name="roleall",
+        description="Mass give/remove a role"
+    )
+    @app_commands.describe(
+        action="Choose 'give' to assign or 'remove' to take away the role.",
+        role="The role to give or remove."
+    )
+    @app_commands.checks.has_permissions(manage_roles=True)
+    async def roleall_slash(self, interaction: discord.Interaction, action: str, role: discord.Role):
+        """Mass give/remove a role (slash)."""
+        await self._roleall(interaction, action, role, is_slash=True)
 
 
 async def setup(bot):
