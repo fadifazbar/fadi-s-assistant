@@ -47,30 +47,30 @@ class RoleAll(commands.Cog):
         else:
             progress_msg = await ctx_or_interaction.send(embed=embed)
 
-        # ---------------- Processing ----------------
-        batch_size = 40   # number of members before pausing
-        pause_time = 1    # seconds to pause per batch
+        # ---------------- Processing in concurrent batches ----------------
+        batch_size = 40
+        pause_time = 1  # seconds
 
-        for i, member in enumerate(members, start=1):
-            try:
+        for i in range(0, len(members), batch_size):
+            batch = members[i:i+batch_size]
+
+            tasks = []
+            for member in batch:
                 if action.lower() == "give":
-                    await member.add_roles(role, reason=f"Mass role give by {author}")
+                    tasks.append(member.add_roles(role, reason=f"Mass role give by {author}"))
                 else:
-                    await member.remove_roles(role, reason=f"Mass role remove by {author}")
-                changed += 1
-            except discord.Forbidden:
-                pass  # skip hierarchy errors silently
-            except Exception:
-                pass  # skip other errors
+                    tasks.append(member.remove_roles(role, reason=f"Mass role remove by {author}"))
 
-            # Update embed every 5 members
-            if i % 5 == 0 or i == total:
-                embed.description = f"{action.capitalize()}ing {role.mention}...\n({changed}/{total})"
-                await progress_msg.edit(embed=embed)
+            # Run all role operations concurrently
+            await asyncio.gather(*tasks, return_exceptions=True)
 
-            # Pause every batch_size members
-            if i % batch_size == 0:
-                await asyncio.sleep(pause_time)
+            # Update progress
+            changed += len(batch)
+            embed.description = f"{action.capitalize()}ing {role.mention}...\n({changed}/{total})"
+            await progress_msg.edit(embed=embed)
+
+            # Pause after each batch
+            await asyncio.sleep(pause_time)
 
         # Final embed
         embed.title = f"✅ Finished {action.capitalize()}ing Role"
