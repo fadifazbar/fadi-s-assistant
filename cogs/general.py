@@ -27,20 +27,68 @@ class General(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.Cog.listener()
+ @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        # Ignore messages from the bot itself
+        # Ignore messages from bots
         if message.author.bot:
             return
 
+        # Ignore DMs
+        if not message.guild:
+            return
+
+        # Ignore @everyone / @here
         if message.mention_everyone:
             return
 
         # Check if the bot was directly mentioned (not in a reply)
         if self.bot.user.mentioned_in(message) and not message.reference:
+            prefix = self.bot.command_prefix
+            # If prefix is callable, resolve it
+            if callable(prefix):
+                prefix = await prefix(self.bot, message)
+
             await message.reply(
-                f"{message.author.mention}, you can use my commands with **/** or **`{Config.PREFIX}`**"
+                f"{message.author.mention}, you can use my commands with **/** or **`{prefix}`**"
             )
+
+
+# -------- Prefix command --------
+@bot.command(name="servericon")
+async def servericon_prefix(ctx: commands.Context):
+    def random_color():
+        return discord.Color(random.randint(0x000000, 0xFFFFFF))
+
+    if ctx.guild.icon:
+        embed = discord.Embed(
+            title=f"Here's The Icon Of **{ctx.guild.name}**!",
+            color=random_color()
+        )
+        embed.set_image(url=ctx.guild.icon.url)
+        await ctx.send(embed=embed)
+    else:
+        await ctx.send("This server has no icon!")
+
+# -------- Slash command --------
+class ServerIcon(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @app_commands.command(name="servericon", description="Shows the server's icon in an embed")
+    async def servericon_slash(self, interaction: discord.Interaction):
+        def random_color():
+            return discord.Color(random.randint(0x000000, 0xFFFFFF))
+
+        if interaction.guild.icon:
+            embed = discord.Embed(
+                title=f"Here's The Icon Of **{interaction.guild.name}**!",
+                color=random_color()
+            )
+            embed.set_image(url=interaction.guild.icon.url)
+            await interaction.response.send_message(embed=embed)
+        else:
+            await interaction.response.send_message("This server has no icon!")
+
 
 
     @commands.command(name="translate", aliases=["tr"])
