@@ -75,7 +75,18 @@ class ReactionRole(commands.Cog):
         reaction_roles[guild_id][str(message_id)][emoji_str] = role.id
         save_reaction_roles(reaction_roles)
 
-        await ctx.send(f"✅ Reaction role set: {emoji} → {role.mention} on [this message]({message.jump_url})")
+embed = discord.Embed(
+    title="✅ Reaction Role Set",
+    description=(
+        f"Emoji: {emoji}\n"
+        f"Role: **{role.name}**\n"
+        f"Message: [Jump to Message]({message.jump_url})"
+    ),
+    color=discord.Color.green()
+)
+embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.display_avatar.url)
+
+await ctx.send(embed=embed)
 
     # ---------------- Slash Command ----------------
     @app_commands.command(name="reactionrole", description="Set a reaction role on a message")
@@ -117,9 +128,18 @@ class ReactionRole(commands.Cog):
         reaction_roles[guild_id][str(message_id)][emoji_str] = role.id
         save_reaction_roles(reaction_roles)
 
-        await interaction.response.send_message(
-            f"✅ Reaction role set: {emoji} → {role.mention} on [this message]({message.jump_url})"
-        )
+embed = discord.Embed(
+    title="✅ Reaction Role Set",
+    description=(
+        f"Emoji: {emoji}\n"
+        f"Role: **{role.name}**\n"
+        f"Message: [Jump to Message]({message.jump_url})"
+    ),
+    color=discord.Color.green()
+)
+embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.display_avatar.url)
+
+await interaction.response.send_message(embed=embed)
 
     # ---------------- Debug Command (List) ----------------
     @commands.command(name="reactionrolelist")
