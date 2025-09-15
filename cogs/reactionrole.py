@@ -108,19 +108,19 @@ class ReactionRole(commands.Cog):
     ):
         """Create a reaction role using a slash command."""
 
-    # Check hierarchy against user
-    if role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
-        return await interaction.response.send_message(
-            "❌ You cannot create a reaction role with a role higher or equal to your top role.",
-            ephemeral=True
-        )
+        # Check hierarchy against user
+        if role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
+            return await interaction.response.send_message(
+                "❌ You cannot create a reaction role with a role higher or equal to your top role.",
+                ephemeral=True
+            )
 
-    # Check hierarchy against bot
-    if role >= interaction.guild.me.top_role:
-        return await interaction.response.send_message(
-            "❌ I cannot manage that role because it is higher than or equal to my top role.",
-            ephemeral=True
-        )
+        # Check hierarchy against bot
+        if role >= interaction.guild.me.top_role:
+            return await interaction.response.send_message(
+                "❌ I cannot manage that role because it is higher than or equal to my top role.",
+                ephemeral=True
+            )
 
     # Fetch message
     try:
