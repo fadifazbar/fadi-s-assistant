@@ -68,12 +68,7 @@ class General(commands.Cog):
         else:
             await ctx.send("This server has no icon!")
 
-# -------- Slash command --------
-class ServerIcon(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-
-    @app_commands.command(name="servericon", description="Shows the server's icon in an embed")
+# -------- Slash command -------- @app_commands.command(name="servericon", description="Shows the server's icon in an embed")
     async def servericon_slash(self, interaction: discord.Interaction):
         def random_color():
             return discord.Color(random.randint(0x000000, 0xFFFFFF))
