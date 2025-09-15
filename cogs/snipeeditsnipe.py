@@ -43,7 +43,7 @@ class Snipe(commands.Cog):
         return embed
 
     # ---------- Prefix Commands ----------
-    @commands.command(name="snipe")
+    @commands.command(name="snipe", aliases=["s", "ds"])
     async def snipe_prefix(self, ctx):
         deleted = self.deleted_messages.get(ctx.channel.id, [])
         if not deleted:
@@ -54,7 +54,7 @@ class Snipe(commands.Cog):
         view = SnipeView(self, ctx.channel.id, mode="deleted")
         await ctx.send(embed=embed, view=view)
 
-    @commands.command(name="editsnipe")
+    @commands.command(name="editsnipe", aliases=["e", "es"])
     async def editsnipe_prefix(self, ctx):
         edited = self.edited_messages.get(ctx.channel.id, [])
         if not edited:
