@@ -96,7 +96,7 @@ class ReactionRole(commands.Cog):
 
     # ---------------- Slash Command ----------------
     @app_commands.command(name="reactionrole", description="Set a reaction role on a message")
-    async def reactionrole_slash(self, interaction: discord.Interaction, ...):
+    async def reactionrole_slash(self, interaction: discord.Interaction, channel: discord.TextChannel, message_id: int, emoji: str, role: discord.Role):
     @app_commands.checks.has_permissions(manage_roles=True)
     async def reactionrole_slash(self, interaction: discord.Interaction, message_id: str, emoji: str, role: discord.Role):
         """Create a reaction role using a slash command."""
