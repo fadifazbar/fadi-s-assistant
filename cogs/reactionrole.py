@@ -101,7 +101,7 @@ class ReactionRole(commands.Cog):
     @app_commands.checks.has_permissions(manage_roles=True)
     async def reactionrole_slash(
         self,
-        interaction: discord.Interaction,  # stays here, not exposed to Discord
+        interaction: discord.Interaction,  # not exposed to Discord
         message_id: str,
         emoji: str,
         role: discord.Role
@@ -122,43 +122,43 @@ class ReactionRole(commands.Cog):
                 ephemeral=True
             )
 
-    # Fetch message
-    try:
-        message = await interaction.channel.fetch_message(int(message_id))
-    except discord.NotFound:
-        return await interaction.response.send_message("❌ Message not found.", ephemeral=True)
-    except discord.Forbidden:
-        return await interaction.response.send_message("❌ I don’t have permission to fetch that message.", ephemeral=True)
+        # Fetch message
+        try:
+            message = await interaction.channel.fetch_message(int(message_id))
+        except discord.NotFound:
+            return await interaction.response.send_message("❌ Message not found.", ephemeral=True)
+        except discord.Forbidden:
+            return await interaction.response.send_message("❌ I don’t have permission to fetch that message.", ephemeral=True)
 
-    # Add reaction
-    try:
-        await message.add_reaction(emoji)
-    except discord.HTTPException:
-        return await interaction.response.send_message("❌ Invalid emoji.", ephemeral=True)
+        # Add reaction
+        try:
+            await message.add_reaction(emoji)
+        except discord.HTTPException:
+            return await interaction.response.send_message("❌ Invalid emoji.", ephemeral=True)
 
-    # Save to JSON
-    guild_id = str(interaction.guild.id)
-    emoji_str = str(emoji)
-    reaction_roles.setdefault(guild_id, {}).setdefault(str(message_id), {})
-    reaction_roles[guild_id][str(message_id)][emoji_str] = role.id
-    save_reaction_roles(reaction_roles)
+        # Save to JSON
+        guild_id = str(interaction.guild.id)
+        emoji_str = str(emoji)
+        reaction_roles.setdefault(guild_id, {}).setdefault(str(message_id), {})
+        reaction_roles[guild_id][str(message_id)][emoji_str] = role.id
+        save_reaction_roles(reaction_roles)
 
-    # Send embed confirmation
-    embed = discord.Embed(
-        title="✅ Reaction Role Set",
-        description=(
-            f"Emoji: {emoji}\n"
-            f"Role: **{role.name}**\n"
-            f"Message: [Jump to Message]({message.jump_url})"
-        ),
-        color=discord.Color.green()
-    )
-    embed.set_footer(
-        text=f"Requested by {interaction.user}",
-        icon_url=interaction.user.display_avatar.url
-    )
+        # Confirmation embed
+        embed = discord.Embed(
+            title="✅ Reaction Role Set",
+            description=(
+                f"Emoji: {emoji}\n"
+                f"Role: **{role.name}**\n"
+                f"Message: [Jump to Message]({message.jump_url})"
+            ),
+            color=discord.Color.green()
+        )
+        embed.set_footer(
+            text=f"Requested by {interaction.user}",
+            icon_url=interaction.user.display_avatar.url
+        )
 
-    await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
     # ---------------- Debug Command (List) ----------------
     @commands.command(name="reactionrolelist")
