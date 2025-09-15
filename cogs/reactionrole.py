@@ -94,20 +94,19 @@ class ReactionRole(commands.Cog):
         await ctx.send(embed=embed)
 
 # ---------------- Slash Command ----------------
-@app_commands.command(
-    name="reactionrole",
-    description="Set a reaction role on a message"
-)
-@app_commands.checks.has_permissions(manage_roles=True)
-async def reactionrole_slash(
-    self,
-    interaction: discord.Interaction,  # stays here, not exposed to Discord
-    message_id: str,
-    emoji: str,
-    role: discord.Role
-):
-    """Create a reaction role using a slash command."""
-    ...
+    @app_commands.command(
+        name="reactionrole",
+        description="Set a reaction role on a message"
+    )
+    @app_commands.checks.has_permissions(manage_roles=True)
+    async def reactionrole_slash(
+        self,
+        interaction: discord.Interaction,  # stays here, not exposed to Discord
+        message_id: str,
+        emoji: str,
+        role: discord.Role
+    ):
+        """Create a reaction role using a slash command."""
 
     # Check hierarchy against user
     if role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
