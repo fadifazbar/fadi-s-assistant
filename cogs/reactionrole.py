@@ -73,7 +73,8 @@ class ReactionRole(commands.Cog):
         emoji_str = str(emoji)
         reaction_roles.setdefault(guild_id, {}).setdefault(str(message_id), {})
         reaction_roles[guild_id][str(message_id)][emoji_str] = role.id
-        save_reaction_roles(reaction_roles)
+
+save_reaction_roles(reaction_roles)
 
 embed = discord.Embed(
     title="✅ Reaction Role Set",
@@ -88,8 +89,9 @@ embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.display_
 
 await ctx.send(embed=embed)
 
-    # ---------------- Slash Command ----------------
-    @app_commands.command(name="reactionrole", description="Set a reaction role on a message")
+
+# ---------------- Slash Command ----------------
+@app_commands.command(name="reactionrole", description="Set a reaction role on a message")
     @app_commands.checks.has_permissions(manage_roles=True)
     async def reactionrole_slash(self, interaction: discord.Interaction, message_id: str, emoji: str, role: discord.Role):
         """Create a reaction role using a slash command."""
