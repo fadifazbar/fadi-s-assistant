@@ -6,7 +6,7 @@ from discord import app_commands
 class Snipe(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.deleted_messages = {}  # channel_id -> [messages]
+        self.deleted_messages = {}  # channel_id -> [discord.Message]
         self.edited_messages = {}   # channel_id -> [{"before": before, "after": after}]
 
     # ---------- Listeners ----------
@@ -25,7 +25,7 @@ class Snipe(commands.Cog):
     # ---------- Helpers ----------
     def build_deleted_embed(self, message: discord.Message):
         embed = discord.Embed(
-            description=message.content,
+            description=message.content or "*no content*",
             color=discord.Color.red()
         )
         embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
@@ -45,10 +45,9 @@ class Snipe(commands.Cog):
     # ---------- Prefix Commands ----------
     @commands.command(name="snipe")
     async def snipe_prefix(self, ctx):
-        """Shows the last deleted message in this channel."""
         deleted = self.deleted_messages.get(ctx.channel.id, [])
         if not deleted:
-            return await ctx.send("No deleted messages to snipe!")
+            return await ctx.send("❌ No deleted messages to snipe!")
 
         embed = self.build_deleted_embed(deleted[-1])
         embed.set_footer(text=f"Deleted message 1/{len(deleted)}")
@@ -57,10 +56,9 @@ class Snipe(commands.Cog):
 
     @commands.command(name="editsnipe")
     async def editsnipe_prefix(self, ctx):
-        """Shows the last edited message in this channel."""
         edited = self.edited_messages.get(ctx.channel.id, [])
         if not edited:
-            return await ctx.send("No edited messages to snipe!")
+            return await ctx.send("❌ No edited messages to snipe!")
 
         embed = self.build_edited_embed(edited[-1])
         embed.set_footer(text=f"Edited message 1/{len(edited)}")
@@ -72,10 +70,7 @@ class Snipe(commands.Cog):
     async def snipe_slash(self, interaction: discord.Interaction):
         deleted = self.deleted_messages.get(interaction.channel.id, [])
         if not deleted:
-            return await interaction.response.send_message(
-                "❌ No deleted messages to snipe!",
-                ephemeral=True
-            )
+            return await interaction.response.send_message("❌ No deleted messages to snipe!", ephemeral=True)
 
         embed = self.build_deleted_embed(deleted[-1])
         embed.set_footer(text=f"Deleted message 1/{len(deleted)}")
@@ -86,10 +81,7 @@ class Snipe(commands.Cog):
     async def editsnipe_slash(self, interaction: discord.Interaction):
         edited = self.edited_messages.get(interaction.channel.id, [])
         if not edited:
-            return await interaction.response.send_message(
-                "❌ No edited messages to snipe!",
-                ephemeral=True
-            )
+            return await interaction.response.send_message("❌ No edited messages to snipe!", ephemeral=True)
 
         embed = self.build_edited_embed(edited[-1])
         embed.set_footer(text=f"Edited message 1/{len(edited)}")
@@ -97,67 +89,46 @@ class Snipe(commands.Cog):
         await interaction.response.send_message(embed=embed, view=view)
 
 
-# ---------- Buttons ----------
+# ---------- View for navigation ----------
 class SnipeView(discord.ui.View):
-    def __init__(self, ctx, snipes, edited_snipes):
+    def __init__(self, cog, channel_id: int, mode: str = "deleted"):
         super().__init__(timeout=60)
-        self.ctx = ctx
-        self.snipes = snipes
-        self.edited_snipes = edited_snipes
-        self.index = 0
-        self.showing_deleted = True
+        self.cog = cog
+        self.channel_id = channel_id
+        self.mode = mode  # "deleted" or "edited"
+        self.current_index = 0
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        """Only allow the command invoker to use the buttons"""
-        if interaction.user.id != self.ctx.author.id:
+        # Only allow the command invoker to use buttons
+        if interaction.user.id != interaction.user.id:
             await interaction.response.send_message(
-                "❌ You can’t control this menu (only the command user can).", 
+                "❌ You can’t control this menu (only the command user can).",
                 ephemeral=True
             )
             return False
         return True
 
-
+    # ---------- Navigation buttons ----------
     @discord.ui.button(label="◀️", style=discord.ButtonStyle.secondary)
     async def previous_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.mode == "deleted":
-            messages = self.cog.deleted_messages.get(self.channel_id, [])
-            if not messages:
-                return await interaction.response.send_message("No deleted messages to navigate!", ephemeral=True)
+        messages = self.cog.deleted_messages.get(self.channel_id, []) if self.mode == "deleted" else self.cog.edited_messages.get(self.channel_id, [])
+        if not messages:
+            return await interaction.response.send_message("No messages to navigate!", ephemeral=True)
 
-            self.current_index = (self.current_index - 1) % len(messages)
-            embed = self.cog.build_deleted_embed(messages[-(self.current_index + 1)])
-            embed.set_footer(text=f"Deleted message {self.current_index + 1}/{len(messages)}")
-        else:
-            messages = self.cog.edited_messages.get(self.channel_id, [])
-            if not messages:
-                return await interaction.response.send_message("No edited messages to navigate!", ephemeral=True)
-
-            self.current_index = (self.current_index - 1) % len(messages)
-            embed = self.cog.build_edited_embed(messages[-(self.current_index + 1)])
-            embed.set_footer(text=f"Edited message {self.current_index + 1}/{len(messages)}")
-
+        self.current_index = (self.current_index - 1) % len(messages)
+        embed = self.cog.build_deleted_embed(messages[-(self.current_index + 1)]) if self.mode == "deleted" else self.cog.build_edited_embed(messages[-(self.current_index + 1)])
+        embed.set_footer(text=f"{'Deleted' if self.mode == 'deleted' else 'Edited'} message {self.current_index + 1}/{len(messages)}")
         await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(label="▶️", style=discord.ButtonStyle.secondary)
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.mode == "deleted":
-            messages = self.cog.deleted_messages.get(self.channel_id, [])
-            if not messages:
-                return await interaction.response.send_message("No deleted messages to navigate!", ephemeral=True)
+        messages = self.cog.deleted_messages.get(self.channel_id, []) if self.mode == "deleted" else self.cog.edited_messages.get(self.channel_id, [])
+        if not messages:
+            return await interaction.response.send_message("No messages to navigate!", ephemeral=True)
 
-            self.current_index = (self.current_index + 1) % len(messages)
-            embed = self.cog.build_deleted_embed(messages[-(self.current_index + 1)])
-            embed.set_footer(text=f"Deleted message {self.current_index + 1}/{len(messages)}")
-        else:
-            messages = self.cog.edited_messages.get(self.channel_id, [])
-            if not messages:
-                return await interaction.response.send_message("No edited messages to navigate!", ephemeral=True)
-
-            self.current_index = (self.current_index + 1) % len(messages)
-            embed = self.cog.build_edited_embed(messages[-(self.current_index + 1)])
-            embed.set_footer(text=f"Edited message {self.current_index + 1}/{len(messages)}")
-
+        self.current_index = (self.current_index + 1) % len(messages)
+        embed = self.cog.build_deleted_embed(messages[-(self.current_index + 1)]) if self.mode == "deleted" else self.cog.build_edited_embed(messages[-(self.current_index + 1)])
+        embed.set_footer(text=f"{'Deleted' if self.mode == 'deleted' else 'Edited'} message {self.current_index + 1}/{len(messages)}")
         await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(label="Deleted", style=discord.ButtonStyle.red)
