@@ -92,9 +92,6 @@ async def setup(bot):
         else:
             await interaction.response.send_message("This server has no icon!")
 
-async def setup(bot):
-    await bot.add_cog(General(bot))
-
 
     @commands.command(name="translate", aliases=["tr"])
     async def translate(self, ctx, *, lang=None):
