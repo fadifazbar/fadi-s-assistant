@@ -93,6 +93,7 @@ class ReactionRole(commands.Cog):
 
         await ctx.send(embed=embed)
 
+
     # ---------------- Slash Command ----------------
     @app_commands.command(name="reactionrole", description="Set a reaction role on a message")
     async def reactionrole_slash(self, interaction: discord.Interaction, ...):
