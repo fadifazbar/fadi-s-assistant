@@ -71,8 +71,6 @@ class General(commands.Cog):
         else:
             await ctx.send("This server has no icon!")
 
-async def setup(bot):
-    await bot.add_cog(General(bot))
 # -------- Slash command --------
 
 
