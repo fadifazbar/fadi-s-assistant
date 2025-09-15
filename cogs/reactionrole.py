@@ -93,60 +93,72 @@ class ReactionRole(commands.Cog):
 
         await ctx.send(embed=embed)
 
-
-    # ---------------- Slash Command ----------------
-    @app_commands.command(name="reactionrole", description="Set a reaction role on a message")
-    async def reactionrole_slash(self, interaction: discord.Interaction, channel: discord.TextChannel, message_id: int, emoji: str, role: discord.Role):
-    @app_commands.checks.has_permissions(manage_roles=True)
-    async def reactionrole_slash(self, interaction: discord.Interaction, message_id: str, emoji: str, role: discord.Role):
-        """Create a reaction role using a slash command."""
-        # Check hierarchy against user
-        if role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
-            return await interaction.response.send_message(
-                "❌ You cannot create a reaction role with a role higher or equal to your top role.",
-                ephemeral=True
-            )
-
-        # Check hierarchy against bot
-        if role >= interaction.guild.me.top_role:
-            return await interaction.response.send_message(
-                "❌ I cannot manage that role because it is higher than or equal to my top role.",
-                ephemeral=True
-            )
-
-        # Fetch message
-        try:
-            message = await interaction.channel.fetch_message(int(message_id))
-        except discord.NotFound:
-            return await interaction.response.send_message("❌ Message not found.", ephemeral=True)
-        except discord.Forbidden:
-            return await interaction.response.send_message("❌ I don’t have permission to fetch that message.", ephemeral=True)
-
-        # Add reaction
-        try:
-            await message.add_reaction(emoji)
-        except discord.HTTPException:
-            return await interaction.response.send_message("❌ Invalid emoji.", ephemeral=True)
-
-        # Save to JSON
-        guild_id = str(interaction.guild.id)
-        emoji_str = str(emoji)
-        reaction_roles.setdefault(guild_id, {}).setdefault(str(message_id), {})
-        reaction_roles[guild_id][str(message_id)][emoji_str] = role.id
-        save_reaction_roles(reaction_roles)
-
-embed = discord.Embed(
-    title="✅ Reaction Role Set",
-    description=(
-        f"Emoji: {emoji}\n"
-        f"Role: **{role.name}**\n"
-        f"Message: [Jump to Message]({message.jump_url})"
-    ),
-    color=discord.Color.green()
+# ---------------- Slash Command ----------------
+@app_commands.command(
+    name="reactionrole",
+    description="Set a reaction role on a message"
 )
-embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.display_avatar.url)
+@app_commands.checks.has_permissions(manage_roles=True)
+async def reactionrole_slash(
+    self,
+    interaction: discord.Interaction,
+    message_id: str,
+    emoji: str,
+    role: discord.Role
+):
+    """Create a reaction role using a slash command."""
 
-await interaction.response.send_message(embed=embed)
+    # Check hierarchy against user
+    if role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
+        return await interaction.response.send_message(
+            "❌ You cannot create a reaction role with a role higher or equal to your top role.",
+            ephemeral=True
+        )
+
+    # Check hierarchy against bot
+    if role >= interaction.guild.me.top_role:
+        return await interaction.response.send_message(
+            "❌ I cannot manage that role because it is higher than or equal to my top role.",
+            ephemeral=True
+        )
+
+    # Fetch message
+    try:
+        message = await interaction.channel.fetch_message(int(message_id))
+    except discord.NotFound:
+        return await interaction.response.send_message("❌ Message not found.", ephemeral=True)
+    except discord.Forbidden:
+        return await interaction.response.send_message("❌ I don’t have permission to fetch that message.", ephemeral=True)
+
+    # Add reaction
+    try:
+        await message.add_reaction(emoji)
+    except discord.HTTPException:
+        return await interaction.response.send_message("❌ Invalid emoji.", ephemeral=True)
+
+    # Save to JSON
+    guild_id = str(interaction.guild.id)
+    emoji_str = str(emoji)
+    reaction_roles.setdefault(guild_id, {}).setdefault(str(message_id), {})
+    reaction_roles[guild_id][str(message_id)][emoji_str] = role.id
+    save_reaction_roles(reaction_roles)
+
+    # Send embed confirmation
+    embed = discord.Embed(
+        title="✅ Reaction Role Set",
+        description=(
+            f"Emoji: {emoji}\n"
+            f"Role: **{role.name}**\n"
+            f"Message: [Jump to Message]({message.jump_url})"
+        ),
+        color=discord.Color.green()
+    )
+    embed.set_footer(
+        text=f"Requested by {interaction.user}",
+        icon_url=interaction.user.display_avatar.url
+    )
+
+    await interaction.response.send_message(embed=embed)
 
     # ---------------- Debug Command (List) ----------------
     @commands.command(name="reactionrolelist")
