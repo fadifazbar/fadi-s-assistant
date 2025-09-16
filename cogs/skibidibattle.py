@@ -1,4 +1,4 @@
-import discord
+whyimport discord
 from discord.ext import commands
 from discord import app_commands
 import random
@@ -15,7 +15,8 @@ characters = {
         "attacks": {
             "Bass Blast": 25,
             "Mic Smash": 30,
-            "Sonic Wave": 20
+            "Sonic Wave": 20,
+            "Quadruple Blast": 100
         }
     },
     "Titan Cameraman 1.0": {
@@ -24,7 +25,8 @@ characters = {
         "attacks": {
             "Flash Shot": 22,
             "Tripod Slam": 28,
-            "Zoom Strike": 26
+            "Zoom Strike": 26,
+            "Heavy Atom": 34
         }
     },
     "G-Man 1.0": {
@@ -33,7 +35,8 @@ characters = {
         "attacks": {
             "Fist Smash": 24,
             "Power Punch": 32,
-            "Ground Slam": 27
+            "Ground Slam": 27,
+            "Laser Eye": 30
         }
     },
     "Titan Tvman 1.0": {
@@ -42,7 +45,8 @@ characters = {
         "attacks": {
             "Static Shock": 20,
             "Channel Crush": 29,
-            "Screen Slam": 26
+            "Screen Slam": 26,
+            "Red Light": 47
         }
     }
 }
