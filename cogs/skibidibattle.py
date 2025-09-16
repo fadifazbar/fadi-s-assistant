@@ -85,9 +85,23 @@ async def make_vs_image(url1: str, url2: str) -> io.BytesIO:
         font = ImageFont.load_default()
 
     text = "VS"
-    text_width, text_height = draw.textsize(text, font=font)
+# Draw VS text
+    draw = ImageDraw.Draw(combined)
+    try:
+        font = ImageFont.truetype("arialbd.ttf", 120)
+    except:
+        font = ImageFont.load_default()
+
+    text = "VS"
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
     text_x = (total_width - text_width) // 2
     text_y = (height - text_height) // 2
+
+    # Shadow + main text
+    draw.text((text_x + 4, text_y + 4), text, font=font, fill="black")
+    draw.text((text_x, text_y), text, font=font, fill="red")
 
     draw.text((text_x + 4, text_y + 4), text, font=font, fill="black")
     draw.text((text_x, text_y), text, font=font, fill="red")
