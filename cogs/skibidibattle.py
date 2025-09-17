@@ -120,7 +120,7 @@ games = {}  # channel_id -> game state
 
 class RetreatButton(discord.ui.Button):
     def __init__(self, game):
-        super().__init__(label="Retreat", style=discord.ButtonStyle.secondary)
+        super().__init__(label="🏳️ Retreat", style=discord.ButtonStyle.success)
         self.game = game
         self.retreat_votes = {}  # Track votes: {player_id: True/False}
 
@@ -129,34 +129,39 @@ class RetreatButton(discord.ui.Button):
         if interaction.user not in self.game["players"]:
             return await interaction.response.send_message("❌ Only battle players can use this!", ephemeral=True)
 
-        # Send ephemeral confirmation embed
+        # Send PUBLIC confirmation embed
         confirm_embed = discord.Embed(
             title="Retreat Confirmation",
             description="Do you want to stop the game?",
-            color=discord.Color.greyple()
+            color=discord.Color.gold()
         )
         view = RetreatConfirmView(interaction.user, self.game, self.retreat_votes)
-        await interaction.response.send_message(embed=confirm_embed, view=view, ephemeral=True)
+        # PUBLIC message, not ephemeral
+        await interaction.response.send_message(embed=confirm_embed, view=view)
 
 
 class RetreatConfirmView(discord.ui.View):
     def __init__(self, player, game, votes):
-        super().__init__(timeout=7)
+        super().__init__(timeout=5)  # Auto timeout after 5 seconds
         self.game = game
         self.player = player
         self.votes = votes
+
         self.add_item(RetreatYesButton(player, game, votes))
         self.add_item(RetreatNoButton(player, game, votes))
 
     async def on_timeout(self):
-        # Disable buttons on timeout
-        for child in self.children:
-            child.disabled = True
+        # Delete confirmation message on timeout
+        if self.message:
+            try:
+                await self.message.delete()
+            except:
+                pass
 
 
 class RetreatYesButton(discord.ui.Button):
     def __init__(self, player, game, votes):
-        super().__init__(label="Yes", style=discord.ButtonStyle.success)
+        super().__init__(label="✅ Yes", style=discord.ButtonStyle.success)
         self.player = player
         self.game = game
         self.votes = votes
@@ -164,7 +169,7 @@ class RetreatYesButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         self.votes[self.player.id] = True
 
-        # If both players voted yes
+        # If both players voted Yes
         if all(self.votes.get(p.id) for p in self.game["players"]):
             channel = interaction.channel
             other_player = [p for p in self.game["players"] if p != self.player][0]
@@ -179,26 +184,30 @@ class RetreatYesButton(discord.ui.Button):
                 color=discord.Color.gold()
             )
             await self.game["message"].edit(embed=embed, view=None)
-            # Remove game from active games
             games.pop(channel.id, None)
-
-            await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
         else:
-            await interaction.response.send_message("You voted ✅ Yes to retreat. Waiting for the other player...", ephemeral=True)
+            await interaction.response.send_message(
+                f"✅ {interaction.user.mention} voted Yes. Waiting for the other player...",
+                ephemeral=False
+            )
 
 
 class RetreatNoButton(discord.ui.Button):
     def __init__(self, player, game, votes):
-        super().__init__(label="No", style=discord.ButtonStyle.danger)
+        super().__init__(label="⛔ No", style=discord.ButtonStyle.danger)
         self.player = player
         self.game = game
         self.votes = votes
 
     async def callback(self, interaction: discord.Interaction):
         self.votes[self.player.id] = False
-        await interaction.response.send_message("You voted ❌ No. The battle will continue!", ephemeral=True)
-        # Clear confirmation message after 7 seconds
-        await asyncio.sleep(7)
+        await interaction.response.send_message(
+            f"❌ {interaction.user.mention} voted No. The battle will continue!",
+            ephemeral=False
+        )
+
+        # Delete confirmation message after 5 seconds
+        await asyncio.sleep(5)
         try:
             await interaction.message.delete()
         except:
