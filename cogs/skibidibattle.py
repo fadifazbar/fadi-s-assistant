@@ -394,6 +394,7 @@ class AttackButton(discord.ui.Button):
         await asyncio.sleep(1.5)  # Optional delay
 
         # Update the battle embed with attack/immune info
+
         await update_battle_embed(interaction.channel, self.game, last_attack=(self.attacker, self.atk_name, dmg), immune_msg=immune_msg)
 
         # ================= Handle faint =================
@@ -448,9 +449,7 @@ async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
         color=discord.Color.red()
     )
 
-    # Update the message
-    await channel.send(embed=embed)  # Or edit existing message with game["message"].edit(embed=embed)
-
+    # Add HP fields
     embed.add_field(
         name=f"{c1['name']} ({p1.name})",
         value=f"{HP_EMOJI} {c1['hp']} HP",
@@ -465,7 +464,7 @@ async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
     # Build attack buttons for the current turn
     view = AttackView(turn_player, opponent, game)
 
-    # Send or edit message
+    # Send new message if first time, else edit existing
     if "message" not in game:
         vs_image = await make_vs_image(c1["image"], c2["image"])
         file = discord.File(vs_image, filename="vs.png")
