@@ -151,6 +151,7 @@ class AttackButton(discord.ui.Button):
         attacker_char = self.game["characters"][self.attacker.id]
         defender_char = self.game["characters"][self.defender.id]
 
+
 # ================= Immunity check =================
     immune = False
     for imm in defender_char.get("immunities", []):
