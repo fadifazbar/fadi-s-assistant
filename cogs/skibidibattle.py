@@ -242,31 +242,32 @@ class Skibidi(commands.Cog):
     async def skibidi_slash(self, interaction: discord.Interaction, target: discord.Member):
         await self.start_battle(interaction.user, target, interaction.channel, interaction=interaction)
 
-    async def start_battle(self, player1, player2, channel, interaction=None):
-        if channel.id in games:
-            msg = "⚠️ A battle is already in progress in this channel!"
-            if interaction:
-                await interaction.response.send_message(msg, ephemeral=True)
-            else:
-                await channel.send(msg)
-            return
-
-        confirm_embed = discord.Embed(
-            title="Skibidi Battle! 🚽⚔️",
-            description=f"{player1.mention} has challenged {player2.mention}!\n\nDo you accept?",
-            color=discord.Color.blue()
-        )
-
-await ctx.send(
-    content=f"||{player1.mention} {player2.mention}||",
-    embed=confirm_embed
-)
-
-        view = ConfirmView(player1, player2, channel)
+async def start_battle(self, player1, player2, channel, interaction=None):
+    if channel.id in games:
+        msg = "⚠️ A battle is already in progress in this channel!"
         if interaction:
-            await interaction.response.send_message(embed=confirm_embed, view=view)
+            await interaction.response.send_message(msg, ephemeral=True)
         else:
-            await channel.send(embed=confirm_embed, view=view)
+            await channel.send(msg)
+        return
+
+    confirm_embed = discord.Embed(
+        title="Skibidi Battle! 🚽⚔️",
+        description=f"{player1.mention} has challenged {player2.mention}!\n\nDo you accept?",
+        color=discord.Color.blue()
+    )
+
+    # <-- This line needed to be indented under the function
+    await channel.send(
+        content=f"||{player1.mention} {player2.mention}||",
+        embed=confirm_embed
+    )
+
+    view = ConfirmView(player1, player2, channel)
+    if interaction:
+        await interaction.response.send_message(embed=confirm_embed, view=view)
+    else:
+        await channel.send(embed=confirm_embed, view=view)
 
 class ConfirmView(discord.ui.View):
     def __init__(self, player1, player2, channel):
