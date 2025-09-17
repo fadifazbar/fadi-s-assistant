@@ -246,10 +246,10 @@ class RetreatButton(discord.ui.Button):
         confirm_embed = discord.Embed(
             title="🏳️ Retreat Confirmation",
             description="Do you want to stop the game?",
-            color=discord.Color.greyple()
+            color=discord.Color.gold()
         )
         view = RetreatConfirmView(interaction.user, self.game, self.retreat_votes)
-        await interaction.response.send_message(embed=confirm_embed, view=view, ephemeral=False)
+        await interaction.response.send_message(embed=confirm_embed, view=view, ephemeral=True)
 
 
 class RetreatConfirmView(discord.ui.View):
