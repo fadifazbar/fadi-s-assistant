@@ -117,41 +117,47 @@ async def make_vs_image(url1: str, url2: str) -> io.BytesIO:
 # ================= Game Logic =================
 games = {}  # channel_id -> game state
 
-
 class RetreatButton(discord.ui.Button):
     def __init__(self, game):
-        super().__init__(label="🏳️ Retreat", style=discord.ButtonStyle.success)
+        super().__init__(label="🏳️ Retreat", style=discord.ButtonStyle.secondary)
         self.game = game
         self.retreat_votes = {}  # Track votes: {player_id: True/False}
 
     async def callback(self, interaction: discord.Interaction):
         # Only battle players can press
         if interaction.user not in self.game["players"]:
-            return await interaction.response.send_message("❌ Only battle players can use this!", ephemeral=True)
+            return await interaction.response.send_message(
+                "❌ Only battle players can use this!", ephemeral=True
+            )
 
-        # Send PUBLIC confirmation embed
+        # Public confirmation embed
         confirm_embed = discord.Embed(
             title="Retreat Confirmation",
             description="Do you want to stop the game?",
             color=discord.Color.gold()
         )
+
         view = RetreatConfirmView(interaction.user, self.game, self.retreat_votes)
-        # PUBLIC message, not ephemeral
+
+        # Send public message and store it in the view
         await interaction.response.send_message(embed=confirm_embed, view=view)
+        sent_msg = await interaction.original_response()
+        view.message = sent_msg  # store reference for timeout/deletion
 
 
 class RetreatConfirmView(discord.ui.View):
     def __init__(self, player, game, votes):
-        super().__init__(timeout=5)  # Auto timeout after 5 seconds
+        super().__init__(timeout=5)  # auto timeout after 5 seconds
         self.game = game
         self.player = player
         self.votes = votes
+        self.message = None  # Will hold the confirmation message
 
         self.add_item(RetreatYesButton(player, game, votes))
         self.add_item(RetreatNoButton(player, game, votes))
 
     async def on_timeout(self):
-        # Delete confirmation message on timeout
+        # Delete the confirmation message on timeout
         if self.message:
             try:
                 await self.message.delete()
@@ -176,7 +182,7 @@ class RetreatYesButton(discord.ui.Button):
             retreated_char = self.game["characters"][self.player.id]["name"]
             winner_char = self.game["characters"][other_player.id]["name"]
 
-            # Update main battle embed
+            # Update main battle embed and remove buttons
             embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
                 description=f"💨 {retreated_char} has retreated and left the battlefield.\n\n"
@@ -185,6 +191,7 @@ class RetreatYesButton(discord.ui.Button):
             )
             await self.game["message"].edit(embed=embed, view=None)
             games.pop(channel.id, None)
+
         else:
             await interaction.response.send_message(
                 f"✅ {interaction.user.mention} voted Yes. Waiting for the other player...",
