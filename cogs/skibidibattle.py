@@ -8,6 +8,9 @@ import aiohttp
 import random
 import io
 
+BATTLE_EMOJI = "<:battle_emoji:1408620699349946572>"
+HP_EMOJI = "<:HP_V2:1408669354069065748>"
+
 # ================= Characters =================
 characters = {
     "Titan Speakerman 1.0": {
@@ -169,7 +172,7 @@ class AttackButton(discord.ui.Button):
         if defender_char["hp"] <= 0:
             embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
-                description=f"**{self.attacker.mention}** used **{self.atk_name}**!\n\n# 💥 {self.defender.mention}'s **{defender_char['name']}** fainted!\n\n🏆 Winner: {self.attacker.mention}",
+                description=f"**{self.attacker.mention}** used **{self.atk_name}**!\n\n 💥 {self.defender.mention}'s **{defender_char['name']}** fainted!\n\n# 🏆 Winner: {self.attacker.mention}",
                 color=discord.Color.gold()
             )
             await self.game["message"].edit(embed=embed, view=None)
@@ -193,7 +196,7 @@ async def update_battle_embed(channel, game, last_attack=None):
     desc = f"{p1.mention} VS {p2.mention}\n\n"
     if last_attack:
         attacker, atk_name, dmg = last_attack
-        desc += f"**{attacker.mention}** used **{atk_name}** and dealt **{dmg} dmg**!\n\n"
+        desc += f"{BATTLE_EMOJI} **{attacker.mention}** used **{atk_name}** and dealt **{dmg} dmg**!\n\n"
 
     desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
 
@@ -205,12 +208,12 @@ async def update_battle_embed(channel, game, last_attack=None):
     )
     embed.add_field(
         name=f"{c1['name']} ({p1.display_name})",
-        value=f"❤️ {c1['hp']} HP",
+        value=f"{HP_EMOJI} {c1['hp']} HP",
         inline=True
     )
     embed.add_field(
         name=f"{c2['name']} ({p2.display_name})",
-        value=f"❤️ {c2['hp']} HP",
+        value=f"{HP_EMOJI} {c2['hp']} HP",
         inline=True
     )
 
@@ -253,6 +256,11 @@ class Skibidi(commands.Cog):
             description=f"{player1.mention} has challenged {player2.mention}!\n\nDo you accept?",
             color=discord.Color.blue()
         )
+
+await ctx.send(
+    content=f"||{player1.mention} {player2.mention}||",
+    embed=confirm_embed
+)
 
         view = ConfirmView(player1, player2, channel)
         if interaction:
