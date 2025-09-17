@@ -156,57 +156,96 @@ class AttackButton(discord.ui.Button):
         self.defender = defender
         self.game = game
 
+    async def callback(self, interaction: discord.Interaction):
+        # Prevent wrong player from clicking
+        if interaction.user != self.attacker:
+            return await interaction.response.send_message("❌ Not your turn!", ephemeral=True)
 
-async def callback(self, interaction: discord.Interaction):
-    if interaction.user != self.attacker:
-        return await interaction.response.send_message("❌ Not your turn!", ephemeral=True)
+        # Defer interaction immediately
+        await interaction.response.defer()
 
-    attacker_char = self.game["characters"][self.attacker.id]
-    defender_char = self.game["characters"][self.defender.id]
+        attacker_char = self.game["characters"][self.attacker.id]
+        defender_char = self.game["characters"][self.defender.id]
 
-    # ================= Immunity check =================
-    immune = False
-    immune_msg = None
-    for imm in defender_char.get("immunities", []):
-        if isinstance(imm, dict):
-            # dict format: {"character": "Titan Tvman 1.0", "attack": "📺 Red Light"}
-            if imm.get("character") == attacker_char["name"] and imm.get("attack") == self.atk_name:
-                immune = True
-                break
-        elif isinstance(imm, str):
-            # text-only format: "📺 Red Light"
-            if imm == self.atk_name:
-                immune = True
-                break
+        # ================= Immunity check =================
+        immune = False
+        immune_msg = None
+        for imm in defender_char.get("immunities", []):
+            if isinstance(imm, dict):
+                if imm.get("character") == attacker_char["name"] and imm.get("attack") == self.atk_name:
+                    immune = True
+                    break
+            elif isinstance(imm, str):
+                if imm == self.atk_name:
+                    immune = True
+                    break
 
-    if immune:
-        dmg = 0
-        immune_msg = f"🛡️ {self.defender.mention}'s **{defender_char.get('name', 'Unknown')}** is immune to **{self.atk_name}**!"
-    else:
-        dmg = self.atk_data["damage"]
-        # Subtract HP from the defender (never the attacker)
-        defender_char["hp"] = max(0, defender_char["hp"] - dmg)
-        immune_msg = None  # No immune message; normal attack
+        if immune:
+            dmg = 0
+            immune_msg = f"🛡️ {self.defender.mention}'s **{defender_char.get('name', 'Unknown')}** is immune to **{self.atk_name}**!"
+        else:
+            dmg = self.atk_data["damage"]
+            defender_char["hp"] = max(0, defender_char["hp"] - dmg)
+            immune_msg = None
 
-    # ================== Response ==================
-    await interaction.response.defer()
-    await asyncio.sleep(1.5)
+        await asyncio.sleep(1.5)  # Optional delay for UX
 
-    channel = interaction.channel
-    if defender_char["hp"] <= 0:
+        # ================= Build embed =================
+        p1, p2 = self.game["players"]
+        c1, c2 = self.game["characters"][p1.id], self.game["characters"][p2.id]
+
+        turn_player = p1 if self.game["turn"] == p1.id else p2
+        opponent = p2 if turn_player == p1 else p1
+
+        desc = f"{p1.mention} VS {p2.mention}\n\n"
+        if immune_msg:
+            desc += f"{immune_msg}\n\n"
+        else:
+            desc += f"**{self.attacker.mention}** used **{self.atk_name}** and dealt **{dmg} dmg** to **{defender_char.get('name', 'Unknown')}**!\n\n"
+        desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
+
         embed = discord.Embed(
             title="Skibidi Battle! 🚽⚔️",
-            description=f"{immune_msg if immune_msg else f'**{self.attacker.mention}** used **{self.atk_name}** and dealt **{dmg} dmg** to **{defender_char.get('name', 'Unknown')}**!'}\n\n"
-                        f"💥 {self.defender.mention}'s **{defender_char.get('name', 'Unknown')}** fainted!\n\n"
-                        f"🏆 Winner: {self.attacker.mention}",
-            color=discord.Color.gold()
+            description=desc,
+            color=discord.Color.red()
         )
-        await self.game["message"].edit(embed=embed, view=None)
-        games.pop(channel.id, None)
-        return
+        embed.add_field(
+            name=f"{c1['name']} ({p1.name})",
+            value=f"{HP_EMOJI} {c1['hp']} HP",
+            inline=True
+        )
+        embed.add_field(
+            name=f"{c2['name']} ({p2.name})",
+            value=f"{HP_EMOJI} {c2['hp']} HP",
+            inline=True
+        )
 
-    # Swap turns
-    self.game["turn"] = self.defender.id
+        channel = interaction.channel
+
+        # ================= Handle faint =================
+        if defender_char["hp"] <= 0:
+            embed = discord.Embed(
+                title="Skibidi Battle! 🚽⚔️",
+                description=f"{immune_msg if immune_msg else f'**{self.attacker.mention}** used **{self.atk_name}** and dealt **{dmg} dmg** to **{defender_char.get('name', 'Unknown')}**!'}\n\n"
+                            f"💥 {self.defender.mention}'s **{defender_char.get('name', 'Unknown')}** fainted!\n\n"
+                            f"🏆 Winner: {self.attacker.mention}",
+                color=discord.Color.gold()
+            )
+            await self.game["message"].edit(embed=embed, view=None)
+            games.pop(channel.id, None)
+            return
+
+        # Swap turns
+        self.game["turn"] = self.defender.id
+
+        # Build buttons for next turn
+        view = AttackView(turn_player, opponent, self.game)
+
+        # Edit the battle message
+        await self.game["message"].edit(embed=embed, view=view)
+
+
+
     await update_battle_embed(channel, self.game, last_attack=(self.attacker, self.atk_name, dmg), immune_msg=immune_msg)
 
 async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
