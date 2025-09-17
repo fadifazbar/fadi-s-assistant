@@ -31,6 +31,32 @@ characters = {
         ]
     },
 
+"Titan Cameraman 1.0": {
+        "hp": 6500,
+        "image": "https://cdn.discordapp.com/attachments/1404364969037922486/1417656456248954900/Titan_Cameraman1-0.png?ex=68cb46f5&is=68c9f575&hm=f90ca1f459498786168c7c52ee64495ae5d619d0d95aa108821cd35561a158eb&",
+        "attacks": {
+            "💫 Core Beam": {"damage": 250, "rarity": 1},
+            "💥 Ground Smash": {"damage": 140, "rarity": 3},
+            "🦵 Kick": {"damage": 120, "rarity": 4},
+            "🥏 Grab & Throw": {"damage": 230, "rarity": 2},
+            "🦶 Stomp": {"damage": 58, "rarity": 8},
+            "👊 Punch": {"damage": 39, "rarity": 9}
+        },
+        "immunities": []
+    },
+
+    "G-Man 1.0": {
+        "hp": 3430,
+        "image": "https://cdn.discordapp.com/attachments/1404364969037922486/1417656457330954353/G-Man_Toilet1-0.png?ex=68cb46f6&is=68c9f576&hm=a24e890e4a7b8af877041d11b7a559f08c52b05645985d6d26fd7926ec92f0d6&",
+        "attacks": {
+            "👁️ Laser Eyes": {"damage": 140, "rarity": 3},
+            "👄 Bite": {"damage": 82, "rarity": 6},
+            "🤕 HeadButt": {"damage": 78, "rarity": 7},
+            "⏩ Dash": {"damage": 95, "rarity": 5}
+        },
+        "immunities": []
+    },
+
     "Titan Tvman 1.0": {
         "hp": 10415,
         "image": "https://cdn.discordapp.com/attachments/1404364969037922486/1417657393021587497/Titan_Tvman1-0.png?ex=68cb47d5&is=68c9f655&hm=deac76b2bb7cc1ac8c88a681bb24e5506abcb91bd9f7862490475631c31f4208&",
