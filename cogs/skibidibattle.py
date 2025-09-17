@@ -188,30 +188,10 @@ class AttackButton(discord.ui.Button):
 
         await asyncio.sleep(1.5)  # Optional delay
 
-        # ================= Build embed =================
-        p1, p2 = self.game["players"]
-        c1, c2 = self.game["characters"][p1.id], self.game["characters"][p2.id]
-
-        turn_player = p1 if self.game["turn"] == p1.id else p2
-        opponent = p2 if turn_player == p1 else p1
-
-        desc = f"{p1.mention} VS {p2.mention}\n\n"
-        if immune_msg:
-            desc += f"{immune_msg}\n\n"
-        else:
-            desc += f"**{self.attacker.mention}** used **{self.atk_name}** and dealt **{dmg} dmg** to **{defender_char.get('name', 'Unknown')}**!\n\n"
-        desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
-
-        embed = discord.Embed(
-            title="Skibidi Battle! 🚽⚔️",
-            description=desc,
-            color=discord.Color.red()
-        )
-        embed.add_field(name=f"{c1['name']} ({p1.name})", value=f"{HP_EMOJI} {c1['hp']} HP", inline=True)
-        embed.add_field(name=f"{c2['name']} ({p2.name})", value=f"{HP_EMOJI} {c2['hp']} HP", inline=True)
+        # Update the battle embed with attack/immune info
+        await update_battle_embed(interaction.channel, self.game, last_attack=(self.attacker, self.atk_name, dmg), immune_msg=immune_msg)
 
         # ================= Handle faint =================
-        channel = interaction.channel
         if defender_char["hp"] <= 0:
             embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
@@ -221,20 +201,19 @@ class AttackButton(discord.ui.Button):
                 color=discord.Color.gold()
             )
             await self.game["message"].edit(embed=embed, view=None)
-            games.pop(channel.id, None)
+            games.pop(interaction.channel.id, None)
             return
 
         # Swap turns
         self.game["turn"] = self.defender.id
 
         # Build buttons for next turn
+        p1, p2 = self.game["players"]
+        turn_player = p1 if self.game["turn"] == p1.id else p2
+        opponent = p2 if turn_player == p1 else p1
         view = AttackView(turn_player, opponent, self.game)
+        await self.game["message"].edit(view=view)
 
-        # Edit the battle message
-        await self.game["message"].edit(embed=embed, view=view)
-
-
-    await update_battle_embed(channel, self.game, last_attack=(self.attacker, self.atk_name, dmg), immune_msg=immune_msg)
 
 async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
     p1, p2 = game["players"]
@@ -246,13 +225,11 @@ async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
 
     # Build description
     desc = f"{p1.mention} VS {p2.mention}\n\n"
-
-    if immune_msg:  # If the defender is immune, show this instead
+    if immune_msg:
         desc += f"{immune_msg}\n\n"
     elif last_attack:
         attacker, atk_name, dmg = last_attack
         desc += f"{BATTLE_EMOJI} **{attacker.mention}** used **{atk_name}** and dealt **{dmg} dmg**!\n\n"
-
     desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
 
     # Create embed
@@ -272,7 +249,7 @@ async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
         inline=True
     )
 
-# Build attack buttons for the current turn
+    # Build attack buttons for the current turn
     view = AttackView(turn_player, opponent, game)
 
     # Send or edit message
