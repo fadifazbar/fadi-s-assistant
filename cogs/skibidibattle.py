@@ -228,24 +228,22 @@ elif last_attack:
 
 desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
 
-    desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
-
-    # Create embed
-    embed = discord.Embed(
-        title="Skibidi Battle! 🚽⚔️",
-        description=desc,
-        color=discord.Color.red()
-    )
-    embed.add_field(
-        name=f"{c1['name']} ({p1.display_name})",
-        value=f"{HP_EMOJI} {c1['hp']} HP",
-        inline=True
-    )
-    embed.add_field(
-        name=f"{c2['name']} ({p2.display_name})",
-        value=f"{HP_EMOJI} {c2['hp']} HP",
-        inline=True
-    )
+        # Create embed
+        embed = discord.Embed(
+            title="Skibidi Battle! 🚽⚔️",
+            description=desc,
+            color=discord.Color.red()
+        )
+        embed.add_field(
+            name=f"{c1['name']} ({p1.name})",
+            value=f"{HP_EMOJI} {c1['hp']} HP",
+            inline=True
+        )
+        embed.add_field(
+            name=f"{c2['name']} ({p2.name})",
+            value=f"{HP_EMOJI} {c2['hp']} HP",
+            inline=True
+        )
 
     # Build attack buttons for the current turn
     view = AttackView(turn_player, opponent, game)
