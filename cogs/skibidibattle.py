@@ -234,7 +234,7 @@ class Skibidi(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="skibidi")
+    @commands.command(name="skibidi", aliases="sk")
     async def skibidi_prefix(self, ctx, opponent: discord.Member):
         await self.start_battle(ctx.author, opponent, ctx.channel)
 
