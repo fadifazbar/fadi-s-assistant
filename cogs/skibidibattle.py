@@ -17,51 +17,60 @@ characters = {
         "hp": 4500,
         "image": "https://cdn.discordapp.com/attachments/1404364969037922486/1417656455213088918/Titan_Speakerman1-0.png?ex=68cb46f5&is=68c9f575&hm=aecc159d6ffec1ba66ac5f48eda661c662ca5e23d5e650c411637ca38dacbc2b&",
         "attacks": {
-            "💥 Cannon Blast": 200,
-            "🔊 Shock Wave": 130,
-            "🦶 Stomp": 80,
-            "👊 Punch": 35,
-            "🦵 Kick": 57,
-            "🤜 Crush": 94,
-            "✋ Slam": 110,
-            "🖐️ Slap": 75
-        }
+            "💥 Cannon Blast": {"damage": 200, "rarity": 2},
+            "🔊 Shock Wave": {"damage": 130, "rarity": 4},
+            "🦶 Stomp": {"damage": 80, "rarity": 6},
+            "👊 Punch": {"damage": 35, "rarity": 10},
+            "🦵 Kick": {"damage": 57, "rarity": 8},
+            "🤜 Crush": {"damage": 94, "rarity": 6},
+            "✋ Slam": {"damage": 110, "rarity": 5},
+            "🖐️ Slap": {"damage": 75, "rarity": 7}
+        },
+        "immunities": [
+            {"character": "Titan Tvman 1.0", "attack": "📺 Red Light"},
+        ]
     },
+
     "Titan Cameraman 1.0": {
         "hp": 6500,
         "image": "https://cdn.discordapp.com/attachments/1404364969037922486/1417656456248954900/Titan_Cameraman1-0.png?ex=68cb46f5&is=68c9f575&hm=f90ca1f459498786168c7c52ee64495ae5d619d0d95aa108821cd35561a158eb&",
         "attacks": {
-            "💫 Core Beam": 250,
-            "💥 Ground Smash": 140,
-            "🦵 Kick": 120,
-            "🥏 Grab & Throw": 230,
-            "🦶 Stomp": 58,
-            "👊 Punch": 39,
-        }
+            "💫 Core Beam": {"damage": 250, "rarity": 1},
+            "💥 Ground Smash": {"damage": 140, "rarity": 3},
+            "🦵 Kick": {"damage": 120, "rarity": 4},
+            "🥏 Grab & Throw": {"damage": 230, "rarity": 2},
+            "🦶 Stomp": {"damage": 58, "rarity": 8},
+            "👊 Punch": {"damage": 39, "rarity": 9}
+        },
+        "immunities": []
     },
+
     "G-Man 1.0": {
         "hp": 3430,
         "image": "https://cdn.discordapp.com/attachments/1404364969037922486/1417656457330954353/G-Man_Toilet1-0.png?ex=68cb46f6&is=68c9f576&hm=a24e890e4a7b8af877041d11b7a559f08c52b05645985d6d26fd7926ec92f0d6&",
         "attacks": {
-            "👁️ Laser Eyes": 140,
-            "👄 Bite": 82,
-            "🤕 HeadButt": 78,
-            "⏩ Dash": 95
-        }
+            "👁️ Laser Eyes": {"damage": 140, "rarity": 3},
+            "👄 Bite": {"damage": 82, "rarity": 6},
+            "🤕 HeadButt": {"damage": 78, "rarity": 7},
+            "⏩ Dash": {"damage": 95, "rarity": 5}
+        },
+        "immunities": []
     },
+
     "Titan Tvman 1.0": {
         "hp": 10415,
         "image": "https://cdn.discordapp.com/attachments/1404364969037922486/1417657393021587497/Titan_Tvman1-0.png?ex=68cb47d5&is=68c9f655&hm=deac76b2bb7cc1ac8c88a681bb24e5506abcb91bd9f7862490475631c31f4208&",
         "attacks": {
-            "📺 Red Light": 500,
-            "🦶 Stomp": 120,
-            "👊 Punch": 65,
-            "🦵 Kick": 97,
-            "🤜 Crush": 134,
-            "✋ Slam": 170,
-            "🖐️ Slap": 120,
-            "🪝 Grapple Hook": 59
-        }
+            "📺 Red Light": {"damage": 500, "rarity": 1},
+            "🦶 Stomp": {"damage": 120, "rarity": 4},
+            "👊 Punch": {"damage": 65, "rarity": 7},
+            "🦵 Kick": {"damage": 97, "rarity": 5},
+            "🤜 Crush": {"damage": 134, "rarity": 3},
+            "✋ Slam": {"damage": 170, "rarity": 2},
+            "🖐️ Slap": {"damage": 120, "rarity": 4},
+            "🪝 Grapple Hook": {"damage": 59, "rarity": 8}
+        },
+        "immunities": []
     }
 }
 
