@@ -27,7 +27,7 @@ characters = {
             "🖐️ Slap": {"damage": 75, "rarity": 7}
         },
         "immunities": [
-            "📺 Red Light",
+           "📺 Red Light",
            "📺 Red Light",
            "📺 Purple Light",
            "📺 Orange Light",
@@ -74,7 +74,7 @@ characters = {
 
     "Titan Tvman 2.0": {
         "hp": 27000,
-        "image": "",
+        "image": "https://cdn.discordapp.com/attachments/1264953147386892388/1417906863852490752/Titan_Tvman2-0.png?ex=68cc302b&is=68cadeab&hm=a81f74b38e3341860fc933f544d11d264e75b7b3c65b3067aa710069d333085a&",
         "attacks": {
             "📺 Purple Light": {"damage": 750, "rarity": 0.5},
             "📺 Red Light": {"damage": 1000, "rarity": 0.31},
