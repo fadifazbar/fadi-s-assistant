@@ -7,6 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 import aiohttp
 import random
 import io
+import difflib
 
 BATTLE_EMOJI = "<:battle_emoji:1408620699349946572>"
 HP_EMOJI = "<:HP_V2:1408669354069065748>"
@@ -478,6 +479,60 @@ async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
 class Skibidi(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    # ========== PREFIX ==========
+    @commands.command(name="skibidilist", aliases=["sklist", "toilets"])
+    async def skibidi_list_prefix(self, ctx, *, character_name: str = None):
+        if character_name:
+            char_name, char_data = self.find_character(character_name)
+            if not char_data:
+                return await ctx.send(f"❌ No close match found for `{character_name}`.")
+            embed = CharacterListView.make_character_embed(char_name, char_data, 0, 1)
+            return await ctx.send(embed=embed)
+
+        # no character given → show paginated list
+        pages = [(name, data) for name, data in characters.items()]
+        view = CharacterListView(ctx.author, pages)
+        embed = view.make_page_embed(0)
+        await ctx.send(embed=embed, view=view)
+
+    # ========== SLASH ==========
+    @app_commands.command(name="skibidilist", description="View Skibidi characters")
+    @app_commands.describe(character="Optional: View a specific character")
+    async def skibidi_list_slash(self, interaction: discord.Interaction, character: str = None):
+        if character:
+            char_name, char_data = self.find_character(character)
+            if not char_data:
+                return await interaction.response.send_message(f"❌ No close match found for `{character}`.", ephemeral=True)
+            embed = CharacterListView.make_character_embed(char_name, char_data, 0, 1)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
+
+        pages = [(name, data) for name, data in characters.items()]
+        view = CharacterListView(interaction.user, pages)
+        embed = view.make_page_embed(0)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+    # ========== AUTOCOMPLETE ==========
+    @skibidi_list_slash.autocomplete("character")
+    async def character_autocomplete(self, interaction: discord.Interaction, current: str):
+        if not current:
+            return [app_commands.Choice(name=name, value=name) for name in list(characters.keys())[:20]]
+
+        matches = difflib.get_close_matches(current, characters.keys(), n=20, cutoff=0.2)
+        return [app_commands.Choice(name=match, value=match) for match in matches]
+
+    # ========== HELPER ==========
+    def find_character(self, query: str):
+        """Find closest character name to the query."""
+        if query in characters:
+            return query, characters[query]
+
+        matches = difflib.get_close_matches(query, characters.keys(), n=1, cutoff=0.2)
+        if matches:
+            best_match = matches[0]
+            return best_match, characters[best_match]
+
+        return None, None
 
     @commands.command(name="skibidi", aliases=["sk", "battle", "toilet"])
     async def skibidi_prefix(self, ctx, opponent: discord.Member):
