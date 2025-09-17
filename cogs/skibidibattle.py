@@ -156,6 +156,7 @@ class AttackButton(discord.ui.Button):
         self.defender = defender
         self.game = game
 
+
 async def callback(self, interaction: discord.Interaction):
     if interaction.user != self.attacker:
         return await interaction.response.send_message("❌ Not your turn!", ephemeral=True)
