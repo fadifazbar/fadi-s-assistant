@@ -57,12 +57,14 @@ characters = {
             "🦶 Stomp": {"damage": 150, "rarity": 14},
             "👊 Punch": {"damage": 120, "rarity": 16},
             "🔥 Core Fire": {"damage": 800, "rarity": 1},
-            "⚒️ Hammer Smash": {"damage": 360, "rarity": 3},
+            "⚒️ Hammer Smash": {"damage": 560, "rarity": 3},
             "👏 Double Hand Slap": {"damage": 180, "rarity": 5},
             "🤕 Head Crush": {"damage": 200, "rarity": 2},
             "🤗 Tackle": {"damage": 240, "rarity": 4},
             "🔫 Shoulder Rockets": {"damage": 270, "rarity": 3},
-            "🧲 Magnet Hand": {"damage": 320, "rarity": 2}
+            "🧲 Magnet Hand": {"damage": 320, "rarity": 2},
+            "🥊 Claw Hand Punch": {"damage": 320, "rarity": 2}
+
         },
         "immunities": [
            "📺 Red Light",
@@ -212,8 +214,8 @@ async def make_vs_image(url1: str, url2: str) -> io.BytesIO:
     bbox = draw.textbbox((0, 0), text, font=font)
     text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
-    text_x = (total_width - text_width) // 10
-    text_y = (height - text_height) // 10
+    text_x = (total_width - text_width) // 50
+    text_y = (height - text_height) // 50
 
     # Shadow + main text
     draw.text((text_x + 4, text_y + 4), text, font=font, fill="black")
@@ -402,7 +404,7 @@ class AttackButton(discord.ui.Button):
                 title="Skibidi Battle! 🚽⚔️",
                 description=f"{immune_msg if immune_msg else f'**{self.attacker.mention}** used **{self.atk_name}** and dealt **{dmg} dmg** to **{defender_char.get('name', 'Unknown')}**!'}\n\n"
                             f"💥 {self.defender.mention}'s **{defender_char.get('name', 'Unknown')}** fainted!\n\n"
-                            f"🏆 Winner: {self.attacker.mention}",
+                            f"# 🏆 Winner: {self.attacker.mention}",
                 color=discord.Color.gold()
             )
             await self.game["message"].edit(embed=embed, view=None)
