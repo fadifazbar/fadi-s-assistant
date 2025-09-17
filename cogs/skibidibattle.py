@@ -424,7 +424,12 @@ async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
     p1, p2 = game["players"]
     c1, c2 = game["characters"][p1.id], game["characters"][p2.id]
 
-    # Determine whose turn it is
+# Determine attacker and opponent
+if last_attack:
+    attacker, atk_name, dmg = last_attack
+    opponent = p2 if attacker == p1 else p1
+    turn_player = opponent  # next turn is opponent
+else:
     turn_player = p1 if game["turn"] == p1.id else p2
     opponent = p2 if turn_player == p1 else p1
 
