@@ -28,6 +28,9 @@ characters = {
         },
         "immunities": [
             "📺 Red Light",
+           "📺 Red Light",
+           "📺 Purple Light",
+           "📺 Orange Light",
         ]
     },
 
@@ -46,12 +49,80 @@ characters = {
     },
 
     "Titan Cameraman 2.0": {
-        "hp" 18489: ,
+        "hp": 18489,
+        "image": "https://cdn.discordapp.com/attachments/1264953147386892388/1417902300986478602/Titan_Cameraman2-0.png?ex=68cc2beb&is=68cada6b&hm=0134759ad4d0144066c98ce914ba2753d16e50757829af9e9a1a43e6a26e0f4c&",
+        "attacks": {
+            ""💥 Blaster: {"damage": 340, "rarity": 4},
+            "🦵 Kick": {"damage": 180, "rarity": 4},
+            "🥏 Grab & Throw": {"damage": 330, "rarity": 2},
+            "🦶 Stomp": {"damage": 128, "rarity": 8},
+            "👊 Punch": {"damage": 109, "rarity": 9},
+            "🔥 Core Fire": {"damage": 719, "rarity": 0.6},
+            "⚒️ Hammer Smash": {"damage": 328, "rarity": 1.8},
+            "👏 Double Hand Slap": {"damage": 150, "rarity": 2},
+            "🤕 Head Crush": {"damage": 164, "rarity": 1},
+            "🤗 Tackle": {"damage": 204, "rarity": 2.4},
+            "🔫 Shouler Rockets": {"damage": 238, "rarity": 1},
+            "🧲 Magnet Hand": {"damage": 289, "rarity": 1.2}
+        },
+        "immunities": [
+           "📺 Red Light",
+           "📺 Purple Light",
+           "📺 Orange Light",
+        ]
+    },
+
+    "Titan Tvman 2.0": {
+        "hp": 27000,
         "image": "",
         "attacks": {
-            "": {"damage": , "rarity": },
+            "📺 Purple Light": {"damage": 750, "rarity": 0.5},
+            "📺 Red Light": {"damage": 1000, "rarity": 0.31},
+            "🦶 Stomp": {"damage": 270, "rarity": 4},
+            "👊 Punch": {"damage": 265, "rarity": 7},
+            "🦵 Kick": {"damage": 307, "rarity": 5},
+            "🤜 Crush": {"damage": 384, "rarity": 3},
+            "✋ Slam": {"damage": 370, "rarity": 2},
+            "🖐️ Slap": {"damage": 220, "rarity": 4},
+            "🗡️ Sword Slash": {"damage": 219, "rarity": 4},
+            "🦞 Shoulder Claws": {"damage": 129, "rarity": 7},
+            "📺 Orange Light": {"damage": 888, "rarity": 0.4},
+            "💥 Core Blast": {"damage": 215, "rarity": 1.4},
+            "☄️ Core Beam": {"damage": 1350, "rarity": 0.08},
+            "🤕 Main Head Lasers": {"damage": 120, "rarity": 7},
+            "📺 Shoulder Tvs Rockets": {"damage": 57, "rarity": 13},
         },
-        "immunities": []
+        "immunities": [
+           "📺 Red Light",
+           "📺 Purple Light",
+           "📺 Orange Light",
+        ]
+    },
+
+    "Titan SpeakerMan 2.0": {
+        "hp": 12600,
+        "image": "https://cdn.discordapp.com/attachments/1264953147386892388/1417902299996491887/Titan_Speakerman2-0.png?ex=68cc2beb&is=68cada6b&hm=611b239522282e2551ba14e8163d86894b36a39155674a15f40e722a229487e2&",
+        "attacks": {
+            "🛰️ Blaster Shot": {"damage": 100, "rarity": 2.6},
+            "🔊 Shock Wave": {"damage": 330, "rarity": 2},
+            "🦶 Stomp": {"damage": 130, "rarity": 6},
+            "👊 Punch": {"damage": 185, "rarity": 10},
+            "🦵 Kick": {"damage": 157, "rarity": 8},
+            "🤜 Crush": {"damage": 194, "rarity": 6},
+            "✋ Slam": {"damage": 190, "rarity": 5},
+            "🖐️ Slap": {"damage": 105, "rarity": 7},
+            "‼️ Double Blasts": {"damage": 250, "rarity": 4.5},
+            "💡 Core Laser": {"damage": 179, "rarity": 4},
+            "🔪 Stab": {"damage": 75, "rarity": 14},
+            "📢 Massive Shockwave": {"damage": 780, "rarity": 0.4}
+        },
+        "immunities": [
+           "🔊 Shock Wave",
+           "📢 Massive Shockwave",
+           "📺 Red Light",
+           "📺 Purple Light",
+           "📺 Orange Light",
+        ]
     },
 
     "G-Man 1.0": {
@@ -63,7 +134,9 @@ characters = {
             "🤕 HeadButt": {"damage": 78, "rarity": 7},
             "⏩ Dash": {"damage": 95, "rarity": 5}
         },
-        "immunities": []
+        "immunities": [
+           "🧲 Magnet Hand",
+        ]
     },
 
 
@@ -78,9 +151,15 @@ characters = {
             "🤜 Crush": {"damage": 134, "rarity": 3},
             "✋ Slam": {"damage": 170, "rarity": 2},
             "🖐️ Slap": {"damage": 120, "rarity": 4},
-            "🪝 Grapple Hook": {"damage": 59, "rarity": 8}
+            "🪝 Grapple Hook": {"damage": 59, "rarity": 8},
+            "🦞 Shoulder Claws": {"damage": 89, "rarity": 7}
+
         },
-        "immunities": []
+        "immunities": [
+           "📺 Red Light",
+           "📺 Purple Light",
+           "📺 Orange Light",
+        ]
     }
 }
 
