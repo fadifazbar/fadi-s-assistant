@@ -209,7 +209,7 @@ async def callback(self, interaction: discord.Interaction):
     self.game["turn"] = self.defender.id
     await update_battle_embed(channel, self.game, last_attack=(self.attacker, self.atk_name, dmg), immune_msg=immune_msg)
 
-async def update_battle_embed(channel, game, last_attack=None):
+async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
     p1, p2 = game["players"]
     c1, c2 = game["characters"][p1.id], game["characters"][p2.id]
 
@@ -217,33 +217,33 @@ async def update_battle_embed(channel, game, last_attack=None):
     turn_player = p1 if game["turn"] == p1.id else p2
     opponent = p2 if turn_player == p1 else p1
 
-# Build description
-desc = f"{p1.mention} VS {p2.mention}\n\n"
+    # Build description
+    desc = f"{p1.mention} VS {p2.mention}\n\n"
 
-if immune_msg:  # If the defender is immune, show this instead
-    desc += f"{immune_msg}\n\n"
-elif last_attack:
-    attacker, atk_name, dmg = last_attack
-    desc += f"{BATTLE_EMOJI} **{attacker.mention}** used **{atk_name}** and dealt **{dmg} dmg**!\n\n"
+    if immune_msg:  # If the defender is immune, show this instead
+        desc += f"{immune_msg}\n\n"
+    elif last_attack:
+        attacker, atk_name, dmg = last_attack
+        desc += f"{BATTLE_EMOJI} **{attacker.mention}** used **{atk_name}** and dealt **{dmg} dmg**!\n\n"
 
-desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
+    desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
 
-# Create embed
-        embed = discord.Embed(
-            title="Skibidi Battle! 🚽⚔️",
-            description=desc,
-            color=discord.Color.red()
-        )
-        embed.add_field(
-            name=f"{c1['name']} ({p1.name})",
-            value=f"{HP_EMOJI} {c1['hp']} HP",
-            inline=True
-        )
-        embed.add_field(
-            name=f"{c2['name']} ({p2.name})",
-            value=f"{HP_EMOJI} {c2['hp']} HP",
-            inline=True
-        )
+    # Create embed
+    embed = discord.Embed(
+        title="Skibidi Battle! 🚽⚔️",
+        description=desc,
+        color=discord.Color.red()
+    )
+    embed.add_field(
+        name=f"{c1['name']} ({p1.name})",
+        value=f"{HP_EMOJI} {c1['hp']} HP",
+        inline=True
+    )
+    embed.add_field(
+        name=f"{c2['name']} ({p2.name})",
+        value=f"{HP_EMOJI} {c2['hp']} HP",
+        inline=True
+    )
 
         # Build attack buttons for the current turn
         view = AttackView(turn_player, opponent, game)
