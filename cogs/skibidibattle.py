@@ -152,30 +152,31 @@ class AttackButton(discord.ui.Button):
         defender_char = self.game["characters"][self.defender.id]
 
 # ================= Immunity check =================
-immune = False
-for imm in defender_char.get("immunities", []):
-    if isinstance(imm, dict):
-        # dict format: {"character": "Titan Tvman 1.0", "attack": "📺 Red Light"}
-        if imm.get("character") == attacker_char["name"] and imm.get("attack") == self.atk_name:
-            immune = True
-            break
-    elif isinstance(imm, str):
-        # text-only format: "📺 Red Light"
-        if imm == self.atk_name:
-            immune = True
-            break
+    immune = False
+    for imm in defender_char.get("immunities", []):
+        if isinstance(imm, dict):
+            # dict format: {"character": "Titan Tvman 1.0", "attack": "📺 Red Light"}
+            if imm.get("character") == attacker_char["name"] and imm.get("attack") == self.atk_name:
+                immune = True
+                break
+        elif isinstance(imm, str):
+            # text-only format: "📺 Red Light"
+            if imm == self.atk_name:
+                immune = True
+                break
 
-        if immune:
-            dmg = 0
-            msg = f"🛡️ {self.defender.mention}'s **{defender_char['name']}** is immune to **{self.atk_name}**!"
-        else:
-            dmg = self.atk_data["damage"]
-            defender_char["hp"] -= dmg
-            msg = f"**{self.attacker.mention}** used **{self.atk_name}** and dealt **{dmg} dmg**!"
+    # ================= Damage / Immunity result =================
+    if immune:
+        dmg = 0
+        msg = f"🛡️ {self.defender.mention}'s **{defender_char['name']}** is immune to **{self.atk_name}**!"
+    else:
+        dmg = self.atk_data["damage"]
+        defender_char["hp"] -= dmg
+        msg = f"**{self.attacker.mention}** used **{self.atk_name}** and dealt **{dmg} dmg**!"
 
-        # ================== Response ==================
-        await interaction.response.defer()
-        await asyncio.sleep(1.5)
+    # ================== Response ==================
+    await interaction.response.defer()
+    await asyncio.sleep(1.5)
 
         channel = interaction.channel
         if defender_char["hp"] <= 0:
