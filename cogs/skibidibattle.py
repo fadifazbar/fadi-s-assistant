@@ -228,7 +228,7 @@ elif last_attack:
 
 desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
 
-        # Create embed
+# Create embed
         embed = discord.Embed(
             title="Skibidi Battle! 🚽⚔️",
             description=desc,
@@ -245,17 +245,17 @@ desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
             inline=True
         )
 
-    # Build attack buttons for the current turn
-    view = AttackView(turn_player, opponent, game)
+        # Build attack buttons for the current turn
+        view = AttackView(turn_player, opponent, game)
 
-    # Send or edit message
-    if "message" not in game:
-        vs_image = await make_vs_image(c1["image"], c2["image"])
-        file = discord.File(vs_image, filename="vs.png")
-        msg = await channel.send(file=file, embed=embed, view=view)
-        game["message"] = msg
-    else:
-        await game["message"].edit(embed=embed, view=view)
+        # Send or edit message
+        if "message" not in game:
+            vs_image = await make_vs_image(c1["image"], c2["image"])
+            file = discord.File(vs_image, filename="vs.png")
+            msg = await channel.send(file=file, embed=embed, view=view)
+            game["message"] = msg
+        else:
+            await game["message"].edit(embed=embed, view=view)
 
 # ================= Commands =================
 class Skibidi(commands.Cog):
