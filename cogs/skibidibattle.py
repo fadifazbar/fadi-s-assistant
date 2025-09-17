@@ -132,6 +132,7 @@ class AttackView(discord.ui.View):
         for atk_name, atk_data in char["attacks"].items():
             pool.extend([(atk_name, atk_data)] * atk_data["rarity"])
 
+        # Pick up to 3 random weighted attacks
         chosen_attacks = random.sample(pool, min(3, len(pool)))
 
         # Pick button style depending on which player is attacking
@@ -144,33 +145,6 @@ class AttackView(discord.ui.View):
             self.add_item(
                 AttackButton(atk_name, atk_data, attacker, defender, game, button_style)
             )
-
-
-class AttackView(discord.ui.View):
-    def __init__(self, attacker, defender, game):
-        super().__init__(timeout=300)
-        self.attacker = attacker
-        self.defender = defender
-        self.game = game
-
-        char = game["characters"][attacker.id]
-
-        # Build weighted pool based on rarity
-        pool = []
-        for atk_name, atk_data in char["attacks"].items():
-            pool.extend([(atk_name, atk_data)] * atk_data["rarity"])
-
-        # Pick up to 3 random weighted attacks
-        chosen_attacks = random.sample(pool, min(3, len(pool)))
-
-        # Pick button style depending on which player is attacking
-        if attacker.id == game["players"][0].id:
-            button_style = discord.ButtonStyle.primary  # Blue for Player 1
-        else:
-            button_style = discord.ButtonStyle.danger   # Red for Player 2
-
-        for atk_name, atk_data in chosen_attacks:
-            self.add_item(AttackButton(atk_name, atk_data, attacker, defender, game, button_style))
 
 
 class AttackButton(discord.ui.Button):
