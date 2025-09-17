@@ -11,43 +11,53 @@ import io
 # ================= Characters =================
 characters = {
     "Titan Speakerman 1.0": {
-        "hp": 120,
+        "hp": 4500,
         "image": "https://cdn.discordapp.com/attachments/1404364969037922486/1417656455213088918/Titan_Speakerman1-0.png?ex=68cb46f5&is=68c9f575&hm=aecc159d6ffec1ba66ac5f48eda661c662ca5e23d5e650c411637ca38dacbc2b&",
         "attacks": {
-            "Bass Blast": 25,
-            "Mic Smash": 30,
-            "Sonic Wave": 20,
-            "Quadruple Blast": 100
+            "💥 Cannon Blast": 200,
+            "🔊 Shock Wave": 130,
+            "🦶 Stomp": 80,
+            "👊 Punch": 35,
+            "🦵 Kick": 57,
+            "🤜 Crush": 94,
+            "✋ Slam": 110,
+            "🖐️ Slap": 75
         }
     },
     "Titan Cameraman 1.0": {
-        "hp": 110,
+        "hp": 6500,
         "image": "https://cdn.discordapp.com/attachments/1404364969037922486/1417656456248954900/Titan_Cameraman1-0.png?ex=68cb46f5&is=68c9f575&hm=f90ca1f459498786168c7c52ee64495ae5d619d0d95aa108821cd35561a158eb&",
         "attacks": {
-            "Flash Shot": 22,
-            "Tripod Slam": 28,
-            "Zoom Strike": 26,
-            "Heavy Atom": 34
+            "💫 Core Beam": 250,
+            "💥 Ground Smash": 140,
+            "🦵 Kick": 120,
+            "🥏 Grab & Throw": 230,
+            "🦶 Stomp": 58,
+            "👊 Punch": 39,
         }
     },
     "G-Man 1.0": {
-        "hp": 130,
+        "hp": 3430,
         "image": "https://cdn.discordapp.com/attachments/1404364969037922486/1417656457330954353/G-Man_Toilet1-0.png?ex=68cb46f6&is=68c9f576&hm=a24e890e4a7b8af877041d11b7a559f08c52b05645985d6d26fd7926ec92f0d6&",
         "attacks": {
-            "Fist Smash": 24,
-            "Power Punch": 32,
-            "Ground Slam": 27,
-            "Laser Eye": 30
+            "👁️ Laser Eyes": 140,
+            "👄 Bite": 82,
+            "🤕 HeadButt": 78,
+            "⏩ Dash": 95
         }
     },
     "Titan Tvman 1.0": {
-        "hp": 115,
+        "hp": 10415,
         "image": "https://cdn.discordapp.com/attachments/1404364969037922486/1417657393021587497/Titan_Tvman1-0.png?ex=68cb47d5&is=68c9f655&hm=deac76b2bb7cc1ac8c88a681bb24e5506abcb91bd9f7862490475631c31f4208&",
         "attacks": {
-            "Static Shock": 20,
-            "Channel Crush": 29,
-            "Screen Slam": 26,
-            "Red Light": 47
+            "📺 Red Light": 500,
+            "🦶 Stomp": 120,
+            "👊 Punch": 65,
+            "🦵 Kick": 97,
+            "🤜 Crush": 134,
+            "✋ Slam": 170,
+            "🖐️ Slap": 120,
+            "🪝 Grapple Hook": 59
         }
     }
 }
