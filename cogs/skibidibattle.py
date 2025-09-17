@@ -424,21 +424,20 @@ async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
     p1, p2 = game["players"]
     c1, c2 = game["characters"][p1.id], game["characters"][p2.id]
 
-# Determine attacker and opponent
-if last_attack:
-    attacker, atk_name, dmg = last_attack
-    opponent = p2 if attacker == p1 else p1
-    turn_player = opponent  # next turn is opponent
-else:
-    turn_player = p1 if game["turn"] == p1.id else p2
-    opponent = p2 if turn_player == p1 else p1
+    # Determine attacker and opponent
+    if last_attack:
+        attacker, atk_name, dmg = last_attack
+        opponent = p2 if attacker == p1 else p1
+        turn_player = opponent  # next turn is opponent
+    else:
+        turn_player = p1 if game["turn"] == p1.id else p2
+        opponent = p2 if turn_player == p1 else p1
 
     # Build description
     desc = f"{p1.mention} VS {p2.mention}\n\n"
     if immune_msg:
         desc += f"{immune_msg}\n\n"
     elif last_attack:
-        attacker, atk_name, dmg = last_attack
         desc += f"{BATTLE_EMOJI} **{attacker.mention}** used **{atk_name}** and dealt **{dmg} dmg**!\n\n"
     desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
 
@@ -448,6 +447,10 @@ else:
         description=desc,
         color=discord.Color.red()
     )
+
+    # Update the message
+    await channel.send(embed=embed)  # Or edit existing message with game["message"].edit(embed=embed)
+
     embed.add_field(
         name=f"{c1['name']} ({p1.name})",
         value=f"{HP_EMOJI} {c1['hp']} HP",
