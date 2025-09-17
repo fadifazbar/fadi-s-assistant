@@ -60,7 +60,7 @@ characters = {
             "⚒️ Hammer Smash": {"damage": 328, "rarity": 3},
             "👏 Double Hand Slap": {"damage": 150, "rarity": 4},
             "🤕 Head Crush": {"damage": 164, "rarity": 2},
-            "🤗 Tackle": {"damage": 204, "rarity": 2.4},
+            "🤗 Tackle": {"damage": 204, "rarity": 5},
             "🔫 Shouler Rockets": {"damage": 238, "rarity": 2},
             "🧲 Magnet Hand": {"damage": 289, "rarity": 2}
         },
