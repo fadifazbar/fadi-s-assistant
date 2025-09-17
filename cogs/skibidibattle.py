@@ -288,8 +288,8 @@ class RetreatYesButton(discord.ui.Button):
             # Update main battle embed
             embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
-                description=f"💨 {retreated_char} has retreated and left the battlefield.\n\n"
-                            f"🏆 Winner: {winner_char}",
+                description=f"💨 Both characters has retreated and left the battlefield.\n\n"
+                            f"# 🏆 Winner: TIE.",
                 color=discord.Color.gold()
             )
             await self.game["message"].edit(embed=embed, view=None)
@@ -298,7 +298,7 @@ class RetreatYesButton(discord.ui.Button):
 
             await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
         else:
-            await interaction.response.send_message("You voted ✅ Yes to retreat. Waiting for the other player...", ephemeral=True)
+            await interaction.response.send_message("You voted ✅ Yes to retreat. Waiting for the other player...", ephemeral=False)
 
 
 class RetreatNoButton(discord.ui.Button):
