@@ -233,7 +233,31 @@ class AttackButton(discord.ui.Button):
                     immune = True
                     break
 
-        # ================= Damage / Immunity result =================
+# ================= Immunity check =================
+    immune = False
+    immune_msg = None
+
+    for imm in defender_char.get("immunities", []):
+        if isinstance(imm, dict):
+            # dict format: {"character": "Titan Tvman 1.0", "attack": "📺 Red Light"}
+            if imm.get("character") == attacker_char["name"] and imm.get("attack") == self.atk_name:
+                immune = True
+                break
+        elif isinstance(imm, str):
+            # text-only format: "📺 Red Light"
+            if imm == self.atk_name:
+                immune = True
+                break
+
+    if immune:
+        dmg = 0
+        immune_msg = f"🛡️ {self.defender.mention}'s **{defender_char.get('name', 'Unknown')}** is immune to **{self.atk_name}**!"
+    else:
+        dmg = self.atk_data["damage"]
+        # Subtract HP from the defender
+        defender_char["hp"] = max(0, defender_char["hp"] - dmg)
+        immune_msg = None  # No immune message
+
 
         # ================== Response ==================
         await interaction.response.defer()
