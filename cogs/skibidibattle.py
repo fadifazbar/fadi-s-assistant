@@ -52,7 +52,7 @@ characters = {
         "hp": 18489,
         "image": "https://cdn.discordapp.com/attachments/1264953147386892388/1417902300986478602/Titan_Cameraman2-0.png?ex=68cc2beb&is=68cada6b&hm=0134759ad4d0144066c98ce914ba2753d16e50757829af9e9a1a43e6a26e0f4c&",
         "attacks": {
-            ""💥 Blaster: {"damage": 340, "rarity": 4},
+            "💥 Blaster": {"damage": 340, "rarity": 4},
             "🦵 Kick": {"damage": 180, "rarity": 4},
             "🥏 Grab & Throw": {"damage": 330, "rarity": 2},
             "🦶 Stomp": {"damage": 128, "rarity": 8},
