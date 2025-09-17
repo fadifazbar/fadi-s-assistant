@@ -272,12 +272,6 @@ class Skibidi(commands.Cog):
                 view=view
             )
 
-    view = ConfirmView(player1, player2, channel)
-    if interaction:
-        await interaction.response.send_message(embed=confirm_embed, view=view)
-    else:
-        await channel.send(embed=confirm_embed, view=view)
-
 class ConfirmView(discord.ui.View):
     def __init__(self, player1, player2, channel):
         super().__init__(timeout=300)
