@@ -146,7 +146,6 @@ class AttackView(discord.ui.View):
                 AttackButton(atk_name, atk_data, attacker, defender, game, button_style)
             )
 
-
 class AttackButton(discord.ui.Button):
     def __init__(self, atk_name, atk_data, attacker, defender, game, button_style):
         super().__init__(label=f"{atk_name} ({atk_data['damage']} dmg)", style=button_style)
@@ -157,12 +156,11 @@ class AttackButton(discord.ui.Button):
         self.game = game
 
     async def callback(self, interaction: discord.Interaction):
-        # Prevent wrong player from clicking
-        if interaction.user != self.attacker:
-            return await interaction.response.send_message("❌ Not your turn!", ephemeral=True)
-
-        # Defer interaction immediately
+        # Immediate defer to prevent "interaction failed"
         await interaction.response.defer()
+
+        if interaction.user != self.attacker:
+            return await interaction.followup.send("❌ Not your turn!", ephemeral=True)
 
         attacker_char = self.game["characters"][self.attacker.id]
         defender_char = self.game["characters"][self.defender.id]
@@ -188,7 +186,7 @@ class AttackButton(discord.ui.Button):
             defender_char["hp"] = max(0, defender_char["hp"] - dmg)
             immune_msg = None
 
-        await asyncio.sleep(1.5)  # Optional delay for UX
+        await asyncio.sleep(1.5)  # Optional delay
 
         # ================= Build embed =================
         p1, p2 = self.game["players"]
@@ -209,20 +207,11 @@ class AttackButton(discord.ui.Button):
             description=desc,
             color=discord.Color.red()
         )
-        embed.add_field(
-            name=f"{c1['name']} ({p1.name})",
-            value=f"{HP_EMOJI} {c1['hp']} HP",
-            inline=True
-        )
-        embed.add_field(
-            name=f"{c2['name']} ({p2.name})",
-            value=f"{HP_EMOJI} {c2['hp']} HP",
-            inline=True
-        )
-
-        channel = interaction.channel
+        embed.add_field(name=f"{c1['name']} ({p1.name})", value=f"{HP_EMOJI} {c1['hp']} HP", inline=True)
+        embed.add_field(name=f"{c2['name']} ({p2.name})", value=f"{HP_EMOJI} {c2['hp']} HP", inline=True)
 
         # ================= Handle faint =================
+        channel = interaction.channel
         if defender_char["hp"] <= 0:
             embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
@@ -243,7 +232,6 @@ class AttackButton(discord.ui.Button):
 
         # Edit the battle message
         await self.game["message"].edit(embed=embed, view=view)
-
 
 
     await update_battle_embed(channel, self.game, last_attack=(self.attacker, self.atk_name, dmg), immune_msg=immune_msg)
