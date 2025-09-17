@@ -5,6 +5,7 @@ import random
 import asyncio
 from PIL import Image, ImageDraw, ImageFont
 import aiohttp
+import random
 import io
 
 # ================= Characters =================
@@ -52,6 +53,12 @@ characters = {
 }
 
 # ================= Helpers =================
+
+def get_random_attacks(character):
+    return random.sample(character["attacks"], 3)
+
+
+
 async def url_to_file(url: str) -> io.BytesIO:
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resp:
@@ -131,7 +138,7 @@ class AttackView(discord.ui.View):
 
 class AttackButton(discord.ui.Button):
     def __init__(self, atk_name, dmg, attacker, defender, game):
-        super().__init__(label=f"{atk_name} ({dmg} dmg)", style=discord.ButtonStyle.red)
+        super().__init__(label=f"{atk_name} ({dmg} dmg)", style=discord.ButtonStyle.primary)
         self.atk_name = atk_name
         self.dmg = dmg
         self.attacker = attacker
@@ -146,13 +153,13 @@ class AttackButton(discord.ui.Button):
         defender_char["hp"] -= self.dmg
 
         await interaction.response.defer()
-        await asyncio.sleep(1.5)  # small delay for dramatic effect
+        await asyncio.sleep(1.5)  # dramatic delay
 
         channel = interaction.channel
         if defender_char["hp"] <= 0:
             embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
-                description=f"**{self.attacker.mention}** used **{self.atk_name}**!\n\n💥 {self.defender.mention}'s {defender_char['name']} fainted!\n\n🏆 Winner: {self.attacker.mention}",
+                description=f"**{self.attacker.mention}** used **{self.atk_name}**!\n\n# 💥 {self.defender.mention}'s **{defender_char['name']}** fainted!\n\n🏆 Winner: {self.attacker.mention}",
                 color=discord.Color.gold()
             )
             await self.game["message"].edit(embed=embed, view=None)
@@ -163,25 +170,46 @@ class AttackButton(discord.ui.Button):
         self.game["turn"] = self.defender.id
         await update_battle_embed(channel, self.game, last_attack=(self.attacker, self.atk_name, self.dmg))
 
+
 async def update_battle_embed(channel, game, last_attack=None):
     p1, p2 = game["players"]
     c1, c2 = game["characters"][p1.id], game["characters"][p2.id]
 
+    # Determine whose turn it is
+    turn_player = p1 if game["turn"] == p1.id else p2
+    opponent = p2 if turn_player == p1 else p1
+
+    # Build description
     desc = f"{p1.mention} VS {p2.mention}\n\n"
     if last_attack:
         attacker, atk_name, dmg = last_attack
         desc += f"**{attacker.mention}** used **{atk_name}** and dealt **{dmg} dmg**!\n\n"
 
-    embed = discord.Embed(title="Skibidi Battle! 🚽⚔️", description=desc, color=discord.Color.red())
-    embed.add_field(name=f"{c1['name']} ({p1.display_name})", value=f"❤️ {c1['hp']} HP", inline=True)
-    embed.add_field(name=f"{c2['name']} ({p2.display_name})", value=f"❤️ {c2['hp']} HP", inline=True)
+    desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
 
-    turn_player = p1 if game["turn"] == p1.id else p2
-    view = AttackView(turn_player, p2 if turn_player == p1 else p1, game)
+    # Create embed
+    embed = discord.Embed(
+        title="Skibidi Battle! 🚽⚔️",
+        description=desc,
+        color=discord.Color.red()
+    )
+    embed.add_field(
+        name=f"{c1['name']} ({p1.display_name})",
+        value=f"❤️ {c1['hp']} HP",
+        inline=True
+    )
+    embed.add_field(
+        name=f"{c2['name']} ({p2.display_name})",
+        value=f"❤️ {c2['hp']} HP",
+        inline=True
+    )
 
+    # Build attack buttons for the current turn
+    view = AttackView(turn_player, opponent, game)
+
+    # Send or edit message
     if "message" not in game:
         vs_image = await make_vs_image(c1["image"], c2["image"])
-        filename = f"{c1['name']}_VS_{c2['name']}.png"
         file = discord.File(vs_image, filename="vs.png")
         msg = await channel.send(file=file, embed=embed, view=view)
         game["message"] = msg
