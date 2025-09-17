@@ -83,7 +83,7 @@ characters = {
             "🤜 Crush": {"damage": 384, "rarity": 6},
             "✋ Slam": {"damage": 370, "rarity": 6},
             "🖐️ Slap": {"damage": 220, "rarity": 8},
-            "🗡️ Sword Slash": {"damage": 219, "rarity": 8},
+            "🗡️ Sword Slash": {"damage": 519, "rarity": 8},
             "🦞 Shoulder Claws": {"damage": 129, "rarity": 14},
             "📺 Orange Light": {"damage": 888, "rarity": 1},
             "💥 Core Blast": {"damage": 215, "rarity": 3},
@@ -213,8 +213,8 @@ async def make_vs_image(url1: str, url2: str) -> io.BytesIO:
     bbox = draw.textbbox((0, 0), text, font=font)
     text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
-    text_x = (total_width - text_width) // 2
-    text_y = (height - text_height) // 2
+    text_x = (total_width - text_width) // 10
+    text_y = (height - text_height) // 10
 
     # Shadow + main text
     draw.text((text_x + 4, text_y + 4), text, font=font, fill="black")
@@ -250,7 +250,7 @@ class RetreatButton(discord.ui.Button):
             color=discord.Color.greyple()
         )
         view = RetreatConfirmView(interaction.user, self.game, self.retreat_votes)
-        await interaction.response.send_message(embed=confirm_embed, view=view, ephemeral=True)
+        await interaction.response.send_message(embed=confirm_embed, view=view, ephemeral=False)
 
 
 class RetreatConfirmView(discord.ui.View):
@@ -298,7 +298,7 @@ class RetreatYesButton(discord.ui.Button):
 
             await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
         else:
-            await interaction.response.send_message("You voted ✅ Yes to retreat. Waiting for the other player...", ephemeral=False)
+            await interaction.response.send_message("You voted ✅ Yes to retreat. Waiting for the other player...", ephemeral=True)
 
 
 class RetreatNoButton(discord.ui.Button):
