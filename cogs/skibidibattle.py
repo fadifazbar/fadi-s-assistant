@@ -142,12 +142,11 @@ class AttackView(discord.ui.View):
         self.game = game
 
         char = game["characters"][attacker.id]
-        for atk_name, dmg in char["attacks"].items():
-            self.add_item(AttackButton(atk_name, dmg, attacker, defender, game))
+        # pick 3 random attacks each turn
+        chosen_attacks = random.sample(list(char["attacks"].items()), 3)
 
-    async def on_timeout(self):
-        if "message" in self.game:
-            await self.game["message"].edit(content="⏰ Battle ended due to inactivity.", view=None)
+        for atk_name, dmg in chosen_attacks:
+            self.add_item(AttackButton(atk_name, dmg, attacker, defender, game))
 
 class AttackButton(discord.ui.Button):
     def __init__(self, atk_name, dmg, attacker, defender, game):
@@ -286,6 +285,8 @@ class ConfirmView(discord.ui.View):
 
         p1_char = random.choice(list(characters.keys()))
         p2_char = random.choice(list(characters.keys()))
+        while p2_char == p1_char:
+            p2_char = random.choice(list(characters.keys()))
 
         games[self.channel.id] = {
             "players": [self.player1, self.player2],
