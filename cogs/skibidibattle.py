@@ -132,12 +132,30 @@ class AttackView(discord.ui.View):
             self.add_item(AttackButton(atk_name, atk_data, attacker, defender, game))
 
 
+class AttackView(discord.ui.View):
+    def __init__(self, attacker, defender, game):
+        super().__init__(timeout=300)
+        self.attacker = attacker
+        self.defender = defender
+        self.game = game
+
+        char = game["characters"][attacker.id]
+
+        # Build weighted pool based on rarity (higher rarity value => more common)
+        pool = []
+        for atk_name, atk_data in char["attacks"].items():
+            pool.extend([(atk_name, atk_data)] * atk_data["rarity"])
+
+        # Pick up to 3 random weighted attacks
+        chosen_attacks = random.sample(pool, min(3, len(pool)))
+
+        for atk_name, atk_data in chosen_attacks:
+            self.add_item(AttackButton(atk_name, atk_data, attacker, defender, game))
+
+
 class AttackButton(discord.ui.Button):
     def __init__(self, atk_name, atk_data, attacker, defender, game):
-        super().__init__(
-            label=f"{atk_name} ({atk_data['damage']} dmg)",
-            style=discord.ButtonStyle.primary
-        )
+        super().__init__(label=f"{atk_name} ({atk_data['damage']} dmg)", style=discord.ButtonStyle.primary)
         self.atk_name = atk_name
         self.atk_data = atk_data
         self.attacker = attacker
@@ -151,39 +169,43 @@ class AttackButton(discord.ui.Button):
         attacker_char = self.game["characters"][self.attacker.id]
         defender_char = self.game["characters"][self.defender.id]
 
+        # ================= Immunity check =================
+        immune = False
+        for imm in defender_char.get("immunities", []):
+            if isinstance(imm, dict):
+                # dict format: {"character": "Titan Tvman 1.0", "attack": "📺 Red Light"}
+                attack_name = imm.get("attack")
+                character_name = imm.get("character")
+                if attack_name and isinstance(attack_name, str):
+                    # if character specified, require both match; if only attack given, allow attack-only immunity
+                    if attack_name.lower() == self.atk_name.lower():
+                        if not character_name or character_name == attacker_char.get("name"):
+                            immune = True
+                            break
+            elif isinstance(imm, str):
+                # text-only format: "📺 Red Light" (immune to that attack from anyone)
+                if imm.lower() == self.atk_name.lower():
+                    immune = True
+                    break
 
-# ================= Immunity check =================
-    immune = False
-    for imm in defender_char.get("immunities", []):
-        if isinstance(imm, dict):
-            # dict format: {"character": "Titan Tvman 1.0", "attack": "📺 Red Light"}
-            if imm.get("character") == attacker_char["name"] and imm.get("attack") == self.atk_name:
-                immune = True
-                break
-        elif isinstance(imm, str):
-            # text-only format: "📺 Red Light"
-            if imm == self.atk_name:
-                immune = True
-                break
+        # ================= Damage / Immunity result =================
+        if immune:
+            dmg = 0
+            msg = f"🛡️ {self.defender.mention}'s **{defender_char.get('name', 'Unknown')}** is immune to **{self.atk_name}**!"
+        else:
+            dmg = self.atk_data["damage"]
+            defender_char["hp"] -= dmg
+            msg = f"**{self.attacker.mention}** used **{self.atk_name}** and dealt **{dmg} dmg**!"
 
-    # ================= Damage / Immunity result =================
-    if immune:
-        dmg = 0
-        msg = f"🛡️ {self.defender.mention}'s **{defender_char['name']}** is immune to **{self.atk_name}**!"
-    else:
-        dmg = self.atk_data["damage"]
-        defender_char["hp"] -= dmg
-        msg = f"**{self.attacker.mention}** used **{self.atk_name}** and dealt **{dmg} dmg**!"
-
-    # ================== Response ==================
-    await interaction.response.defer()
-    await asyncio.sleep(1.5)
+        # ================== Response ==================
+        await interaction.response.defer()
+        await asyncio.sleep(1.5)
 
         channel = interaction.channel
         if defender_char["hp"] <= 0:
             embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
-                description=f"{msg}\n\n 💥 {self.defender.mention}'s **{defender_char['name']}** fainted!\n\n# 🏆 Winner: {self.attacker.mention}",
+                description=f"{msg}\n\n 💥 {self.defender.mention}'s **{defender_char.get('name', 'Unknown')}** fainted!\n\n# 🏆 Winner: {self.attacker.mention}",
                 color=discord.Color.gold()
             )
             await self.game["message"].edit(embed=embed, view=None)
