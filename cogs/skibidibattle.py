@@ -8,6 +8,31 @@ import aiohttp
 import random
 import io
 import difflib
+import json
+import os
+
+DATA_PATH = "./data/player_data.json"
+
+def load_data():
+    if not os.path.exists(DATA_PATH):
+        return {}
+    with open(DATA_PATH, "r") as f:
+        return json.load(f)
+
+def save_data(data):
+    with open(DATA_PATH, "w") as f:
+        json.dump(data, f, indent=4)
+
+def get_player(user_id: int):
+    data = load_data()
+    if str(user_id) not in data:
+        data[str(user_id)] = {"cash": 1000, "characters": []}  # default cash
+    return data[str(user_id)]
+
+def update_player(user_id: int, player_data):
+    data = load_data()
+    data[str(user_id)] = player_data
+    save_data(data)
 
 BATTLE_EMOJI = "<:battle_emoji:1408620699349946572>"
 HP_EMOJI = "<:HP_V2:1408669354069065748>"
