@@ -8,6 +8,26 @@ import aiohttp
 import random
 import io
 import difflib
+import json
+import os
+
+DATA_FILE = "data/player_data.json"
+
+# Ensure folder
+os.makedirs("data", exist_ok=True)
+
+def load_data():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_data():
+    with open(DATA_FILE, "w") as f:
+        json.dump(player_data, f, indent=2)
+
+player_data = load_data()
+
 
 BATTLE_EMOJI = "<:battle_emoji:1408620699349946572>"
 HP_EMOJI = "<:HP_V2:1408669354069065748>"
@@ -144,6 +164,7 @@ characters = {
 
     "Titan Tvman 1.0": {
         "hp": 14500,
+        "price": 3500,
         "image": "https://i.postimg.cc/vTyHnfxZ/Titan-Tvman1-0.png",
         "attacks": {
             "📺 Red Light": {"damage": 700, "rarity": 2},
@@ -165,24 +186,37 @@ characters = {
 }
 
 
+
 class CharacterListView(discord.ui.View):
-    def __init__(self, user, pages):
+    def __init__(self, user, pages, mode="shop"):
+        """
+        mode: "shop" = show buy button
+              "inv"  = show equip button
+        """
         super().__init__(timeout=180)
         self.user = user
         self.pages = pages  # list of (name, data)
         self.current_page = 0
+        self.mode = mode  # shop or inv
 
     def make_page_embed(self, page_index):
         name, data = self.pages[page_index]
         embed = discord.Embed(
             title=f"{name} (Page {page_index+1}/{len(self.pages)})",
-            description=f"{HP_EMOJI} {name}'w HP: {data['hp']}",
             color=discord.Color.orange()
         )
-        # Add attacks field
-        attacks_str = "\n".join([f"- {atk} ({info['damage']} dmg, rarity {info['rarity']})" for atk, info in data["attacks"].items()])
-        embed.add_field(name="Attacks", value=attacks_str if attacks_str else "No attacks", inline=False)
-        # Set image if exists
+        # Show different info based on mode
+        if self.mode == "shop":
+            embed.description = f"💰 Price: {data.get('price', 0)} Coins"
+        elif self.mode == "inv":
+            hp = data.get("hp", "Unknown")
+            attacks_str = "\n".join([f"- {atk} ({info['damage']} dmg, rarity {info['rarity']})" for atk, info in data["attacks"].items()])
+            embed.description = f"{HP_EMOJI} {name}'s HP: {hp}\n\nAttacks:\n{attacks_str}"
+            # Show equipped
+            user_chars = player_data.get(self.user.id, {})
+            if user_chars.get("equipped") == name:
+                embed.set_footer(text="Equipped ✅")
+        # Image
         if data.get("image"):
             embed.set_image(url=data["image"])
         return embed
@@ -192,16 +226,42 @@ class CharacterListView(discord.ui.View):
         if interaction.user != self.user:
             return await interaction.response.send_message("❌ This menu isn’t for you!", ephemeral=True)
         self.current_page = (self.current_page - 1) % len(self.pages)
-        embed = self.make_page_embed(self.current_page)
-        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.response.edit_message(embed=self.make_page_embed(self.current_page), view=self)
 
     @discord.ui.button(label="➡️ Next", style=discord.ButtonStyle.blurple)
     async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user != self.user:
             return await interaction.response.send_message("❌ This menu isn’t for you!", ephemeral=True)
         self.current_page = (self.current_page + 1) % len(self.pages)
-        embed = self.make_page_embed(self.current_page)
-        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.response.edit_message(embed=self.make_page_embed(self.current_page), view=self)
+
+    @discord.ui.button(label="🛒 Buy / ⚔️ Equip", style=discord.ButtonStyle.green)
+    async def buy_or_equip(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user != self.user:
+            return await interaction.response.send_message("❌ This menu isn’t for you!", ephemeral=True)
+        
+        name, data = self.pages[self.current_page]
+        user_chars = player_data.setdefault(self.user.id, {"coins": 0, "owned": [], "equipped": None})
+
+        if self.mode == "shop":
+            price = data.get("price", 0)
+            if name in user_chars["owned"]:
+                return await interaction.response.send_message("✅ You already own this character!", ephemeral=True)
+            if user_chars["coins"] < price:
+                return await interaction.response.send_message("❌ Not enough coins!", ephemeral=True)
+            user_chars["coins"] -= price
+            user_chars["owned"].append(name)
+            await interaction.response.send_message(f"💰 You bought **{name}** for {price} coins!", ephemeral=True)
+        elif self.mode == "inv":
+            if name not in user_chars["owned"]:
+                return await interaction.response.send_message("❌ You do not own this character!", ephemeral=True)
+            user_chars["equipped"] = name
+            await interaction.response.send_message(f"⚔️ You equipped **{name}**!", ephemeral=True)
+
+        # Update embed after buy/equip
+        await interaction.message.edit(embed=self.make_page_embed(self.current_page), view=self)
+
+
 
 # ================= Helpers =================
 
@@ -402,16 +462,14 @@ class AttackButton(discord.ui.Button):
         self.game = game
 
     async def callback(self, interaction: discord.Interaction):
-        # Immediate defer to prevent "interaction failed"
         await interaction.response.defer()
-
         if interaction.user != self.attacker:
             return await interaction.followup.send("❌ Not your turn!", ephemeral=True)
 
         attacker_char = self.game["characters"][self.attacker.id]
         defender_char = self.game["characters"][self.defender.id]
 
-        # ================= Immunity check =================
+        # Immunity check
         immune = False
         immune_msg = None
         for imm in defender_char.get("immunities", []):
@@ -432,19 +490,32 @@ class AttackButton(discord.ui.Button):
             defender_char["hp"] = max(0, defender_char["hp"] - dmg)
             immune_msg = None
 
-        await asyncio.sleep(1.5)  # Optional delay
-
-        # Update the battle embed with attack/immune info
-
+        await asyncio.sleep(1.5)
         await update_battle_embed(interaction.channel, self.game, last_attack=(self.attacker, self.atk_name, dmg), immune_msg=immune_msg)
 
-        # ================= Handle faint =================
+        # Handle faint
         if defender_char["hp"] <= 0:
+            winner = self.attacker
+            loser = self.defender
+
+            # Ensure both players exist in player_data
+            player_data.setdefault(winner.id, {"coins": 0, "owned": [], "equipped": None})
+            player_data.setdefault(loser.id, {"coins": 0, "owned": [], "equipped": None})
+
+            # Update coins
+            player_data[winner.id]["coins"] += 500
+            player_data[loser.id]["coins"] += 100
+
+            # Persist changes
+            save_data()
+
             embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
-                description=f"{immune_msg if immune_msg else f'**{self.attacker.mention}** used **{self.atk_name}** and dealt **{dmg} dmg** to **{defender_char.get('name', 'Unknown')}**!'}\n\n"
-                            f"💥 {self.defender.mention}'s **{defender_char.get('name', 'Unknown')}** fainted!\n\n"
-                            f"# 🏆 Winner: {self.attacker.mention}",
+                description=f"{immune_msg if immune_msg else f'**{winner.mention}** used **{self.atk_name}** and dealt **{dmg} dmg** to **{defender_char.get('name', 'Unknown')}**!'}\n\n"
+                            f"💥 {loser.mention}'s **{defender_char.get('name', 'Unknown')}** fainted!\n\n"
+                            f"# 🏆 Winner: {winner.mention}\n"
+                            f"💰 {winner.mention} earned 500 coins!\n"
+                            f"💰 {loser.mention} earned 100 coins for participating!",
                 color=discord.Color.gold()
             )
             await self.game["message"].edit(embed=embed, view=None)
@@ -453,13 +524,12 @@ class AttackButton(discord.ui.Button):
 
         # Swap turns
         self.game["turn"] = self.defender.id
-
-        # Build buttons for next turn
         p1, p2 = self.game["players"]
         turn_player = p1 if self.game["turn"] == p1.id else p2
         opponent = p2 if turn_player == p1 else p1
         view = AttackView(turn_player, opponent, self.game)
         await self.game["message"].edit(view=view)
+
 
 
 async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
@@ -518,6 +588,54 @@ async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
 class Skibidi(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    # ===== Shop =====
+    @commands.command(name="shop")
+    async def shop_prefix(self, ctx, *, search: str = None):
+        pages = [(name, data) for name, data in characters.items()]
+        if search:
+            matches = [item for item in pages if search.lower() in item[0].lower()]
+            if matches:
+                pages = matches
+            else:
+                return await ctx.send("❌ No character found matching that name.")
+        view = CharacterListView(ctx.author, pages, mode="shop")
+        embed = view.make_page_embed(0)
+        view.message = await ctx.send(embed=embed, view=view)
+
+    @app_commands.command(name="shop", description="Browse characters in the shop")
+    async def shop_slash(self, interaction: discord.Interaction, search: str = None):
+        pages = [(name, data) for name, data in characters.items()]
+        if search:
+            matches = [item for item in pages if search.lower() in item[0].lower()]
+            if matches:
+                pages = matches
+            else:
+                return await interaction.response.send_message("❌ No character found matching that name.", ephemeral=True)
+        view = CharacterListView(interaction.user, pages, mode="shop")
+        embed = view.make_page_embed(0)
+        await interaction.response.send_message(embed=embed, view=view)
+
+    # ===== Inventory =====
+    @commands.command(name="inventory", aliases=["inv", "backpack"])
+    async def inventory_prefix(self, ctx):
+        user_chars = player_data.get(ctx.author.id, {"coins": 0, "owned": [], "equipped": None})
+        pages = [(name, characters[name]) for name in user_chars["owned"]]
+        if not pages:
+            return await ctx.send("❌ You don't own any characters yet.")
+        view = CharacterListView(ctx.author, pages, mode="inv")
+        embed = view.make_page_embed(0)
+        view.message = await ctx.send(embed=embed, view=view)
+
+    @app_commands.command(name="inventory", description="Show your owned characters and equip")
+    async def inventory_slash(self, interaction: discord.Interaction):
+        user_chars = player_data.get(interaction.user.id, {"coins": 0, "owned": [], "equipped": None})
+        pages = [(name, characters[name]) for name in user_chars["owned"]]
+        if not pages:
+            return await interaction.response.send_message("❌ You don't own any characters yet.", ephemeral=True)
+        view = CharacterListView(interaction.user, pages, mode="inv")
+        embed = view.make_page_embed(0)
+        await interaction.response.send_message(embed=embed, view=view)
 
 # ========== PREFIX ==========
     @commands.command(name="skibidilist")
@@ -617,27 +735,38 @@ class Skibidi(commands.Cog):
             )
 
 class ConfirmView(discord.ui.View):
-    def __init__(self, player1, player2, channel):
+    def __init__(self, player1, player2, channel, bot):
         super().__init__(timeout=300)
         self.player1 = player1
         self.player2 = player2
         self.channel = channel
+        self.bot = bot
 
     @discord.ui.button(label="✅ Accept", style=discord.ButtonStyle.green)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user != self.player2:
-            return await interaction.response.send_message("❌ Only the challenged player can accept!", ephemeral=True)
+            return await interaction.response.send_message(
+                "❌ Only the challenged player can accept!", ephemeral=True
+            )
 
-        p1_char = random.choice(list(characters.keys()))
-        p2_char = random.choice(list(characters.keys()))
-        while p2_char == p1_char:
-            p2_char = random.choice(list(characters.keys()))
+        # ---------------- Get equipped characters ----------------
+        # Load player data (coins, inventory, equipped)
+        player1_data = await get_player_data(self.player1.id)
+        player2_data = await get_player_data(self.player2.id)
+
+        if not player1_data.get("equipped") or not player2_data.get("equipped"):
+            return await interaction.response.send_message(
+                "❌ Both players must have an equipped character to start the battle!", ephemeral=True
+            )
+
+        p1_char_name = player1_data["equipped"]
+        p2_char_name = player2_data["equipped"]
 
         games[self.channel.id] = {
             "players": [self.player1, self.player2],
             "characters": {
-                self.player1.id: {**characters[p1_char], "name": p1_char, "hp": characters[p1_char]["hp"]},
-                self.player2.id: {**characters[p2_char], "name": p2_char, "hp": characters[p2_char]["hp"]},
+                self.player1.id: {**characters[p1_char_name], "name": p1_char_name, "hp": characters[p1_char_name]["hp"]},
+                self.player2.id: {**characters[p2_char_name], "name": p2_char_name, "hp": characters[p2_char_name]["hp"]},
             },
             "turn": self.player1.id
         }
@@ -648,12 +777,72 @@ class ConfirmView(discord.ui.View):
     @discord.ui.button(label="❌ Decline", style=discord.ButtonStyle.red)
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user != self.player2:
-            return await interaction.response.send_message("❌ Only the challenged player can decline!", ephemeral=True)
+            return await interaction.response.send_message(
+                "❌ Only the challenged player can decline!", ephemeral=True
+            )
 
-        await interaction.response.edit_message(content=f"{self.player2.mention} declined the challenge.", embed=None, view=None)
+        await interaction.response.edit_message(
+            content=f"{self.player2.mention} declined the challenge.", embed=None, view=None
+        )
 
     async def on_timeout(self):
-        await self.message.edit(content="⌛ Challenge expired.", view=None)
+        if hasattr(self, "message"):
+            await self.message.edit(content="⌛ Challenge expired.", view=None)
+
+
+# ---------------- Updated start_battle ----------------
+async def start_battle(self, player1, player2, channel, interaction=None):
+    if channel.id in games:
+        msg = "⚠️ A battle is already in progress in this channel!"
+        if interaction:
+            await interaction.response.send_message(msg, ephemeral=True)
+        else:
+            await channel.send(msg)
+        return
+
+    confirm_embed = discord.Embed(
+        title="Skibidi Battle! 🚽⚔️",
+        description=f"{player1.mention} has challenged {player2.mention}!\n\nDo you accept?",
+        color=discord.Color.blue()
+    )
+
+    view = ConfirmView(player1, player2, channel, self.bot)
+
+    if interaction:
+        await interaction.response.send_message(
+            content=f"||{player1.mention} {player2.mention}||",
+            embed=confirm_embed,
+            view=view
+        )
+    else:
+        await channel.send(
+            content=f"||{player1.mention} {player2.mention}||",
+            embed=confirm_embed,
+            view=view
+        )
+
+
+# ---------------- Helper to fetch player data ----------------
+async def get_player_data(user_id):
+    """Load a player's data (inventory, coins, equipped) from DB or local storage."""
+    # Replace with your data system (Railway, JSON, etc.)
+    # Example structure:
+    # {
+    #   "coins": 500,
+    #   "owned": ["Titan Tvman 1.0", "TiTa CaMeRA2"],
+    #   "equipped": "Titan Tvman 1.0"
+    # }
+    # If no data exists, return defaults
+    try:
+        data = await load_user_data(user_id)
+        return {
+            "coins": data.get("coins", 0),
+            "owned": data.get("owned", []),
+            "equipped": data.get("equipped", None)
+        }
+    except:
+        return {"coins": 0, "owned": [], "equipped": None}
+
 
 # ============ SETUP ============
 async def setup(bot):
