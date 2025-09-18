@@ -16,15 +16,20 @@ DATA_FILE = "data/player_data.json"
 # Ensure folder
 os.makedirs("data", exist_ok=True)
 
+# Load data
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as f:
-            return json.load(f)
+            raw = json.load(f)
+            # convert all keys to strings
+            return {str(k): v for k, v in raw.items()}
     return {}
 
+# Save data (keys are already strings)
 def save_data():
     with open(DATA_FILE, "w") as f:
         json.dump(player_data, f, indent=2)
+
 
 player_data = load_data()
 
@@ -634,30 +639,6 @@ class Skibidi(commands.Cog):
         await ctx.send(f"💰 Gave **{amount} coins** to {member.mention}!")
 
 
-    # ===== PREFIX COMMAND =====
-    @commands.command(name="coins", aliases=["cash", "money"])
-    async def coins_prefix(self, ctx, member: discord.Member = None):
-        target = member or ctx.author
-        user_id = str(target.id)
-        user_data = player_data.get(user_id, {"coins": 0})
-        coins = user_data.get("coins", 0)
-        if target == ctx.author:
-            await ctx.send(f"💰 You have **{coins} coins**.")
-        else:
-            await ctx.send(f"💰 {target.display_name} has **{coins} coins**.")
-
-    # ===== SLASH COMMAND =====
-    @app_commands.command(name="coins", description="Check your or someone else's coins")
-    @app_commands.describe(member="Optional: User to check coins of")
-    async def coins_slash(self, interaction: discord.Interaction, member: discord.Member = None):
-        target = member or interaction.user
-        user_id = str(target.id)
-        user_data = player_data.get(user_id, {"coins": 0})
-        coins = user_data.get("coins", 0)
-        if target == interaction.user:
-            await interaction.response.send_message(f"💰 You have **{coins} coins**.", ephemeral=True)
-        else:
-            await interaction.response.send_message(f"💰 {target.display_name} has **{coins} coins**.", ephemeral=False)
 
     # ===== Shop =====
     @commands.command(name="shop")
