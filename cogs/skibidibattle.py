@@ -204,6 +204,22 @@ class CharacterListView(discord.ui.View):
         self.current_page = 0
         self.mode = mode  # shop or inv
 
+        # Set button label and style dynamically
+        if self.mode == "shop":
+            button_label = "🛒 Buy"
+            button_style = discord.ButtonStyle.green
+        elif self.mode == "inv":
+            button_label = "⚔️ Equip"
+            button_style = discord.ButtonStyle.primary
+        else:
+            button_label = "🛒 Buy / ⚔️ Equip"
+            button_style = discord.ButtonStyle.green
+
+        # Replace the static button with dynamic one
+        self.buy_or_equip_button = discord.ui.Button(label=button_label, style=button_style)
+        self.buy_or_equip_button.callback = self.buy_or_equip
+        self.add_item(self.buy_or_equip_button)
+
     def make_page_embed(self, page_index):
         name, data = self.pages[page_index]
         embed = discord.Embed(
@@ -240,11 +256,10 @@ class CharacterListView(discord.ui.View):
         self.current_page = (self.current_page + 1) % len(self.pages)
         await interaction.response.edit_message(embed=self.make_page_embed(self.current_page), view=self)
 
-    @discord.ui.button(label="🛒 Buy / ⚔️ Equip", style=discord.ButtonStyle.green)
-    async def buy_or_equip(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def buy_or_equip(self, interaction: discord.Interaction):
         if interaction.user != self.user:
             return await interaction.response.send_message("❌ This menu isn’t for you!", ephemeral=True)
-        
+
         name, data = self.pages[self.current_page]
         user_chars = player_data.setdefault(self.user.id, {"coins": 0, "owned": [], "equipped": None})
 
@@ -256,15 +271,19 @@ class CharacterListView(discord.ui.View):
                 return await interaction.response.send_message("❌ Not enough coins!", ephemeral=True)
             user_chars["coins"] -= price
             user_chars["owned"].append(name)
+            save_data()
             await interaction.response.send_message(f"💰 You bought **{name}** for {price} coins!", ephemeral=True)
+
         elif self.mode == "inv":
             if name not in user_chars["owned"]:
                 return await interaction.response.send_message("❌ You do not own this character!", ephemeral=True)
             user_chars["equipped"] = name
+            save_data()
             await interaction.response.send_message(f"⚔️ You equipped **{name}**!", ephemeral=True)
 
         # Update embed after buy/equip
         await interaction.message.edit(embed=self.make_page_embed(self.current_page), view=self)
+
 
 
 
@@ -594,21 +613,30 @@ class Skibidi(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # ===== Prefix command =====
+    # ===== PREFIX COMMAND =====
     @commands.command(name="coins", aliases=["cash", "money"])
-    async def coins_prefix(self, ctx):
-        user_id = str(ctx.author.id)
+    async def coins_prefix(self, ctx, member: discord.Member = None):
+        target = member or ctx.author
+        user_id = str(target.id)
         user_data = player_data.get(user_id, {"coins": 0})
         coins = user_data.get("coins", 0)
-        await ctx.send(f"💰 {ctx.author.mention}, you have **{coins} coins**.")
+        if target == ctx.author:
+            await ctx.send(f"💰 You have **{coins} coins**.")
+        else:
+            await ctx.send(f"💰 {target.display_name} has **{coins} coins**.")
 
-    # ===== Slash command =====
-    @app_commands.command(name="coins", description="Check your coins")
-    async def coins_slash(self, interaction: discord.Interaction):
-        user_id = str(interaction.user.id)
+    # ===== SLASH COMMAND =====
+    @app_commands.command(name="coins", description="Check your or someone else's coins")
+    @app_commands.describe(member="Optional: User to check coins of")
+    async def coins_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        target = member or interaction.user
+        user_id = str(target.id)
         user_data = player_data.get(user_id, {"coins": 0})
         coins = user_data.get("coins", 0)
-        await interaction.response.send_message(f"💰 {interaction.user.mention}, you have **{coins} coins**.", ephemeral=True)
+        if target == interaction.user:
+            await interaction.response.send_message(f"💰 You have **{coins} coins**.", ephemeral=True)
+        else:
+            await interaction.response.send_message(f"💰 {target.display_name} has **{coins} coins**.", ephemeral=False)
 
     # ===== Shop =====
     @commands.command(name="shop")
