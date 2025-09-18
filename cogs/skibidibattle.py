@@ -176,7 +176,7 @@ class CharacterListView(discord.ui.View):
         name, data = self.pages[page_index]
         embed = discord.Embed(
             title=f"{name} (Page {page_index+1}/{len(self.pages)})",
-            description=f"❤️ HP: {data['hp']}",
+            description=f"{HP_EMOJI} {name}'w HP: {data['hp']}",
             color=discord.Color.orange()
         )
         # Add attacks field
