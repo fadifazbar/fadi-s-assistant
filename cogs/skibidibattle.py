@@ -521,13 +521,13 @@ class Skibidi(commands.Cog):
 
 # ========== PREFIX ==========
     @commands.command(name="skibidilist")
-    async def skibidi_list_prefix(self, ctx, *, search=None):
+    async def skibidi_list_prefix(self, ctx, *, search: str = None):
         pages = [(name, data) for name, data in characters.items()]
 
         if search:
-            match = difflib.get_close_matches(search, characters.keys(), n=1, cutoff=0.2)
-            if match:
-                pages = [(match[0], characters[match[0]])]
+            name, data = self.find_character(search)
+            if name:
+                pages = [(name, data)]
             else:
                 await ctx.send("❌ No character found matching that name.")
                 return
@@ -539,13 +539,13 @@ class Skibidi(commands.Cog):
     # ========== SLASH ==========
     @app_commands.command(name="skibidilist", description="List all available characters")
     @app_commands.describe(character="Optional character name to search")
-    async def skibidi_list_slash(self, interaction, character=None):
+    async def skibidi_list_slash(self, interaction: discord.Interaction, character: str = None):
         pages = [(name, data) for name, data in characters.items()]
 
         if character:
-            match = difflib.get_close_matches(character, characters.keys(), n=1, cutoff=0.2)
-            if match:
-                pages = [(match[0], characters[match[0]])]
+            name, data = self.find_character(character)
+            if name:
+                pages = [(name, data)]
             else:
                 await interaction.response.send_message(
                     "❌ No character found matching that name.", ephemeral=True
@@ -558,12 +558,25 @@ class Skibidi(commands.Cog):
 
     # ========== AUTOCOMPLETE ==========
     @skibidi_list_slash.autocomplete("character")
-    async def character_autocomplete(self, interaction, current: str):
+    async def character_autocomplete(self, interaction: discord.Interaction, current: str):
         if not current:
             return [app_commands.Choice(name=name, value=name) for name in list(characters.keys())[:20]]
 
         matches = difflib.get_close_matches(current, characters.keys(), n=20, cutoff=0.2)
         return [app_commands.Choice(name=match, value=match) for match in matches]
+
+    # ========== HELPER ==========
+    def find_character(self, query: str):
+        """Find the closest character name to the query using fuzzy matching."""
+        if query in characters:
+            return query, characters[query]
+
+        matches = difflib.get_close_matches(query, characters.keys(), n=1, cutoff=0.2)
+        if matches:
+            best_match = matches[0]
+            return best_match, characters[best_match]
+
+        return None, None
 
     @commands.command(name="skibidi", aliases=["sk", "battle", "toilet"])
     async def skibidi_prefix(self, ctx, opponent: discord.Member):
