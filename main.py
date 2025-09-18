@@ -30,7 +30,10 @@ class ModBot(commands.Bot):
         logger.info("Setting up bot...")
 
         # Load all cogs
-        await self.load_extension("cogs.skibidibattle")
+        await self.load_extension("cogs.warning")
+        await self.load_extension("cogs.moderation")
+        await self.load_extension("cogs.general")
+ self.load_extension("cogs.skibidibattle")
 
         logger.info("✅ Loaded cogs (slash commands will now auto-sync)")
 
