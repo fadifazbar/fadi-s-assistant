@@ -542,7 +542,7 @@ async def skibidi_list_prefix(self, ctx, *, search: str = None):
 # ========== SLASH ==========
 @app_commands.command(name="skibidilist", description="List all available characters")
 @app_commands.describe(character="Optional character name to search")
-async def skibidi_list_slash(self, interaction: discord.Interaction, character: str = None):
+async def skibidi_list_slash(self, interaction, character: str = None):
     pages = [(name, data) for name, data in characters.items()]
 
     if character:
@@ -563,7 +563,7 @@ async def skibidi_list_slash(self, interaction: discord.Interaction, character: 
 
 # ========== AUTOCOMPLETE ==========
 @skibidi_list_slash.autocomplete("character")
-async def character_autocomplete(self, interaction: discord.Interaction, current: str):
+async def character_autocomplete(self, interaction, current: str):
     import difflib
     if not current:
         return [app_commands.Choice(name=name, value=name) for name in list(characters.keys())[:20]]
