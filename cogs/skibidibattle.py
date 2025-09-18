@@ -15,7 +15,7 @@ HP_EMOJI = "<:HP_V2:1408669354069065748>"
 characters = {
     "Titan Speakerman 1.0": {
         "hp": 4500,
-        "image": "https://cdn.discordapp.com/attachments/1406626173517303909/1418230605950226433/Titan_Speakerman1-0.png",
+        "image": "https://i.postimg.cc/PrzvSrd7/Titan-Speakerman1-0.png",
         "attacks": {
             "💥 Cannon Blast": {"damage": 400, "rarity": 6},
             "🔊 Shock Wave": {"damage": 200, "rarity": 10},
@@ -36,7 +36,7 @@ characters = {
 
     "Titan Cameraman 1.0": {
         "hp": 6500,
-        "image": "https://cdn.discordapp.com/attachments/1406626173517303909/1418230612820492348/Titan_Cameraman1-0.png",
+        "image": "https://i.postimg.cc/PqcCCCMC/Titan-Cameraman1-0.png",
         "attacks": {
             "💫 Core Beam": {"damage": 300, "rarity": 2},
             "💥 Ground Smash": {"damage": 200, "rarity": 6},
@@ -50,7 +50,7 @@ characters = {
 
     "Titan Cameraman 2.0": {
         "hp":20000,
-        "image": "https://cdn.discordapp.com/attachments/1406626173517303909/1418230635029332048/Titan_Cameraman2-0.png",
+        "image": "https://i.postimg.cc/SRmkR4HX/Titan-Cameraman2-0.png",
         "attacks": {
             "💥 Blaster": {"damage": 380, "rarity": 7},
             "🦵 Kick": {"damage": 200, "rarity": 8},
@@ -76,7 +76,7 @@ characters = {
 
     "Titan Tvman 2.0": {
         "hp": 30000,
-        "image": "https://cdn.discordapp.com/attachments/1406626173517303909/1418230655384293428/Titan_Tvman2-0.png",
+        "image": "https://i.postimg.cc/X7H4jTLJ/Titan-Tvman2-0.png",
         "attacks": {
             "📺 Purple Light": {"damage": 1200, "rarity": 1},
             "📺 Red Light": {"damage": 1500, "rarity": 1},
@@ -103,7 +103,7 @@ characters = {
 
     "Titan SpeakerMan 2.0": {
         "hp": 13500,
-        "image": "https://cdn.discordapp.com/attachments/1406626173517303909/1418230649055219712/Titan_Speakerman2-0.png",
+        "image": "https://i.postimg.cc/2yTmBJf0/Titan-Speakerman2-0.png",
         "attacks": {
             "🛰️ Blaster Shot": {"damage": 220, "rarity": 5},
             "🔊 Shock Wave": {"damage": 350, "rarity": 4},
@@ -129,7 +129,7 @@ characters = {
 
     "G-Man 1.0": {
         "hp": 5500,
-        "image": "https://cdn.discordapp.com/attachments/1406626173517303909/1418230628452667442/G-Man_Toilet1-0.png",
+        "image": "https://i.postimg.cc/sgLjctG8/G-Man-Toilet1-0.png",
         "attacks": {
             "👁️ Laser Eyes": {"damage": 300, "rarity": 6},
             "👄 Bite": {"damage": 220, "rarity": 12},
@@ -144,7 +144,7 @@ characters = {
 
     "Titan Tvman 1.0": {
         "hp": 14500,
-        "image": "https://cdn.discordapp.com/attachments/1406626173517303909/1418230619338440825/Titan_Tvman1-0.png",
+        "image": "https://i.postimg.cc/vTyHnfxZ/Titan-Tvman1-0.png",
         "attacks": {
             "📺 Red Light": {"damage": 700, "rarity": 2},
             "🦶 Stomp": {"damage": 180, "rarity": 8},
