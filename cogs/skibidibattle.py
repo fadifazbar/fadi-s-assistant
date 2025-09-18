@@ -35,6 +35,7 @@ HP_EMOJI = "<:HP_V2:1408669354069065748>"
 characters = {
     "Titan Speakerman 1.0": {
         "hp": 4500,
+        "price": 2500,
         "image": "https://i.postimg.cc/PrzvSrd7/Titan-Speakerman1-0.png",
         "attacks": {
             "💥 Cannon Blast": {"damage": 400, "rarity": 6},
@@ -56,6 +57,7 @@ characters = {
 
     "Titan Cameraman 1.0": {
         "hp": 6500,
+        "price": 4500,
         "image": "https://i.postimg.cc/PqcCCCMC/Titan-Cameraman1-0.png",
         "attacks": {
             "💫 Core Beam": {"damage": 300, "rarity": 2},
@@ -70,6 +72,7 @@ characters = {
 
     "Titan Cameraman 2.0": {
         "hp":20000,
+        "price": 18000,
         "image": "https://i.postimg.cc/SRmkR4HX/Titan-Cameraman2-0.png",
         "attacks": {
             "💥 Blaster": {"damage": 380, "rarity": 7},
@@ -96,6 +99,7 @@ characters = {
 
     "Titan Tvman 2.0": {
         "hp": 30000,
+        "price": 27000,
         "image": "https://i.postimg.cc/X7H4jTLJ/Titan-Tvman2-0.png",
         "attacks": {
             "📺 Purple Light": {"damage": 1200, "rarity": 1},
@@ -123,6 +127,7 @@ characters = {
 
     "Titan SpeakerMan 2.0": {
         "hp": 13500,
+        "price": 10500,
         "image": "https://i.postimg.cc/2yTmBJf0/Titan-Speakerman2-0.png",
         "attacks": {
             "🛰️ Blaster Shot": {"damage": 220, "rarity": 5},
@@ -164,7 +169,7 @@ characters = {
 
     "Titan Tvman 1.0": {
         "hp": 14500,
-        "price": 3500,
+        "price": 7500,
         "image": "https://i.postimg.cc/vTyHnfxZ/Titan-Tvman1-0.png",
         "attacks": {
             "📺 Red Light": {"damage": 700, "rarity": 2},
