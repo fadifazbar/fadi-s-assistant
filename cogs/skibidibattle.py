@@ -609,6 +609,30 @@ async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
         await game["message"].edit(embed=embed, view=view)
 
 # ================= Commands =================
+class Economy(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.command(name="givecash")
+    async def givecash(self, ctx, member: discord.Member, amount: int):
+        # Allowed admin IDs only inside the command
+        allowed_admins = [1167531276467708055, 1123292111404531783]  # Replace with real IDs
+
+        if ctx.author.id not in allowed_admins:
+            return await ctx.send("❌ You are not authorized to use this command!")
+
+        if amount <= 0:
+            return await ctx.send("❌ Amount must be greater than 0!")
+
+        # Ensure the recipient has an entry in player_data
+        recipient_data = player_data.setdefault(member.id, {"coins": 0, "owned": [], "equipped": None})
+        recipient_data["coins"] += amount
+
+        # Save data
+        save_data()
+
+        await ctx.send(f"💰 Gave **{amount} coins** to {member.mention}!")
+
 class Skibidi(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
