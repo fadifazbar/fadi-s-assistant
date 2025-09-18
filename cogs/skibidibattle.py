@@ -609,7 +609,7 @@ async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
         await game["message"].edit(embed=embed, view=view)
 
 # ================= Commands =================
-class Economy(commands.Cog):
+class Skibidi(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -633,9 +633,6 @@ class Economy(commands.Cog):
 
         await ctx.send(f"💰 Gave **{amount} coins** to {member.mention}!")
 
-class Skibidi(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
 
     # ===== PREFIX COMMAND =====
     @commands.command(name="coins", aliases=["cash", "money"])
