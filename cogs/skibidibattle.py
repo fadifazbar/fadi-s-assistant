@@ -594,6 +594,22 @@ class Skibidi(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    # ===== Prefix command =====
+    @commands.command(name="coins", aliases=["cash", "money"])
+    async def coins_prefix(self, ctx):
+        user_id = str(ctx.author.id)
+        user_data = player_data.get(user_id, {"coins": 0})
+        coins = user_data.get("coins", 0)
+        await ctx.send(f"💰 {ctx.author.mention}, you have **{coins} coins**.")
+
+    # ===== Slash command =====
+    @app_commands.command(name="coins", description="Check your coins")
+    async def coins_slash(self, interaction: discord.Interaction):
+        user_id = str(interaction.user.id)
+        user_data = player_data.get(user_id, {"coins": 0})
+        coins = user_data.get("coins", 0)
+        await interaction.response.send_message(f"💰 {interaction.user.mention}, you have **{coins} coins**.", ephemeral=True)
+
     # ===== Shop =====
     @commands.command(name="shop")
     async def shop_prefix(self, ctx, *, search: str = None):
