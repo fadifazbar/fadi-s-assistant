@@ -11,3 +11,4 @@ uvicorn[standard]
 aiofiles
 python-multipart
 googletrans==4.0.0rc1
+simpleeval
