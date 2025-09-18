@@ -520,71 +520,50 @@ class Skibidi(commands.Cog):
         self.bot = bot
 
 # ========== PREFIX ==========
-@commands.command(name="skibidilist")
-async def skibidi_list_prefix(self, ctx, *, search: str = None):
-    pages = [(name, data) for name, data in characters.items()]
+    @commands.command(name="skibidilist")
+    async def skibidi_list_prefix(self, ctx, *, search=None):
+        pages = [(name, data) for name, data in characters.items()]
 
-    if search:
-        # Fuzzy search
-        from difflib import get_close_matches
-        match = get_close_matches(search, characters.keys(), n=1)
-        if match:
-            pages = [(match[0], characters[match[0]])]
-        else:
-            await ctx.send("❌ No character found matching that name.")
-            return
+        if search:
+            match = difflib.get_close_matches(search, characters.keys(), n=1, cutoff=0.2)
+            if match:
+                pages = [(match[0], characters[match[0]])]
+            else:
+                await ctx.send("❌ No character found matching that name.")
+                return
 
-    view = CharacterListView(ctx.author, pages)
-    embed = view.make_page_embed(0)
-    await ctx.send(embed=embed, view=view)
+        view = CharacterListView(ctx.author, pages)
+        embed = view.make_page_embed(0)
+        view.message = await ctx.send(embed=embed, view=view)
 
+    # ========== SLASH ==========
+    @app_commands.command(name="skibidilist", description="List all available characters")
+    @app_commands.describe(character="Optional character name to search")
+    async def skibidi_list_slash(self, interaction, character=None):
+        pages = [(name, data) for name, data in characters.items()]
 
-# ========== SLASH ==========
-@app_commands.command(name="skibidilist", description="List all available characters")
-@app_commands.describe(character="Optional character name to search")
-async def skibidi_list_slash(self, interaction: Interaction, character: str = None):
-    pages = [(name, data) for name, data in characters.items()]
+        if character:
+            match = difflib.get_close_matches(character, characters.keys(), n=1, cutoff=0.2)
+            if match:
+                pages = [(match[0], characters[match[0]])]
+            else:
+                await interaction.response.send_message(
+                    "❌ No character found matching that name.", ephemeral=True
+                )
+                return
 
-    if character:
-        from difflib import get_close_matches
-        match = get_close_matches(character, characters.keys(), n=1)
-        if match:
-            pages = [(match[0], characters[match[0]])]
-        else:
-            await interaction.response.send_message(
-                "❌ No character found matching that name.", ephemeral=True
-            )
-            return
+        view = CharacterListView(interaction.user, pages)
+        embed = view.make_page_embed(0)
+        view.message = await interaction.response.send_message(embed=embed, view=view)
 
-    view = CharacterListView(interaction.user, pages)
-    embed = view.make_page_embed(0)
-    await interaction.response.send_message(embed=embed, view=view)
+    # ========== AUTOCOMPLETE ==========
+    @skibidi_list_slash.autocomplete("character")
+    async def character_autocomplete(self, interaction, current: str):
+        if not current:
+            return [app_commands.Choice(name=name, value=name) for name in list(characters.keys())[:20]]
 
-
-# ========== AUTOCOMPLETE ==========
-@skibidi_list_slash.autocomplete("character")
-async def character_autocomplete(self, interaction: Interaction, current: str):
-    import difflib
-    if not current:
-        return [app_commands.Choice(name=name, value=name) for name in list(characters.keys())[:20]]
-
-    matches = difflib.get_close_matches(current, characters.keys(), n=20, cutoff=0.2)
-    return [app_commands.Choice(name=match, value=match) for match in matches]
-
-
-# ========== HELPER ==========
-def find_character(self, query: str):
-    """Find closest character name to the query."""
-    import difflib
-    if query in characters:
-        return query, characters[query]
-
-    matches = difflib.get_close_matches(query, characters.keys(), n=1, cutoff=0.2)
-    if matches:
-        best_match = matches[0]
-        return best_match, characters[best_match]
-
-    return None, None
+        matches = difflib.get_close_matches(current, characters.keys(), n=20, cutoff=0.2)
+        return [app_commands.Choice(name=match, value=match) for match in matches]
 
     @commands.command(name="skibidi", aliases=["sk", "battle", "toilet"])
     async def skibidi_prefix(self, ctx, opponent: discord.Member):
