@@ -28,9 +28,9 @@ characters = {
         },
         "immunities": [
            "📺 Red Light",
-           "📺 Red Light",
            "📺 Purple Light",
            "📺 Orange Light",
+           "💥 Tv & Speaker Combo",
         ]
     },
 
@@ -71,6 +71,7 @@ characters = {
            "📺 Red Light",
            "📺 Purple Light",
            "📺 Orange Light",
+           "💥 Tv & Speaker Combo",
         ]
     },
 
@@ -98,6 +99,7 @@ characters = {
            "📺 Red Light",
            "📺 Purple Light",
            "📺 Orange Light",
+           "💥 Tv & Speaker Combo",
         ]
     },
 
@@ -124,6 +126,205 @@ characters = {
            "📺 Red Light",
            "📺 Purple Light",
            "📺 Orange Light",
+           "💥 Tv & Speaker Combo",
+        ]
+    },
+
+    "Titan Cinemaman": {
+        "hp": 17400,
+        "image": "https://i.postimg.cc/vZyhMvhP/cinemaman.png",
+        "attacks": {
+            "📺 Red Light": {"damage": 700, "rarity": 2},
+            "🎶 Speaker Blast": {"damage": 500, "rarity": 2},
+            "💥 Tv & Speaker Combo": {"damage": 1500, "rarity": 1},
+            "🦶 Stomp": {"damage": 180, "rarity": 8},
+            "👊 Punch": {"damage": 100, "rarity": 14},
+            "🦵 Kick": {"damage": 140, "rarity": 10},
+            "🤜 Crush": {"damage": 200, "rarity": 6},
+            "✋ Slam": {"damage": 250, "rarity": 4},
+            "🖐️ Slap": {"damage": 160, "rarity": 8},
+            "🪝 Grapple Hook": {"damage": 120, "rarity": 16},
+            "🦞 Shoulder Claws": {"damage": 150, "rarity": 14}
+        },
+        "immunities": [
+           "📺 Red Light",
+           "📺 Purple Light",
+           "📺 Orange Light",
+        ]
+    },
+
+    "G-Man 2.0": {
+        "hp": 7500,
+        "image": "https://i.postimg.cc/XJnXYpm6/image-2025-09-19-012332879.png",
+        "attacks": {
+            "👁️ Laser Eyes": {"damage": 300, "rarity": 6},
+            "🚀 Mechanical Lasers": {"damage": 500, "rarity": 4},
+            "💥 Laser Combo": {"damage": 2000, "rarity": 1},
+            "👄 Bite": {"damage": 220, "rarity": 12},
+            "🤕 HeadButt": {"damage": 210, "rarity": 14},
+            "⏩ Dash": {"damage": 260, "rarity": 10}
+        },
+        "immunities": []
+    },
+
+    "G-Man 3.0": {
+        "hp": 10000,
+        "image": "https://i.postimg.cc/N0kfSQMJ/image-2025-09-19-012558768.png",
+        "attacks": {
+            "🚀 Mechanical Lasers": {"damage": 1000, "rarity": 4},
+            "👄 Bite": {"damage": 220, "rarity": 12},
+            "🤕 HeadButt": {"damage": 210, "rarity": 14},
+            "⏩ Dash": {"damage": 260, "rarity": 10}
+        },
+        "immunities": [
+           "📺 Red Light",
+           "📺 Purple Light",
+           "📺 Orange Light",
+           "💥 Tv & Speaker Combo",
+           "🎶 Speaker Blast",
+           "🔊 Shock Wave",
+           "📢 Massive Shockwave",
+        ]
+    },
+
+    "Injured G-Man 3.0": {
+        "hp": 6500,
+        "image": "https://i.postimg.cc/sX8F0LpH/image-2025-09-19-012959782.png",
+        "attacks": {
+            "🚀 Mechanical Lasers": {"damage": 400, "rarity": 4},
+            "👄 Bite": {"damage": 220, "rarity": 12},
+            "🤕 HeadButt": {"damage": 210, "rarity": 14},
+            "⏩ Dash": {"damage": 260, "rarity": 10}
+        },
+        "immunities": []
+    },
+
+    "G-Man 4.0": {
+        "hp": 24500,
+        "image": "https://i.postimg.cc/2yhzdYP7/image-2025-09-19-013117308.png",
+        "attacks": {
+            "👁️ Laser Eyes": {"damage": 800, "rarity": 4},
+            "🚀 Mechanical Lasers": {"damage": 1400, "rarity": 2},
+            "💥 Laser Combo": {"damage": 4500, "rarity": 1},
+            "🟡 Yellow Orb": {"damage": 750, "rarity": 5},
+            "🟢 Green Orb": {"damage": 1000, "rarity": 3},
+            "🟣 Purple Orb": {"damage": 1500, "rarity": 1},
+            "👄 Bite": {"damage": 420, "rarity": 12},
+            "🤕 HeadButt": {"damage": 410, "rarity": 14},
+            "⏩ Dash": {"damage": 460, "rarity": 10}
+            "🥽 Shield Dash": {"damage": 860, "rarity": 3}
+        },
+        "immunities": [
+           "📺 Red Light",
+           "📺 Purple Light",
+           "📺 Orange Light",
+           "💥 Tv & Speaker Combo",
+           "🎶 Speaker Blast",
+           "🔊 Shock Wave",
+           "📢 Massive Shockwave",
+        ]
+    },
+
+    "Injured G-Man 4.0": {
+        "hp": 14500,
+        "image": "https://i.postimg.cc/TPLB508r/image-2025-09-19-013702596.png",
+        "attacks": {
+            "👁️ Laser Eyes": {"damage": 200, "rarity": 7},
+            "🚀 Mechanical Lasers": {"damage": 400, "rarity": 6},
+            "👄 Bite": {"damage": 420, "rarity": 12},
+            "🤕 HeadButt": {"damage": 410, "rarity": 14},
+            "⏩ Dash": {"damage": 460, "rarity": 10}
+            "🥽 Shield Dash": {"damage": 860, "rarity": 3}
+        },
+        "immunities": [
+           "💥 Tv & Speaker Combo",
+           "🎶 Speaker Blast",
+           "🔊 Shock Wave",
+           "📢 Massive Shockwave",
+        ]
+    },
+
+    "G-Man 5.0": {
+        "hp": 75000,
+        "image": "https://i.postimg.cc/5NsrPTbB/image-2025-09-19-013825177.png",
+        "attacks": {
+            "👁️ Laser Eyes": {"damage": 800, "rarity": 4},
+            "🚀 Mechanical Lasers": {"damage": 1400, "rarity": 2},
+            "💥 Laser Combo": {"damage": 4500, "rarity": 1},
+            "🟡 Yellow Orb": {"damage": 750, "rarity": 5},
+            "🟢 Green Orb": {"damage": 1000, "rarity": 3},
+            "🟣 Purple Orb": {"damage": 1500, "rarity": 1},
+            "👊 Punch": {"damage": 600, "rarity": 5},
+            "💥 Combo Punch": {"damage": 1800, "rarity": 3},
+            "🔪 Stab Punch": {"damage": 400, "rarity": 16},
+            "👄 Bite": {"damage": 420, "rarity": 12},
+            "🤕 HeadButt": {"damage": 410, "rarity": 14},
+            "⏩ Dash": {"damage": 460, "rarity": 10}
+            "🥽 Shield Dash": {"damage": 860, "rarity": 3}
+        },
+        "immunities": [
+           "📺 Red Light",
+           "📺 Purple Light",
+           "📺 Orange Light",
+           "💥 Tv & Speaker Combo",
+           "🎶 Speaker Blast",
+           "🔊 Shock Wave",
+           "📢 Massive Shockwave",
+        ]
+    },
+
+    "": {
+        "hp": ,
+        "image": "",
+        "attacks": {
+            "": {"damage": , "rarity": },
+        },
+        "immunities": [
+           "",
+        ]
+    },
+
+    "": {
+        "hp": ,
+        "image": "",
+        "attacks": {
+            "": {"damage": , "rarity": },
+        },
+        "immunities": [
+           "",
+        ]
+    },
+
+    "": {
+        "hp": ,
+        "image": "",
+        "attacks": {
+            "": {"damage": , "rarity": },
+        },
+        "immunities": [
+           "",
+        ]
+    },
+
+    "": {
+        "hp": ,
+        "image": "",
+        "attacks": {
+            "": {"damage": , "rarity": },
+        },
+        "immunities": [
+           "",
+        ]
+    },
+
+    "": {
+        "hp": ,
+        "image": "",
+        "attacks": {
+            "": {"damage": , "rarity": },
+        },
+        "immunities": [
+           "",
         ]
     },
 
@@ -160,6 +361,7 @@ characters = {
            "📺 Red Light",
            "📺 Purple Light",
            "📺 Orange Light",
+           "💥 Tv & Speaker Combo",
         ]
     }
 }
