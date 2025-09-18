@@ -164,6 +164,45 @@ characters = {
     }
 }
 
+
+class CharacterListView(discord.ui.View):
+    def __init__(self, user, pages):
+        super().__init__(timeout=180)
+        self.user = user
+        self.pages = pages  # list of (name, data)
+        self.current_page = 0
+
+    def make_page_embed(self, page_index):
+        name, data = self.pages[page_index]
+        embed = discord.Embed(
+            title=f"{name} (Page {page_index+1}/{len(self.pages)})",
+            description=f"❤️ HP: {data['hp']}",
+            color=discord.Color.orange()
+        )
+        # Add attacks field
+        attacks_str = "\n".join([f"- {atk} ({info['damage']} dmg, rarity {info['rarity']})" for atk, info in data["attacks"].items()])
+        embed.add_field(name="Attacks", value=attacks_str if attacks_str else "No attacks", inline=False)
+        # Set image if exists
+        if data.get("image"):
+            embed.set_image(url=data["image"])
+        return embed
+
+    @discord.ui.button(label="⬅️ Prev", style=discord.ButtonStyle.blurple)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user != self.user:
+            return await interaction.response.send_message("❌ This menu isn’t for you!", ephemeral=True)
+        self.current_page = (self.current_page - 1) % len(self.pages)
+        embed = self.make_page_embed(self.current_page)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="➡️ Next", style=discord.ButtonStyle.blurple)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user != self.user:
+            return await interaction.response.send_message("❌ This menu isn’t for you!", ephemeral=True)
+        self.current_page = (self.current_page + 1) % len(self.pages)
+        embed = self.make_page_embed(self.current_page)
+        await interaction.response.edit_message(embed=embed, view=self)
+
 # ================= Helpers =================
 
 def get_random_attacks(character):
@@ -481,36 +520,42 @@ class Skibidi(commands.Cog):
         self.bot = bot
 
     # ========== PREFIX ==========
-    @commands.command(name="skibidilist", aliases=["sklist", "toilets"])
-    async def skibidi_list_prefix(self, ctx, *, character_name: str = None):
-        if character_name:
-            char_name, char_data = self.find_character(character_name)
-            if not char_data:
-                return await ctx.send(f"❌ No close match found for `{character_name}`.")
-            embed = CharacterListView.make_character_embed(char_name, char_data, 0, 1)
-            return await ctx.send(embed=embed)
-
-        # no character given → show paginated list
-        pages = [(name, data) for name, data in characters.items()]
-        view = CharacterListView(ctx.author, pages)
-        embed = view.make_page_embed(0)
-        await ctx.send(embed=embed, view=view)
+    @commands.command(name="skibidilist")
+async def skibidi_list_prefix(self, ctx, *, search: str = None):
+    pages = [(name, data) for name, data in characters.items()]
+    
+    if search:
+        # Fuzzy search
+        from difflib import get_close_matches
+        match = get_close_matches(search, characters.keys(), n=1)
+        if match:
+            pages = [(match[0], characters[match[0]])]
+        else:
+            await ctx.send("❌ No character found matching that name.")
+            return
+    
+    view = CharacterListView(ctx.author, pages)
+    embed = view.make_page_embed(0)
+    await ctx.send(embed=embed, view=view)
 
     # ========== SLASH ==========
-    @app_commands.command(name="skibidilist", description="View Skibidi characters")
-    @app_commands.describe(character="Optional: View a specific character")
-    async def skibidi_list_slash(self, interaction: discord.Interaction, character: str = None):
-        if character:
-            char_name, char_data = self.find_character(character)
-            if not char_data:
-                return await interaction.response.send_message(f"❌ No close match found for `{character}`.", ephemeral=True)
-            embed = CharacterListView.make_character_embed(char_name, char_data, 0, 1)
-            return await interaction.response.send_message(embed=embed, ephemeral=True)
-
-        pages = [(name, data) for name, data in characters.items()]
-        view = CharacterListView(interaction.user, pages)
-        embed = view.make_page_embed(0)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    @app_commands.command(name="skibidilist", description="List all available characters")
+@app_commands.describe(character="Optional character name to search")
+async def skibidi_list_slash(self, interaction: discord.Interaction, character: str = None):
+    pages = [(name, data) for name, data in characters.items()]
+    
+    if character:
+        from difflib import get_close_matches
+        match = get_close_matches(character, characters.keys(), n=1)
+        if match:
+            pages = [(match[0], characters[match[0]])]
+        else:
+            await interaction.response.send_message("❌ No character found matching that name.", ephemeral=True)
+            return
+    
+    view = CharacterListView(interaction.user, pages)
+    embed = view.make_page_embed(0)
+    await interaction.response.send_message(embed=embed, view=view)
 
     # ========== AUTOCOMPLETE ==========
     @skibidi_list_slash.autocomplete("character")
