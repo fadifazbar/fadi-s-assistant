@@ -19,7 +19,7 @@ def save_data(data):
 
 class AcceptDeclineView(ui.View):
     def __init__(self, proposer_id, target_id, action):
-        super().__init__(timeout=10)  # wait 120s
+        super().__init__(timeout=120)  # wait 120s
         self.proposer_id = proposer_id
         self.target_id = target_id
         self.action = action
@@ -73,12 +73,12 @@ class DisownDropdown(ui.Select):
                 break
 
         if kid_id is None:
-            return await interaction.response.send_message("Could not find that child!", ephemeral=True)
+            return await interaction.response.send_message("❌ Could not find that child!", ephemeral=True)
 
         parent_data["kids"].remove(kid_id)
         self.parent_cog.get_user(kid_id)["parent"] = None
         self.parent_cog.save()
-        await interaction.response.send_message(f"You disowned {kid_name}.")
+        await interaction.response.send_message(f"😭 You disowned {kid_name}.")
         self.view.stop()
 
 class DisownView(ui.View):
@@ -115,12 +115,12 @@ class Family(commands.Cog):
         target = self.get_user(member.id)
 
         if proposer["married_to"]:
-            return await self._send(ctx, "You are already married!")
+            return await self._send(ctx, "💍 You are already married!")
         if target["married_to"]:
-            return await self._send(ctx, "They are already married!")
+            return await self._send(ctx, "💍 They are already married!")
 
         view = AcceptDeclineView(author.id, member.id, "marriage proposal")
-        msg = await self._send(ctx, f"{member.mention}, {author.mention} is proposing to you!", view=view)
+        msg = await self._send(ctx, f"💍 {member.mention}, {author.mention} is proposing to you!", view=view)
         view.message = msg
         await view.wait()
 
@@ -134,9 +134,9 @@ class Family(commands.Cog):
         child = self.get_user(member.id)
 
         if len(parent["kids"]) >= 7:
-            return await self._send(ctx, "You already have 7 kids!")
+            return await self._send(ctx, "👼 You already have 7 kids!")
         if child["parent"]:
-            return await self._send(ctx, "They already have a parent!")
+            return await self._send(ctx, "👨 They already have a parent!")
         if parent["married_to"] == member.id or child["married_to"] == author.id:
             return await self._send(ctx, "❌ You cannot adopt your spouse!")
 
@@ -153,10 +153,10 @@ class Family(commands.Cog):
     async def _disown(self, ctx, author):
         parent = self.get_user(author.id)
         if not parent["kids"]:
-            return await self._send(ctx, "You don’t have any kids!")
+            return await self._send(ctx, "❌ You don’t have any kids!")
 
         view = DisownView(self, author.id, parent["kids"])
-        embed = discord.Embed(title="Disown a Child", description="Choose a kid to disown", color=discord.Color.red())
+        embed = discord.Embed(title="😭 Disown a Child", description="Choose a kid to disown", color=discord.Color.red())
         await self._send(ctx, embed=embed, view=view)
 
     async def _runaway(self, ctx, author):
@@ -168,18 +168,18 @@ class Family(commands.Cog):
         parent["kids"].remove(author.id)
         child["parent"] = None
         self.save()
-        return await self._send(ctx, "You ran away from your parent.")
+        return await self._send(ctx, "😭 You ran away from your parent.")
 
     async def _divorce(self, ctx, author):
         person = self.get_user(author.id)
         if not person["married_to"]:
-            return await self._send(ctx, "You are not married!")
+            return await self._send(ctx, "❌ You are not married!")
 
         partner = self.get_user(person["married_to"])
         partner["married_to"] = None
         person["married_to"] = None
         self.save()
-        return await self._send(ctx, "You are now divorced.")
+        return await self._send(ctx, "😭 You are now divorced.")
 
     async def _family(self, ctx, author, member=None):
         user = member or author
@@ -190,9 +190,9 @@ class Family(commands.Cog):
         kids = "\n".join([await self.fetch_username(kid) for kid in data["kids"]]) if data["kids"] else "None"
 
         embed = discord.Embed(title=f"{user.display_name}'s Family!", color=discord.Color.blurple())
-        embed.add_field(name="Partner", value=partner, inline=False)
-        embed.add_field(name="Parent", value=parent, inline=False)
-        embed.add_field(name="Kids", value=kids, inline=False)
+        embed.add_field(name="😭 Partner", value=partner, inline=False)
+        embed.add_field(name="👨 Parent", value=parent, inline=False)
+        embed.add_field(name="👼 Kids", value=kids, inline=False)
 
         await self._send(ctx, embed=embed)
 
