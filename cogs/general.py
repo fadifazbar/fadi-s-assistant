@@ -219,7 +219,17 @@ class General(commands.Cog):
             "slap": ("👋 Slap", f"`{Config.PREFIX}slap <member>` or `/slap`\nSlap spomeone\n"),
             "punch": ("👊 Punch", f"`{Config.PREFIX}punch <member>` or `/punch`\nPunch a member\n"),
             "pat": ("🐶 Pat", f"`{Config.PREFIX}pat <member>` or `/pat`\nPat Someone\n"),
-            "forcekiss": ("💋 ForceKiss", f"`{Config.PREFIX}forcekiss <member> <member>` or `/forcekiss`\nMake 2 members kiss\n")
+            "forcekiss": ("💋 ForceKiss", f"`{Config.PREFIX}forcekiss <member> <member>` or `/forcekiss`\nMake 2 members kiss\n"),
+            "translate": ("🌐 Translate", f"`{Config.PREFIX}translate(tr) <language> and react to the message.` or `no slash command.`\nTranslate a message to any language\n"),
+            "skibidi": ("🚽 Skibidi", f"`{Config.PREFIX}skibidi(sk/toilet) <member>` or `/skibidi`\nHave an intractable battle with someone!\n"),
+            "skibidilist": ("📃 SkibidiList", f"`{Config.PREFIX}skibidilist` or `/skibidilist`\nLists all the characters in skibidi battle!\n"),
+            "marry": ("💍 Marry", f"`{Config.PREFIX}marry <member>` or `/marry`\nMarry someone on discord (max is 1)\n"),
+            "divorce": ("💔 Divorce", f"`{Config.PREFIX}divorce` or `/divorce`\nDivorces your partner\n"),
+            "adopt": ("👼 Adopt", f"`{Config.PREFIX}adopt <member>` or `/adopt`\nAsk someone to be your child! (max is 7)\n"),
+            "disown": ("😭 Disown", f"`{Config.PREFIX}disown` or `/disown`\nShows a list of your children and disown one.\n"),
+            "runaway": ("💨 RunAway", f"`{Config.PREFIX}runaway` or `/runaway`\nrunaway from your parent\n"),
+            "makeout": ("😘 makeOut", f"`{Config.PREFIXmakeout}makeout <member>` or `/makeout`\nMakeout with someone\n") # ,
+            # "": ("", f"`{Config.PREFIX}` or `/`\n\n"),
         }
 
         # --- Show specific command help ---
@@ -258,7 +268,16 @@ class General(commands.Cog):
                     f"`{Config.PREFIX}resetnick` - Resets a user's nick to default\n"
                     f"`{Config.PREFIX}slowmode` - Set a slowmode for a channel\n"
                     f"`{Config.PREFIX}lock` - Locks a channel\n"
-                    f"`{Config.PREFIX}unlock` - Unlocks a channel"
+                    f"`{Config.PREFIX}unlock` - Unlocks a channel\n"
+                    f"`{Config.PREFIX}translate` - Translate a message\n"
+                    f"`{Config.PREFIX}skibidi` - Battle someone\n"
+                    f"`{Config.PREFIX}skibidilist` - List of characters\n"
+                    f"`{Config.PREFIX}marry` - Marry someone\n"
+                    f"`{Config.PREFIX}adopt` - Adopt Someone\n"
+                    f"`{Config.PREFIX}divorce` - Divorce Your Partner\n"
+                    f"`{Config.PREFIX}disown` - Disown your child\n"
+                    f"`{Config.PREFIX}runaway` - Runaway from your parent\n"
+                    f"`{Config.PREFIX}makeout` - Makeout with someone\n"
                 ),
                 inline=True
             )
