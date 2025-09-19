@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands, ui
+import asyncio
 import json
 import os
 
@@ -41,26 +42,36 @@ class AcceptDeclineView(ui.View):
         await interaction.response.edit_message(content=f"{interaction.user.mention} declined the {self.action}.", view=None)
 
 class DisownDropdown(ui.Select):
-    def __init__(self, parent_id, kids):
-        options = [
-            discord.SelectOption(label=f"Child: {kid}", value=str(kid)) for kid in kids
-        ]
-        super().__init__(placeholder="Choose a child to disown", min_values=1, max_values=1, options=options)
+    def __init__(self, parent_cog, parent_id, kids):
+        options = [discord.SelectOption(label=str(kid), description=f"Disown {kid}") for kid in kids]
+        super().__init__(placeholder="Choose a kid to disown", options=options)
+        self.parent_cog = parent_cog
         self.parent_id = parent_id
-        self.result = None
+        self.kids = kids
 
     async def callback(self, interaction: discord.Interaction):
-        if interaction.user.id != self.parent_id:
-            return await interaction.response.send_message("This menu isn’t for you.", ephemeral=True)
-        self.result = int(self.values[0])
+        kid_name = self.values[0]
+        parent_data = self.parent_cog.get_user(self.parent_id)
+
+        kid_id = None
+        for k in parent_data["kids"]:
+            if str(k) == kid_name:
+                kid_id = k
+                break
+
+        if kid_id is None:
+            return await interaction.response.send_message("Could not find that child!", ephemeral=True)
+
+        parent_data["kids"].remove(kid_id)
+        self.parent_cog.get_user(kid_id)["parent"] = None
+        self.parent_cog.save()
+        await interaction.response.send_message(f"You disowned <@{kid_id}>.")
         self.view.stop()
-        await interaction.response.edit_message(content=f"You disowned <@{self.result}>.", view=None, embed=None)
 
 class DisownView(ui.View):
-    def __init__(self, parent_id, kids):
-        super().__init__(timeout=60)
-        self.dropdown = DisownDropdown(parent_id, kids)
-        self.add_item(self.dropdown)
+    def __init__(self, parent_cog, parent_id, kids):
+        super().__init__()
+        self.add_item(DisownDropdown(parent_cog, parent_id, kids))
 
 class Family(commands.Cog):
     def __init__(self, bot):
@@ -75,122 +86,152 @@ class Family(commands.Cog):
             self.data[str(user_id)] = {"married_to": None, "kids": [], "parent": None}
         return self.data[str(user_id)]
 
-    @app_commands.command(name="marry", description="Propose marriage to someone")
-    async def marry(self, interaction: discord.Interaction, member: discord.Member):
-        proposer = self.get_user(interaction.user.id)
+    # ---------- Shared logic ----------
+    async def _marry(self, ctx, author, member):
+        proposer = self.get_user(author.id)
         target = self.get_user(member.id)
 
         if proposer["married_to"]:
-            return await interaction.response.send_message("You are already married!", ephemeral=True)
+            return await ctx.send("You are already married!") if isinstance(ctx, commands.Context) else await ctx.response.send_message("You are already married!", ephemeral=True)
         if target["married_to"]:
-            return await interaction.response.send_message("They are already married!", ephemeral=True)
+            return await ctx.send("They are already married!") if isinstance(ctx, commands.Context) else await ctx.response.send_message("They are already married!", ephemeral=True)
 
-        view = AcceptDeclineView(interaction.user.id, member.id, "marriage proposal")
-        await interaction.response.send_message(f"{member.mention}, {interaction.user.mention} is proposing to you!", view=view)
+        view = AcceptDeclineView(author.id, member.id, "marriage proposal")
+
+        if isinstance(ctx, commands.Context):
+            msg = await ctx.send(f"{member.mention}, {author.mention} is proposing to you!", view=view)
+        else:
+            await ctx.response.send_message(f"{member.mention}, {author.mention} is proposing to you!", view=view)
+
         await view.wait()
 
         if view.result:
             proposer["married_to"] = member.id
-            target["married_to"] = interaction.user.id
+            target["married_to"] = author.id
             self.save()
 
-    @app_commands.command(name="adopt", description="Adopt a child")
-    async def adopt(self, interaction: discord.Interaction, member: discord.Member):
-        parent = self.get_user(interaction.user.id)
+    async def _adopt(self, ctx, author, member):
+        parent = self.get_user(author.id)
         child = self.get_user(member.id)
 
         if len(parent["kids"]) >= 7:
-            return await interaction.response.send_message("You already have 7 kids!", ephemeral=True)
+            return await ctx.send("You already have 7 kids!") if isinstance(ctx, commands.Context) else await ctx.response.send_message("You already have 7 kids!", ephemeral=True)
         if child["parent"]:
-            return await interaction.response.send_message("They already have a parent!", ephemeral=True)
+            return await ctx.send("They already have a parent!") if isinstance(ctx, commands.Context) else await ctx.response.send_message("They already have a parent!", ephemeral=True)
 
-        view = AcceptDeclineView(interaction.user.id, member.id, "adoption request")
-        await interaction.response.send_message(f"{member.mention}, {interaction.user.mention} wants to adopt you!", view=view)
+        view = AcceptDeclineView(author.id, member.id, "adoption request")
+
+        if isinstance(ctx, commands.Context):
+            msg = await ctx.send(f"{member.mention}, {author.mention} wants to adopt you!", view=view)
+        else:
+            await ctx.response.send_message(f"{member.mention}, {author.mention} wants to adopt you!", view=view)
+
         await view.wait()
 
         if view.result:
             parent["kids"].append(member.id)
-            child["parent"] = interaction.user.id
+            child["parent"] = author.id
             self.save()
 
-    @app_commands.command(name="disown", description="Disown one of your kids")
-    async def disown(self, interaction: discord.Interaction):
-        parent = self.get_user(interaction.user.id)
+    async def _disown(self, ctx, author):
+        parent = self.get_user(author.id)
         if not parent["kids"]:
-            return await interaction.response.send_message("You don’t have any kids to disown!", ephemeral=True)
+            return await ctx.send("You don’t have any kids!") if isinstance(ctx, commands.Context) else await ctx.response.send_message("You don’t have any kids!", ephemeral=True)
 
-        embed = discord.Embed(
-            title="Choose a child to disown",
-            description="Select one from the dropdown below.",
-            color=discord.Color.red()
-        )
+        view = DisownView(self, author.id, parent["kids"])
 
-        view = DisownView(interaction.user.id, parent["kids"])
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-        await view.wait()
+        if isinstance(ctx, commands.Context):
+            await ctx.send("Choose a kid to disown:", view=view)
+        else:
+            embed = discord.Embed(title="Disown a Child", description="Choose a kid to disown", color=discord.Color.red())
+            await ctx.response.send_message(embed=embed, view=view)
 
-        if view.dropdown.result:
-            kid_id = view.dropdown.result
-            parent["kids"].remove(kid_id)
-            self.get_user(kid_id)["parent"] = None
-            self.save()
-
-    @app_commands.command(name="runaway", description="Run away from your parent")
-    async def runaway(self, interaction: discord.Interaction):
-        child = self.get_user(interaction.user.id)
+    async def _runaway(self, ctx, author):
+        child = self.get_user(author.id)
         if not child["parent"]:
-            return await interaction.response.send_message("You don’t have a parent!", ephemeral=True)
+            return await ctx.send("You don’t have a parent!") if isinstance(ctx, commands.Context) else await ctx.response.send_message("You don’t have a parent!", ephemeral=True)
 
         parent = self.get_user(child["parent"])
-        parent["kids"].remove(interaction.user.id)
+        parent["kids"].remove(author.id)
         child["parent"] = None
         self.save()
-        await interaction.response.send_message("You ran away from your parent.")
+        return await ctx.send("You ran away from your parent.") if isinstance(ctx, commands.Context) else await ctx.response.send_message("You ran away from your parent.")
 
-    @app_commands.command(name="divorce", description="Divorce your current partner")
-    async def divorce(self, interaction: discord.Interaction):
-        user = self.get_user(interaction.user.id)
-        if not user["married_to"]:
-            return await interaction.response.send_message("You are not married!", ephemeral=True)
+    async def _divorce(self, ctx, author):
+        person = self.get_user(author.id)
+        if not person["married_to"]:
+            return await ctx.send("You are not married!") if isinstance(ctx, commands.Context) else await ctx.response.send_message("You are not married!", ephemeral=True)
 
-        partner = self.get_user(user["married_to"])
+        partner = self.get_user(person["married_to"])
         partner["married_to"] = None
-        user["married_to"] = None
+        person["married_to"] = None
         self.save()
-        await interaction.response.send_message("You are now divorced.")
+        return await ctx.send("You are now divorced.") if isinstance(ctx, commands.Context) else await ctx.response.send_message("You are now divorced.")
 
-    @app_commands.command(name="family", description="Show your family or someone else's")
-    async def family(self, interaction: discord.Interaction, member: discord.Member = None):
-        target = member or interaction.user
-        user_data = self.get_user(target.id)
+    async def _family(self, ctx, author, member=None):
+        user = member or author
+        data = self.get_user(user.id)
 
-        partner_name = "None"
-        if user_data["married_to"]:
-            partner = interaction.guild.get_member(user_data["married_to"])
-            partner_name = partner.display_name if partner else f"<@{user_data['married_to']}>"
+        partner = f"<@{data['married_to']}>" if data["married_to"] else "None"
+        parent = f"<@{data['parent']}>" if data["parent"] else "None"
+        kids = "\n".join([f"<@{kid}>" for kid in data["kids"]]) if data["kids"] else "None"
 
-        parent_name = "None"
-        if user_data["parent"]:
-            parent = interaction.guild.get_member(user_data["parent"])
-            parent_name = parent.display_name if parent else f"<@{user_data['parent']}>"
+        embed = discord.Embed(title=f"{user.display_name}'s Family!", color=discord.Color.blurple())
+        embed.add_field(name="Partner", value=partner, inline=False)
+        embed.add_field(name="Parent", value=parent, inline=False)
+        embed.add_field(name="Kids", value=kids, inline=False)
 
-        kids_list = "None"
-        if user_data["kids"]:
-            kids = []
-            for kid_id in user_data["kids"]:
-                kid = interaction.guild.get_member(kid_id)
-                kids.append(kid.display_name if kid else f"<@{kid_id}>")
-            kids_list = "\n".join(kids)
+        return await ctx.send(embed=embed) if isinstance(ctx, commands.Context) else await ctx.response.send_message(embed=embed)
 
-        embed = discord.Embed(
-            title=f"{target.display_name}'s Family!",
-            color=discord.Color.blurple()
-        )
-        embed.add_field(name="Partner", value=partner_name, inline=False)
-        embed.add_field(name="Parent", value=parent_name, inline=False)
-        embed.add_field(name="Kids", value=kids_list, inline=False)
+    # ---------- Slash Commands ----------
+    @app_commands.command(name="marry")
+    async def marry_slash(self, interaction: discord.Interaction, member: discord.Member):
+        await self._marry(interaction, interaction.user, member)
 
-        await interaction.response.send_message(embed=embed)
+    @app_commands.command(name="adopt")
+    async def adopt_slash(self, interaction: discord.Interaction, member: discord.Member):
+        await self._adopt(interaction, interaction.user, member)
+
+    @app_commands.command(name="disown")
+    async def disown_slash(self, interaction: discord.Interaction):
+        await self._disown(interaction, interaction.user)
+
+    @app_commands.command(name="runaway")
+    async def runaway_slash(self, interaction: discord.Interaction):
+        await self._runaway(interaction, interaction.user)
+
+    @app_commands.command(name="divorce")
+    async def divorce_slash(self, interaction: discord.Interaction):
+        await self._divorce(interaction, interaction.user)
+
+    @app_commands.command(name="family")
+    async def family_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        await self._family(interaction, interaction.user, member)
+
+    # ---------- Prefix Commands ----------
+    @commands.command(name="marry")
+    async def marry_prefix(self, ctx, member: discord.Member):
+        await self._marry(ctx, ctx.author, member)
+
+    @commands.command(name="adopt")
+    async def adopt_prefix(self, ctx, member: discord.Member):
+        await self._adopt(ctx, ctx.author, member)
+
+    @commands.command(name="disown")
+    async def disown_prefix(self, ctx):
+        await self._disown(ctx, ctx.author)
+
+    @commands.command(name="runaway")
+    async def runaway_prefix(self, ctx):
+        await self._runaway(ctx, ctx.author)
+
+    @commands.command(name="divorce")
+    async def divorce_prefix(self, ctx):
+        await self._divorce(ctx, ctx.author)
+
+    @commands.command(name="family")
+    async def family_prefix(self, ctx, member: discord.Member = None):
+        await self._family(ctx, ctx.author, member)
 
 async def setup(bot):
     await bot.add_cog(Family(bot))
