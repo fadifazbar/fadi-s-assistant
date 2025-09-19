@@ -40,8 +40,8 @@ class ModBot(commands.Bot):
         await self.load_extension("cogs.url_download")
         await self.load_extension("cogs.deathbattle")
         await self.load_extension("cogs.roleall")
-
         await self.load_extension("cogs.skibidibattle")
+        await self.load_extension("cogs.family")
 
         logger.info("✅ Loaded cogs (slash commands will now auto-sync)")
 
