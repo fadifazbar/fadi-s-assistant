@@ -819,6 +819,56 @@ class General(commands.Cog):
         embed.set_image(url=gif)
         await interaction.response.send_message(embed=embed)
 
+    # --- Prefix command ---
+    @commands.command(name="makeout")
+    async def makeout_prefix(self, ctx, member: discord.Member):
+        makeout_gifs = [
+            "https://c.tenor.com/V0nBQduEYb8AAAAC/tenor.gif",
+            "https://31.media.tumblr.com/32961c313ac0e9095425772eb2a08897/tumblr_mximpwMA6p1t2wbmao1_500.gif",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRr2eMazrP7bNBTJHREzLkoQw2eOCkG-LgAQw&s",
+            "https://gifdb.com/images/high/anime-kissing-498-x-267-gif-z1vgw7s50sta4hqy.gif",
+            "https://gifdb.com/images/high/anime-kissing-498-x-298-gif-vgg589fz4dh2l36b.gif",
+            "https://usagif.com/wp-content/uploads/anime-kissin-1.gif",
+            "https://i.makeagif.com/media/12-24-2021/-zQ_G9.gif",
+            "https://i.gifer.com/XJis.gif",
+            "https://gifdb.com/images/high/anime-kissing-498-x-253-gif-iwjslpma9xqg9ctt.gif",
+            "https://giffiles.alphacoders.com/112/112125.gif"
+        ]
+        gif = random.choice(makeout_gifs)
+        color = discord.Color(random.randint(0, 0xFFFFFF))
+        embed = discord.Embed(
+            description=f"*{ctx.author.mention} madeout with {member.mention} cutely*",
+            color=color
+        )
+        embed.set_image(url=gif)
+        await ctx.send(embed=embed)
+
+
+
+    @app_commands.command(name="makeout", description="Makeout with a member")
+    @app_commands.describe(member="The member to makeout with")
+    async def makeout_slash(self, interaction: discord.Interaction, member: discord.Member):
+        makeout_gifs = [
+            "https://c.tenor.com/V0nBQduEYb8AAAAC/tenor.gif",
+            "https://31.media.tumblr.com/32961c313ac0e9095425772eb2a08897/tumblr_mximpwMA6p1t2wbmao1_500.gif",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRr2eMazrP7bNBTJHREzLkoQw2eOCkG-LgAQw&s",
+            "https://gifdb.com/images/high/anime-kissing-498-x-267-gif-z1vgw7s50sta4hqy.gif",
+            "https://gifdb.com/images/high/anime-kissing-498-x-298-gif-vgg589fz4dh2l36b.gif",
+            "https://usagif.com/wp-content/uploads/anime-kissin-1.gif",
+            "https://i.makeagif.com/media/12-24-2021/-zQ_G9.gif",
+            "https://i.gifer.com/XJis.gif",
+            "https://gifdb.com/images/high/anime-kissing-498-x-253-gif-iwjslpma9xqg9ctt.gif",
+            "https://giffiles.alphacoders.com/112/112125.gif"
+        ]
+        gif = random.choice(makeout_gifs)
+        color = discord.Color(random.randint(0, 0xFFFFFF))
+        embed = discord.Embed(
+            description=f"*{interaction.user.mention} madeout with {member.mention} cutely*",
+            color=color
+        )
+        embed.set_image(url=gif)
+        await interaction.response.send_message(embed=embed)
+
 
 
 
