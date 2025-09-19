@@ -296,41 +296,43 @@ class Family(commands.Cog):
         else:
             await ctx_or_inter.send(msg)
 
-    # ================= Force Divorce =================
-    @app_commands.command(name="forcedivorce", description="Forcefully divorce two people (only whitelisted users).")
-    async def forcedivorce_slash(self, interaction: discord.Interaction, user1: discord.User, user2: discord.User):
-        if not await self.force_check(interaction):
-            return
-        await self._forcedivorce(interaction, user1, user2)
+# ================= Force Divorce =================
+@app_commands.command(name="forcedivorce", description="Forcefully divorce a user and their partner (only whitelisted users).")
+async def forcedivorce_slash(self, interaction: discord.Interaction, user: discord.User):
+    if not await self.force_check(interaction):
+        return
+    await self._forcedivorce(interaction, user)
 
-    @commands.command(name="forcedivorce", aliases=["fd"])
-    async def forcedivorce_prefix(self, ctx: commands.Context, user1: discord.User, user2: discord.User = None):
-        if not await self.force_check(ctx):
-            return
+@commands.command(name="forcedivorce", aliases=["fd"])
+async def forcedivorce_prefix(self, ctx: commands.Context, user: discord.User):
+    if not await self.force_check(ctx):
+        return
+    await self._forcedivorce(ctx, user)
 
-        # if only one mention → divorces the caller and the mentioned person
-        if user2 is None:
-            user2 = user1
-            user1 = ctx.author
+async def _forcedivorce(self, ctx_or_inter, user: discord.User):
+    u = self.get_user(user.id)
 
-        await self._forcedivorce(ctx, user1, user2)
+    # Check if the user is even married
+    if not u["married_to"]:
+        msg = f"❌ {user.name} is not married to anyone."
+    else:
+        partner_id = u["married_to"]
+        partner_user = self.get_user(partner_id)
 
-    async def _forcedivorce(self, ctx_or_inter, user1: discord.User, user2: discord.User):
-        u1 = self.get_user(user1.id)
-        u2 = self.get_user(user2.id)
+        # Break both sides
+        u["married_to"] = None
+        partner_user["married_to"] = None
+        self.save()
 
-        if u1["married_to"] != user2.id or u2["married_to"] != user1.id:
-            msg = "❌ These two are not married."
-        else:
-            u1["married_to"] = None
-            u2["married_to"] = None
-            self.save()
-            msg = f"💔 {user1.name} and {user2.name} have been forcefully divorced."
+        partner_name = (await self.bot.fetch_user(partner_id)).name
+        msg = f"💔 {user.name} and {partner_name} have been forcefully divorced."
 
-        if isinstance(ctx_or_inter, discord.Interaction):
-            await ctx_or_inter.response.send_message(msg)
-        else:
-            await ctx_or_inter.send(msg)
+    # Send message in the correct context
+    if isinstance(ctx_or_inter, discord.Interaction):
+        await ctx_or_inter.response.send_message(msg)
+    else:
+        await ctx_or_inter.send(msg)
+
 
 
 
