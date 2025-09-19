@@ -248,9 +248,9 @@ characters = {
         "hp": 75000,
         "image": "https://i.postimg.cc/5NsrPTbB/image-2025-09-19-013825177.png",
         "attacks": {
-            "👁️ Laser Eyes": {"damage": 800, "rarity": 4},
-            "🚀 Mechanical Lasers": {"damage": 1400, "rarity": 2},
-            "💥 Laser Combo": {"damage": 4500, "rarity": 1},
+            "👁️ Laser Eyes": {"damage": 2800, "rarity": 4},
+            "🚀 Mechanical Lasers": {"damage": 4400, "rarity": 2},
+            "💥 Laser Combo": {"damage": 10000, "rarity": 1},
             "🟡 Yellow Orb": {"damage": 750, "rarity": 5},
             "🟢 Green Orb": {"damage": 1000, "rarity": 3},
             "🟣 Purple Orb": {"damage": 1500, "rarity": 1},
@@ -273,58 +273,97 @@ characters = {
         ]
     },
 
-    "": {
-        "hp": ,
-        "image": "",
+    "Cameraman": {
+        "hp": 100,
+        "image": "https://i.postimg.cc/6pN8mjcQ/cameraman.png",
         "attacks": {
-            "": {"damage": , "rarity": },
+            "👊 Punch": {"damage": 10, "rarity": 14},
+            "🦵 Kick": {"damage": 30, "rarity": 10},
+            "🤜 Crush": {"damage": 57, "rarity": 6},
+            "✋ Slam": {"damage": 76, "rarity": 4},
+            "🖐️ Slap": {"damage": 46, "rarity": 8}
+        },
+        "immunities": []
+    },
+
+    "Large Cameraman": {
+        "hp": 500,
+        "image": "https://i.postimg.cc/vBDTVpY0/large-cameraman.png",
+        "attacks": {
+            "👊 Punch": {"damage": 30, "rarity": 14},
+            "🦵 Kick": {"damage": 90, "rarity": 10},
+            "🤜 Crush": {"damage": 100, "rarity": 6},
+            "✋ Slam": {"damage": 150, "rarity": 4},
+            "🖐️ Slap": {"damage": 80, "rarity": 8},
+            "🥏 Grab & Throw": {"damage": 250, "rarity": 3}
+        },
+        "immunities": []
+    },
+
+    "Large Speakerman": {
+        "hp": 1000,
+        "image": "https://i.postimg.cc/XvBY8tBq/large-speakerman.png",
+        "attacks": {
+            "👊 Punch": {"damage": 60, "rarity": 14},
+            "🦵 Kick": {"damage": 150, "rarity": 10},
+            "🤜 Crush": {"damage": 230, "rarity": 6},
+            "✋ Slam": {"damage": 300, "rarity": 4},
+            "🖐️ Slap": {"damage": 240, "rarity": 8},
+            "🥏 Grab & Throw": {"damage": 500, "rarity": 3},
+            "🎶 Speaker Blast": {"damage": 1000, "rarity": 1}
+
         },
         "immunities": [
-           "",
+           "📺 Red Light",
+           "📺 Purple Light",
+           "📺 Orange Light",
+           "💥 Tv & Speaker Combo",
+]
+    },
+
+    "Strider Cameraman": {
+        "hp": 750,
+        "image": "https://i.postimg.cc/rF4jBp6N/strider-cameraman.png",
+        "attacks": {
+            "☄️ Gun Shot": {"damage": 125, "rarity": 4},
+            "💥 Crush": {"damage": 150, "rarity": 2},
+            "🦶 Stomp": {"damage": 100, "rarity": 6}
+        },
+        "immunities": []
+    },
+
+    "Strider Speakerman": {
+        "hp": 1250,
+        "image": "https://i.postimg.cc/6pwrFLfB/strider-speakerman.png",
+        "attacks": {
+            "📢 Massive Shockwave": {"damage": 3500, "rarity": 1},
+            "💥 Crush": {"damage": 250, "rarity": 9},
+            "🦶 Stomp": {"damage": 200, "rarity": 14}
+        },
+        "immunities": [
+           "📺 Red Light",
+           "📺 Purple Light",
+           "📺 Orange Light",
+           "💥 Tv & Speaker Combo",
         ]
     },
 
-    "": {
-        "hp": ,
-        "image": "",
+    "Speakerman": {
+        "hp": 200,
+        "image": "https://i.postimg.cc/65VRV4Jg/speakerman.png",
         "attacks": {
-            "": {"damage": , "rarity": },
+            "👊 Punch": {"damage": 25, "rarity": 14},
+            "🦵 Kick": {"damage": 45, "rarity": 10},
+            "🤜 Crush": {"damage": 72, "rarity": 6},
+            "✋ Slam": {"damage": 91, "rarity": 4},
+            "🖐️ Slap": {"damage": 61, "rarity": 8},
+            "🎶 Speaker Blast": {"damage": 500, "rarity": 3}
         },
         "immunities": [
-           "",
-        ]
-    },
-
-    "": {
-        "hp": ,
-        "image": "",
-        "attacks": {
-            "": {"damage": , "rarity": },
-        },
-        "immunities": [
-           "",
-        ]
-    },
-
-    "": {
-        "hp": ,
-        "image": "",
-        "attacks": {
-            "": {"damage": , "rarity": },
-        },
-        "immunities": [
-           "",
-        ]
-    },
-
-    "": {
-        "hp": ,
-        "image": "",
-        "attacks": {
-            "": {"damage": , "rarity": },
-        },
-        "immunities": [
-           "",
+           "📺 Red Light",
+           "📺 Purple Light",
+           "📺 Orange Light",
+           "💥 Tv & Speaker Combo",
         ]
     },
 
