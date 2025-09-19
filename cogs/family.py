@@ -44,7 +44,7 @@ class AcceptDeclineView(ui.View):
     @ui.button(label="❌ Decline", style=discord.ButtonStyle.red)
     async def decline(self, interaction: discord.Interaction, button: ui.Button):
         if interaction.user.id != self.target_id:
-            return await interaction.response.send_message("This isn’t your proposal.", ephemeral=True)
+            return await interaction.response.send_message("❌ This isn’t your proposal.", ephemeral=True)
         self.result = False
         self.stop()
         await interaction.response.edit_message(content=f"{interaction.user.mention} declined the {self.action}.", view=None)
@@ -205,7 +205,7 @@ class Family(commands.Cog):
         kids = "\n".join([await self.fetch_username(kid) for kid in data["kids"]]) if data["kids"] else "None"
 
         embed = discord.Embed(title=f"{user.display_name}'s Family!", color=discord.Color.blurple())
-        embed.add_field(name="😭 Partner", value=partner, inline=False)
+        embed.add_field(name="💍 Partner", value=partner, inline=False)
         embed.add_field(name="👨 Parent", value=parent, inline=False)
         embed.add_field(name="👼 Kids", value=kids, inline=False)
 
@@ -222,7 +222,7 @@ class Family(commands.Cog):
                 return await ctx.response.send_message(content, embed=embed, view=view, ephemeral=ephemeral)
 
 
-    @commands.command(name="forcemarry")
+    @commands.command(name="forcemarry", aliases=["fm"])
     async def forcemarry_prefix(self, ctx: commands.Context, user1: discord.User, user2: discord.User):
         if not await self.force_check(ctx):
             return
@@ -252,7 +252,7 @@ class Family(commands.Cog):
             return
         await self._forceadopt(interaction, parent, child)
 
-    @commands.command(name="forceadopt")
+    @commands.command(name="forceadopt", aliases=["fa"])
     async def forceadopt_prefix(self, ctx: commands.Context, parent: discord.User, child: discord.User):
         if not await self.force_check(ctx):
             return
