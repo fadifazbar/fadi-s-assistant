@@ -19,11 +19,19 @@ def save_data(data):
 
 class AcceptDeclineView(ui.View):
     def __init__(self, proposer_id, target_id, action):
-        super().__init__(timeout=90)
+        super().__init__(timeout=120)  # wait 120s
         self.proposer_id = proposer_id
         self.target_id = target_id
         self.action = action
         self.result = None
+        self.message = None  # track original message
+
+    async def on_timeout(self):
+        if self.message:
+            try:
+                await self.message.edit(content=f"<@{self.target_id}> hasn’t responded to the {self.action}.", view=None)
+            except:
+                pass
 
     @ui.button(label="✅ Accept", style=discord.ButtonStyle.green)
     async def accept(self, interaction: discord.Interaction, button: ui.Button):
@@ -43,7 +51,11 @@ class AcceptDeclineView(ui.View):
 
 class DisownDropdown(ui.Select):
     def __init__(self, parent_cog, parent_id, kids):
-        options = [discord.SelectOption(label=str(kid), description=f"Disown {kid}") for kid in kids]
+        options = []
+        for kid_id in kids:
+            user = parent_cog.bot.get_user(int(kid_id))
+            label = user.name if user else f"User {kid_id}"
+            options.append(discord.SelectOption(label=label, description=f"Disown {label}"))
         super().__init__(placeholder="Choose a kid to disown", options=options)
         self.parent_cog = parent_cog
         self.parent_id = parent_id
@@ -55,7 +67,8 @@ class DisownDropdown(ui.Select):
 
         kid_id = None
         for k in parent_data["kids"]:
-            if str(k) == kid_name:
+            user = self.parent_cog.bot.get_user(int(k))
+            if (user and user.name == kid_name) or str(k) == kid_name:
                 kid_id = k
                 break
 
@@ -65,7 +78,7 @@ class DisownDropdown(ui.Select):
         parent_data["kids"].remove(kid_id)
         self.parent_cog.get_user(kid_id)["parent"] = None
         self.parent_cog.save()
-        await interaction.response.send_message(f"You disowned <@{kid_id}>.")
+        await interaction.response.send_message(f"You disowned {kid_name}.")
         self.view.stop()
 
 class DisownView(ui.View):
@@ -86,6 +99,16 @@ class Family(commands.Cog):
             self.data[str(user_id)] = {"married_to": None, "kids": [], "parent": None}
         return self.data[str(user_id)]
 
+    async def fetch_username(self, user_id):
+        """Fetch username even if user is not in the server."""
+        user = self.bot.get_user(int(user_id))
+        if not user:
+            try:
+                user = await self.bot.fetch_user(int(user_id))
+            except:
+                return f"User {user_id}"
+        return user.name
+
     # ---------- Shared logic ----------
     async def _marry(self, ctx, author, member):
         proposer = self.get_user(author.id)
@@ -97,7 +120,8 @@ class Family(commands.Cog):
             return await self._send(ctx, "They are already married!")
 
         view = AcceptDeclineView(author.id, member.id, "marriage proposal")
-        await self._send(ctx, f"{member.mention}, {author.mention} is proposing to you!", view=view)
+        msg = await self._send(ctx, f"{member.mention}, {author.mention} is proposing to you!", view=view)
+        view.message = msg
         await view.wait()
 
         if view.result:
@@ -113,9 +137,12 @@ class Family(commands.Cog):
             return await self._send(ctx, "You already have 7 kids!")
         if child["parent"]:
             return await self._send(ctx, "They already have a parent!")
+        if parent["married_to"] == member.id or child["married_to"] == author.id:
+            return await self._send(ctx, "❌ You cannot adopt your spouse!")
 
         view = AcceptDeclineView(author.id, member.id, "adoption request")
-        await self._send(ctx, f"{member.mention}, {author.mention} wants to adopt you!", view=view)
+        msg = await self._send(ctx, f"{member.mention}, {author.mention} wants to adopt you!", view=view)
+        view.message = msg
         await view.wait()
 
         if view.result:
@@ -158,9 +185,9 @@ class Family(commands.Cog):
         user = member or author
         data = self.get_user(user.id)
 
-        partner = f"<@{data['married_to']}>" if data["married_to"] else "None"
-        parent = f"<@{data['parent']}>" if data["parent"] else "None"
-        kids = "\n".join([f"<@{kid}>" for kid in data["kids"]]) if data["kids"] else "None"
+        partner = await self.fetch_username(data["married_to"]) if data["married_to"] else "None"
+        parent = await self.fetch_username(data["parent"]) if data["parent"] else "None"
+        kids = "\n".join([await self.fetch_username(kid) for kid in data["kids"]]) if data["kids"] else "None"
 
         embed = discord.Embed(title=f"{user.display_name}'s Family!", color=discord.Color.blurple())
         embed.add_field(name="Partner", value=partner, inline=False)
@@ -182,12 +209,12 @@ class Family(commands.Cog):
     # ---------- Slash Commands ----------
     @app_commands.command(name="marry")
     @app_commands.checks.cooldown(1, 5)
-    async def marry_slash(self, interaction: discord.Interaction, member: discord.Member):
+    async def marry_slash(self, interaction: discord.Interaction, member: discord.User):
         await self._marry(interaction, interaction.user, member)
 
     @app_commands.command(name="adopt")
     @app_commands.checks.cooldown(1, 5)
-    async def adopt_slash(self, interaction: discord.Interaction, member: discord.Member):
+    async def adopt_slash(self, interaction: discord.Interaction, member: discord.User):
         await self._adopt(interaction, interaction.user, member)
 
     @app_commands.command(name="disown")
@@ -207,18 +234,18 @@ class Family(commands.Cog):
 
     @app_commands.command(name="family")
     @app_commands.checks.cooldown(1, 5)
-    async def family_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def family_slash(self, interaction: discord.Interaction, member: discord.User = None):
         await self._family(interaction, interaction.user, member)
 
     # ---------- Prefix Commands ----------
     @commands.command(name="marry")
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def marry_prefix(self, ctx, member: discord.Member):
+    async def marry_prefix(self, ctx, member: discord.User):
         await self._marry(ctx, ctx.author, member)
 
     @commands.command(name="adopt")
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def adopt_prefix(self, ctx, member: discord.Member):
+    async def adopt_prefix(self, ctx, member: discord.User):
         await self._adopt(ctx, ctx.author, member)
 
     @commands.command(name="disown")
@@ -238,7 +265,7 @@ class Family(commands.Cog):
 
     @commands.command(name="family")
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def family_prefix(self, ctx, member: discord.Member = None):
+    async def family_prefix(self, ctx, member: discord.User = None):
         await self._family(ctx, ctx.author, member)
 
     # ---------- Error handler for cooldown ----------
