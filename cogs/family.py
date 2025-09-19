@@ -222,6 +222,13 @@ class Family(commands.Cog):
                 return await ctx.response.send_message(content, embed=embed, view=view, ephemeral=ephemeral)
 
 
+    # ================= Force Marry =================
+    @app_commands.command(name="forcemarry", description="Forcefully marry two people (only whitelisted users).")
+    async def forcemarry_slash(self, interaction: discord.Interaction, user1: discord.User, user2: discord.User):
+        if not await self.force_check(interaction):
+            return
+        await self._forcemarry(interaction, user1, user2)
+
     @commands.command(name="forcemarry", aliases=["fm"])
     async def forcemarry_prefix(self, ctx: commands.Context, user1: discord.User, user2: discord.User):
         if not await self.force_check(ctx):
@@ -232,11 +239,11 @@ class Family(commands.Cog):
         u1 = self.get_user(user1.id)
         u2 = self.get_user(user2.id)
 
-        if u1["partner"] or u2["partner"]:
+        if u1["married_to"] or u2["married_to"]:
             msg = "❌ One of them is already married."
         else:
-            u1["partner"] = user2.id
-            u2["partner"] = user1.id
+            u1["married_to"] = user2.id
+            u2["married_to"] = user1.id
             self.save()
             msg = f"💍 {user1.name} has been forcefully married to {user2.name}."
 
@@ -264,7 +271,7 @@ class Family(commands.Cog):
 
         if child_data["parent"]:
             msg = "❌ That kid already has a parent."
-        elif parent_data["partner"] == child.id:
+        elif parent_data["married_to"] == child.id:
             msg = "❌ You cannot adopt your partner."
         else:
             parent_data["kids"].append(child.id)
@@ -277,6 +284,7 @@ class Family(commands.Cog):
         else:
             await ctx_or_inter.send(msg)
 
+    
     # ---------- Slash Commands ----------
     @app_commands.command(name="marry")
     @app_commands.checks.cooldown(1, 5)
