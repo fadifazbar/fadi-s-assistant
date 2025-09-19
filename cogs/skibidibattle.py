@@ -211,7 +211,7 @@ characters = {
             "🟣 Purple Orb": {"damage": 1500, "rarity": 1},
             "👄 Bite": {"damage": 420, "rarity": 12},
             "🤕 HeadButt": {"damage": 410, "rarity": 14},
-            "⏩ Dash": {"damage": 460, "rarity": 10}
+            "⏩ Dash": {"damage": 460, "rarity": 10},
             "🥽 Shield Dash": {"damage": 860, "rarity": 3}
         },
         "immunities": [
@@ -233,7 +233,7 @@ characters = {
             "🚀 Mechanical Lasers": {"damage": 400, "rarity": 6},
             "👄 Bite": {"damage": 420, "rarity": 12},
             "🤕 HeadButt": {"damage": 410, "rarity": 14},
-            "⏩ Dash": {"damage": 460, "rarity": 10}
+            "⏩ Dash": {"damage": 460, "rarity": 10},
             "🥽 Shield Dash": {"damage": 860, "rarity": 3}
         },
         "immunities": [
@@ -259,7 +259,7 @@ characters = {
             "🔪 Stab Punch": {"damage": 400, "rarity": 16},
             "👄 Bite": {"damage": 420, "rarity": 12},
             "🤕 HeadButt": {"damage": 410, "rarity": 14},
-            "⏩ Dash": {"damage": 460, "rarity": 10}
+            "⏩ Dash": {"damage": 460, "rarity": 10},
             "🥽 Shield Dash": {"damage": 860, "rarity": 3}
         },
         "immunities": [
