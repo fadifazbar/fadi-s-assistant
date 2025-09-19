@@ -19,7 +19,7 @@ def save_data(data):
 
 class AcceptDeclineView(ui.View):
     def __init__(self, proposer_id, target_id, action):
-        super().__init__(timeout=120)  # wait 120s
+        super().__init__(timeout=10)  # wait 120s
         self.proposer_id = proposer_id
         self.target_id = target_id
         self.action = action
