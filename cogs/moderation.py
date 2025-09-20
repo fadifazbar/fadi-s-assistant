@@ -934,59 +934,60 @@ class Moderation(commands.Cog):
         """Rename a channel (slash command)"""
         await self._rename_channel(interaction, channel, new_name, interaction.user)
 
-        
+    # Internal method to handle channel renaming
     async def _rename_channel(self, ctx_or_interaction, channel: discord.TextChannel, new_name: str, moderator):
-    """Rename a Discord channel while keeping almost all allowed Unicode characters"""
+        """Rename a Discord channel while keeping almost all allowed Unicode characters"""
 
-    # Validate length
-    if len(new_name) < 1 or len(new_name) > 100:
-        await self._send_response(ctx_or_interaction, "❌ Channel name must be between 1 and 100 characters!")
-        return
-
-    # Remove characters Discord disallows (control chars, backticks)
-    clean_name = ''.join(c for c in new_name if c.isprintable() and c != '`')
-
-    # Replace multiple spaces or dashes with single dash for readability
-    import re
-    clean_name = re.sub(r'\s+', '-', clean_name)
-    clean_name = re.sub(r'-+', '-', clean_name).strip('-')
-
-    if not clean_name:
-        await self._send_response(ctx_or_interaction, "❌ Invalid channel name after sanitization!")
-        return
-
-    old_name = channel.name
-
-    try:
-        await channel.edit(name=clean_name, reason=f"Channel renamed by {moderator}")
-
-        # Log the rename
+        import re
+        import discord
         import logging
         from datetime import datetime
-        logger = logging.getLogger(__name__)
-        logger.info(f"Channel {old_name} renamed to {clean_name} by {moderator}")
 
-        # Send confirmation embed
-        import discord
-        embed = discord.Embed(
-            title="✅ Channel Renamed",
-            description=f"**Old Name:** #{old_name}\n**New Name:** {channel.mention}\n**Moderator:** {moderator.mention}",
-            color=0x00FF00,
-            timestamp=datetime.utcnow()
-        )
-        await self._send_response(ctx_or_interaction, embed=embed)
+        # Validate length
+        if len(new_name) < 1 or len(new_name) > 100:
+            await self._send_response(ctx_or_interaction, "❌ Channel name must be between 1 and 100 characters!")
+            return
 
-    except discord.Forbidden:
-        await self._send_response(ctx_or_interaction, "❌ I don't have permission to manage channels!")
-    except discord.HTTPException as e:
-        if "already taken" in str(e).lower():
-            await self._send_response(ctx_or_interaction, f"❌ A channel with the name `{clean_name}` already exists!")
-        else:
-            await self._send_response(ctx_or_interaction, f"❌ Failed to rename channel: {str(e)}")
-    except Exception as e:
-        logger.error(f"Error renaming channel: {e}")
-        await self._send_response(ctx_or_interaction, "❌ An error occurred while renaming the channel!")
-        
+        # Remove characters Discord disallows (control chars, backticks)
+        clean_name = ''.join(c for c in new_name if c.isprintable() and c != '`')
+
+        # Replace multiple spaces or dashes with single dash for readability
+        clean_name = re.sub(r'\s+', '-', clean_name)
+        clean_name = re.sub(r'-+', '-', clean_name).strip('-')
+
+        if not clean_name:
+            await self._send_response(ctx_or_interaction, "❌ Invalid channel name after sanitization!")
+            return
+
+        old_name = channel.name
+
+        try:
+            # Rename the channel
+            await channel.edit(name=clean_name, reason=f"Channel renamed by {moderator}")
+
+            # Log the rename
+            logger = logging.getLogger(__name__)
+            logger.info(f"Channel {old_name} renamed to {clean_name} by {moderator}")
+
+            # Send confirmation embed
+            embed = discord.Embed(
+                title="✅ Channel Renamed",
+                description=f"**Old Name:** #{old_name}\n**New Name:** {channel.mention}\n**Moderator:** {moderator.mention}",
+                color=0x00FF00,
+                timestamp=datetime.utcnow()
+            )
+            await self._send_response(ctx_or_interaction, embed=embed)
+
+        except discord.Forbidden:
+            await self._send_response(ctx_or_interaction, "❌ I don't have permission to manage channels!")
+        except discord.HTTPException as e:
+            if "already taken" in str(e).lower():
+                await self._send_response(ctx_or_interaction, f"❌ A channel with the name `{clean_name}` already exists!")
+            else:
+                await self._send_response(ctx_or_interaction, f"❌ Failed to rename channel: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error renaming channel: {e}")
+            await self._send_response(ctx_or_interaction, "❌ An error occurred while renaming the channel!")
 
     # Mute command (Prefix)
     @commands.command(name="mute")
