@@ -903,7 +903,7 @@ class Moderation(commands.Cog):
             await self._send_response(ctx_or_interaction, "❌ An error occurred while clearing messages!")
 
     # $deletechannel command
-    @commands.command(name=deletechannel)
+    @commands.command(name="deletechannel")
     @commands.has_permissions(manage_channels=True)
     async def deletechannel(self, ctx, channel: discord.TextChannel):
         await channel.delete()
