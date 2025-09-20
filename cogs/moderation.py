@@ -934,47 +934,43 @@ class Moderation(commands.Cog):
         """Rename a channel (slash command)"""
         await self._rename_channel(interaction, channel, new_name, interaction.user)
 
-
     async def _rename_channel(self, ctx_or_interaction, channel: discord.TextChannel, new_name: str, moderator):
-    """Internal method to handle channel renaming"""
-    
+    """Rename a Discord channel while keeping almost all allowed Unicode characters"""
+
     # Validate length
     if len(new_name) < 1 or len(new_name) > 100:
         await self._send_response(ctx_or_interaction, "❌ Channel name must be between 1 and 100 characters!")
         return
 
-    # Function to check if a character is allowed
-    def is_valid_char(c):
-        # Keep letters, numbers, dash, underscore, spaces, and some symbols
-        if re.match(r'[a-zA-Z0-9\-_ ]', c):
-            return True
-        # Keep Japanese-style quotes and brackets
-        if c in "「」『』【】":
-            return True
-        # Keep emojis
-        if c in emoji.EMOJI_DATA:
-            return True
-        return False
+    # Remove characters Discord disallows (control chars, backticks)
+    clean_name = ''.join(c for c in new_name if c.isprintable() and c != '`')
 
-    # Filter the new name
-    clean_name = ''.join(c for c in new_name if is_valid_char(c))
-    clean_name = re.sub(r'\s+', '-', clean_name)  # replace spaces with dashes
+    # Replace multiple spaces or dashes with single dash for readability
+    import re
+    clean_name = re.sub(r'\s+', '-', clean_name)
     clean_name = re.sub(r'-+', '-', clean_name).strip('-')
 
     if not clean_name:
-        await self._send_response(ctx_or_interaction, "❌ Invalid channel name! Channel names can only contain letters, numbers, dashes, underscores, emojis, and some symbols.")
+        await self._send_response(ctx_or_interaction, "❌ Invalid channel name after sanitization!")
         return
 
     old_name = channel.name
 
     try:
         await channel.edit(name=clean_name, reason=f"Channel renamed by {moderator}")
+
+        # Log the rename
+        import logging
+        from datetime import datetime
+        logger = logging.getLogger(__name__)
         logger.info(f"Channel {old_name} renamed to {clean_name} by {moderator}")
 
+        # Send confirmation embed
+        import discord
         embed = discord.Embed(
             title="✅ Channel Renamed",
             description=f"**Old Name:** #{old_name}\n**New Name:** {channel.mention}\n**Moderator:** {moderator.mention}",
-            color=Config.COLORS["success"],
+            color=0x00FF00,
             timestamp=datetime.utcnow()
         )
         await self._send_response(ctx_or_interaction, embed=embed)
@@ -989,7 +985,8 @@ class Moderation(commands.Cog):
     except Exception as e:
         logger.error(f"Error renaming channel: {e}")
         await self._send_response(ctx_or_interaction, "❌ An error occurred while renaming the channel!")
-    
+
+
     # Mute command (Prefix)
     @commands.command(name="mute")
     @has_mod_permissions()
