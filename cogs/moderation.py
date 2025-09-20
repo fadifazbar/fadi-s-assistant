@@ -903,7 +903,7 @@ class Moderation(commands.Cog):
             await self._send_response(ctx_or_interaction, "❌ An error occurred while clearing messages!")
 
     # $deletechannel command
-    @commands.command()
+    @commands.command(name=deletechannel)
     @commands.has_permissions(manage_channels=True)
     async def deletechannel(self, ctx, channel: discord.TextChannel):
         await channel.delete()
@@ -986,7 +986,7 @@ class Moderation(commands.Cog):
     except Exception as e:
         logger.error(f"Error renaming channel: {e}")
         await self._send_response(ctx_or_interaction, "❌ An error occurred while renaming the channel!")
-
+        
 
     # Mute command (Prefix)
     @commands.command(name="mute")
