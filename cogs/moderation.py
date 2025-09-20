@@ -933,8 +933,7 @@ class Moderation(commands.Cog):
     async def slash_renamechannel(self, interaction: discord.Interaction, channel: discord.TextChannel, new_name: str):
         """Rename a channel (slash command)"""
         await self._rename_channel(interaction, channel, new_name, interaction.user)
-
-    async def _rename_channel(self, ctx_or_interaction, channel: discord.TextChannel, new_name: str, moderator):
+async def _rename_channel(self, ctx_or_interaction, channel: discord.TextChannel, new_name: str, moderator):
     """Rename a Discord channel while keeping almost all allowed Unicode characters"""
 
     # Validate length
