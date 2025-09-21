@@ -7,20 +7,23 @@ from datetime import datetime, timedelta
 
 DATA_FILE = "data/reminders.json"
 
-# ======================
-# Data Helpers
-# ======================
 def load_reminders():
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
+        try:
+            with open(DATA_FILE, "r") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            print("⚠️ reminders.json was corrupted, resetting...")
+            return []
     return []
 
 def save_reminders(reminders):
     os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
-    with open(DATA_FILE, "w") as f:
-        json.dump(reminders, f)
-
+    try:
+        with open(DATA_FILE, "w") as f:
+            json.dump(reminders, f, indent=2)  # indent for readability
+    except Exception as e:
+        print(f"❌ Failed to save reminders: {e}")
 
 # ======================
 # Time Parser
