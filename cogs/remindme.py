@@ -90,7 +90,7 @@ class ReminderCog(commands.Cog):
                     await user.send(msg)
                 except discord.Forbidden:
                     break
-                await asyncio.sleep(30)  # 5 minutes
+                await asyncio.sleep(5)  # 5 minutes
 
         task = asyncio.create_task(loop_func())
         self.active_loops[user.id] = task
