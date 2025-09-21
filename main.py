@@ -42,13 +42,11 @@ class ModBot(commands.Bot):
         await self.load_extension("cogs.roleall")
         await self.load_extension("cogs.skibidibattle")
         await self.load_extension("cogs.family")
+        await self.load_extension("cogs.remindme")
 
         logger.info("✅ Loaded cogs (slash commands will now auto-sync)")
 
-        # --- Global slash command sync ---
-        # --- Global slash command sync ---
-        synced = await self.tree.sync()  # Global sync
-        logger.info(f"🎯 Synced {len(synced)} Commands! ✅")
+
 
 
     async def on_ready(self):
