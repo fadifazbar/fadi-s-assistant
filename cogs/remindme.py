@@ -187,7 +187,7 @@ class ReminderCog(commands.Cog):
     # ======================
     # Commands
     # ======================
-    @commands.command(name="remindme")
+@commands.command(name="remindme")
     async def remindme_prefix(self, ctx, when: str = None, *, message: str = None):
         await self.create_reminder(ctx, ctx.author, when, message)
 
@@ -195,68 +195,65 @@ class ReminderCog(commands.Cog):
     async def remindme_slash(self, interaction: discord.Interaction, when: str, message: str):
         await self.create_reminder(interaction, interaction.user, when, message)
 
-async def create_reminder(self, src, user, when, message):
-    seconds = parse_time(when)
-    if seconds is None:
-        err = "❌ Invalid time format. Example: `10m`, `1h30min`, `2week`, `1mon`"
-        return await (src.response.send_message(err) if isinstance(src, discord.Interaction) else src.send(err))
+    async def create_reminder(self, src, user, when, message):
+        seconds = parse_time(when)
+        if seconds is None:
+            err = "❌ Invalid time format. Example: `10m`, `1h30min`, `2week`, `1mon`"
+            return await (src.response.send_message(err) if isinstance(src, discord.Interaction) else src.send(err))
 
-    end_time = int(datetime.utcnow().timestamp() + seconds)
-    reminder_id = str(uuid.uuid4())  # ✅ unique ID per reminder
+        end_time = int(datetime.utcnow().timestamp() + seconds)
+        reminder_id = str(uuid.uuid4())  # ✅ unique ID per reminder
 
-    reminder = {
-        "id": reminder_id,
-        "user": user.id,
-        "message": message,
-        "time": end_time,
-        "active": True,   # user wants it to become active when due
-        "repeat": True
-    }
-    self.reminders.append(reminder)
-    save_reminders(self.reminders)
+        reminder = {
+            "id": reminder_id,
+            "user": user.id,
+            "message": message,
+            "time": end_time,
+            "active": True,
+            "repeat": True
+        }
+        self.reminders.append(reminder)
+        save_reminders(self.reminders)
 
-    # Start this reminder loop
-    self.start_reminder_loop(reminder)
+        # Start this reminder loop
+        self.start_reminder_loop(reminder)
 
-    abs_time = datetime.utcfromtimestamp(end_time).strftime("%d %B %Y, %H:%M UTC")
-    embed = discord.Embed(
-        title="⏰ Reminder Set",
-        description=f"**Message:** {message}\n**Relative:** <t:{int(end_time)}:R>\n**Exact:** {abs_time}",
-        color=discord.Color.green()
-    )
-    embed.set_footer(text=f"Requested by {user}", icon_url=user.avatar.url if user.avatar else None)
+        abs_time = datetime.utcfromtimestamp(end_time).strftime("%d %B %Y, %H:%M UTC")
+        embed = discord.Embed(
+            title="⏰ Reminder Set",
+            description=f"**Message:** {message}\n**Relative:** <t:{int(end_time)}:R>\n**Exact:** {abs_time}",
+            color=discord.Color.green()
+        )
+        embed.set_footer(text=f"Requested by {user}", icon_url=user.avatar.url if user.avatar else None)
 
-    # attach a cancel button so user can cancel immediately
-    class CancelNow(ui.View):
-        def __init__(self, cog, reminder):
-            super().__init__(timeout=60)
-            self.cog = cog
-            self.reminder = reminder
+        class CancelNow(ui.View):
+            def __init__(self, cog, reminder):
+                super().__init__(timeout=60)
+                self.cog = cog
+                self.reminder = reminder
 
-        @ui.button(label="❌ Cancel Reminder", style=discord.ButtonStyle.danger)
-        async def cancel_btn(self, interaction: discord.Interaction, button: ui.Button):
-            if interaction.user != user:
-                return await interaction.response.send_message("❌ This isn’t your reminder!", ephemeral=True)
-            # mark inactive instead of deleting
-            self.reminder["active"] = False
-            save_reminders(self.cog.reminders)
-            # cancel only this reminder’s loop
-            if user.id in self.cog.active_loops and self.reminder["id"] in self.cog.active_loops[user.id]:
-                try:
-                    self.cog.active_loops[user.id][self.reminder["id"]].cancel()
-                except Exception:
-                    pass
-                del self.cog.active_loops[user.id][self.reminder["id"]]
-            await interaction.response.edit_message(
-                content=f"🗑️ Reminder cancelled: **{self.reminder['message']}**",
-                embed=None,
-                view=None
-            )
+            @ui.button(label="❌ Cancel Reminder", style=discord.ButtonStyle.danger)
+            async def cancel_btn(self, interaction: discord.Interaction, button: ui.Button):
+                if interaction.user != user:
+                    return await interaction.response.send_message("❌ This isn’t your reminder!", ephemeral=True)
+                self.reminder["active"] = False
+                save_reminders(self.cog.reminders)
+                if user.id in self.cog.active_loops and self.reminder["id"] in self.cog.active_loops[user.id]:
+                    try:
+                        self.cog.active_loops[user.id][self.reminder["id"]].cancel()
+                    except Exception:
+                        pass
+                    del self.cog.active_loops[user.id][self.reminder["id"]]
+                await interaction.response.edit_message(
+                    content=f"🗑️ Reminder cancelled: **{self.reminder['message']}**",
+                    embed=None,
+                    view=None
+                )
 
-    if isinstance(src, discord.Interaction):
-        await src.response.send_message(embed=embed, view=CancelNow(self, reminder))
-    else:
-        await src.send(embed=embed, view=CancelNow(self, reminder))
+        if isinstance(src, discord.Interaction):
+            await src.response.send_message(embed=embed, view=CancelNow(self, reminder))
+        else:
+            await src.send(embed=embed, view=CancelNow(self, reminder))
 
     # ======================
     # reminders list
