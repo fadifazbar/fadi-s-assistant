@@ -5,7 +5,7 @@ import asyncio
 import os, json, re
 from datetime import datetime, timedelta
 
-DATA_FILE = "data/reminders.json"
+DATA_FILE = "/data/reminders.json"
 
 def load_reminders():
     if os.path.exists(DATA_FILE):
@@ -13,17 +13,15 @@ def load_reminders():
             with open(DATA_FILE, "r") as f:
                 return json.load(f)
         except json.JSONDecodeError:
-            print("⚠️ reminders.json was corrupted, resetting...")
+            print("⚠️ reminders.json corrupted, resetting file...")
             return []
     return []
 
 def save_reminders(reminders):
     os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
-    try:
-        with open(DATA_FILE, "w") as f:
-            json.dump(reminders, f, indent=2)  # indent for readability
-    except Exception as e:
-        print(f"❌ Failed to save reminders: {e}")
+    with open(DATA_FILE, "w") as f:
+        json.dump(reminders, f, indent=2)
+    print(f"💾 Saved {len(reminders)} reminders to {DATA_FILE}")
 
 # ======================
 # Time Parser
@@ -85,7 +83,7 @@ class ReminderCog(commands.Cog):
             save_reminders(self.reminders)
 
     async def start_reminder_loop(self, user: discord.User, reminder: dict):
-        msg = f"⏰ Reminder: **{reminder['message']}**\nReply with `Remind` to stop the reminding."
+        msg = f"⏰ Reminder: **{reminder['message']}**\nReply with `Remind` to stop the reminding.\n**You will be reminded again after 5 minutes."
 
         async def loop_func():
             while True:
