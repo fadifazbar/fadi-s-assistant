@@ -265,72 +265,72 @@ class ReminderCog(commands.Cog):
     async def cancel_slash(self, interaction: discord.Interaction):
         await self.cancel_reminder(interaction, interaction.user)
 
-    async def cancel_reminder(self, src, user):
-    user_reminders = [r for r in self.reminders if r["user"] == user.id and r.get("active", True)]
-    if not user_reminders:
-        msg = "📭 You have no active reminders to cancel."
-        return await (src.response.send_message(msg) if isinstance(src, discord.Interaction) else src.send(msg))
+async def cancel_reminder(self, src, user):
+        user_reminders = [r for r in self.reminders if r["user"] == user.id and r.get("active", True)]
+        if not user_reminders:
+            msg = "📭 You have no active reminders to cancel."
+            return await (src.response.send_message(msg) if isinstance(src, discord.Interaction) else src.send(msg))
 
-    options = [
-        discord.SelectOption(
-            label=r["message"][:50],
-            description=f"Reminds <t:{int(r['time'])}:R>",
-            value=str(idx)
-        )
-        for idx, r in enumerate(user_reminders)
-    ]
-
-    class CancelView(ui.View):
-        def __init__(self, cog):
-            super().__init__(timeout=60)
-            self.cog = cog
-
-        @ui.select(placeholder="Select a reminder to cancel", options=options)
-        async def select_callback(self, interaction, select):
-            if interaction.user != user:
-                return await interaction.response.send_message("❌ This isn’t your menu!", ephemeral=True)
-            idx = int(select.values[0])
-            reminder = user_reminders[idx]
-
-            confirm_view = ConfirmCancel(reminder, user, self.cog)
-
-            await interaction.response.edit_message(
-                content=f"⚠️ Do you really want to cancel **{reminder['message']}**?",
-                view=confirm_view
+        options = [
+            discord.SelectOption(
+                label=r["message"][:50],
+                description=f"Reminds <t:{int(r['time'])}:R>",
+                value=str(idx)
             )
+            for idx, r in enumerate(user_reminders)
+        ]
 
-    class ConfirmCancel(ui.View):
-        def __init__(self, reminder, user, cog):
-            super().__init__(timeout=60)
-            self.reminder = reminder
-            self.user = user
-            self.cog = cog
+        class CancelView(ui.View):
+            def __init__(self, cog):
+                super().__init__(timeout=60)
+                self.cog = cog
 
-        @ui.button(label="✅ Confirm", style=discord.ButtonStyle.danger)
-        async def confirm(self, interaction, button):
-            if interaction.user != self.user:
-                return await interaction.response.send_message("❌ This isn’t your menu!", ephemeral=True)
-            # don’t remove — mark inactive
-            self.reminder["active"] = False
-            save_reminders(self.cog.reminders)
-            await interaction.response.edit_message(
-                content=f"🗑️ Reminder cancelled: **{self.reminder['message']}**",
-                view=None
-            )
+            @ui.select(placeholder="Select a reminder to cancel", options=options)
+            async def select_callback(self, interaction, select):
+                if interaction.user != user:
+                    return await interaction.response.send_message("❌ This isn’t your menu!", ephemeral=True)
+                idx = int(select.values[0])
+                reminder = user_reminders[idx]
 
-        @ui.button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
-        async def cancel(self, interaction, button):
-            if interaction.user != self.user:
-                return await interaction.response.send_message("❌ This isn’t your menu!", ephemeral=True)
-            await interaction.response.edit_message(
-                content="❎ Cancel action aborted.",
-                view=None
-            )
+                confirm_view = ConfirmCancel(reminder, user, self.cog)
 
-    if isinstance(src, discord.Interaction):
-        await src.response.send_message("📋 Select a reminder to cancel:", view=CancelView(self))
-    else:
-        await src.send("📋 Select a reminder to cancel:", view=CancelView(self))
+                await interaction.response.edit_message(
+                    content=f"⚠️ Do you really want to cancel **{reminder['message']}**?",
+                    view=confirm_view
+                )
+
+        class ConfirmCancel(ui.View):
+            def __init__(self, reminder, user, cog):
+                super().__init__(timeout=60)
+                self.reminder = reminder
+                self.user = user
+                self.cog = cog
+
+            @ui.button(label="✅ Confirm", style=discord.ButtonStyle.danger)
+            async def confirm(self, interaction, button):
+                if interaction.user != self.user:
+                    return await interaction.response.send_message("❌ This isn’t your menu!", ephemeral=True)
+                # don’t remove — mark inactive
+                self.reminder["active"] = False
+                save_reminders(self.cog.reminders)
+                await interaction.response.edit_message(
+                    content=f"🗑️ Reminder cancelled: **{self.reminder['message']}**",
+                    view=None
+                )
+
+            @ui.button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
+            async def cancel(self, interaction, button):
+                if interaction.user != self.user:
+                    return await interaction.response.send_message("❌ This isn’t your menu!", ephemeral=True)
+                await interaction.response.edit_message(
+                    content="❎ Cancel action aborted.",
+                    view=None
+                )
+
+        if isinstance(src, discord.Interaction):
+            await src.response.send_message("📋 Select a reminder to cancel:", view=CancelView(self))
+        else:
+            await src.send("📋 Select a reminder to cancel:", view=CancelView(self))
 
 
 # ======================
