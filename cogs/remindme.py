@@ -187,6 +187,10 @@ class ReminderCog(commands.Cog):
     # ======================
     # Commands
     # ======================
+class RemindMe(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
 @commands.command(name="remindme")
     async def remindme_prefix(self, ctx, when: str = None, *, message: str = None):
         await self.create_reminder(ctx, ctx.author, when, message)
