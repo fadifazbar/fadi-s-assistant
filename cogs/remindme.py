@@ -67,7 +67,8 @@ def parse_time(timestr: str | None):
 class ReminderCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.reminders = load_reminders()
+        self.reminders =
+ load_reminders()
         self.active_loops = {}  # user_id -> asyncio.Task
         # start checker loop
         self.check_reminders.start()
@@ -187,11 +188,7 @@ class ReminderCog(commands.Cog):
 # ======================
 # Commands
 # ======================
-class RemindMe(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-        self.reminders = []
-        self.active_loops = {}
+
 
     @commands.command(name="remindme")
     async def remindme_prefix(self, ctx, when: str = None, *, message: str = None):
