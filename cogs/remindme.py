@@ -67,8 +67,7 @@ def parse_time(timestr: str | None):
 class ReminderCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.reminders =
- load_reminders()
+        self.reminders = load_reminders()
         self.active_loops = {}  # user_id -> asyncio.Task
         # start checker loop
         self.check_reminders.start()
