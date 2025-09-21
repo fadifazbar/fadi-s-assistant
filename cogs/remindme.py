@@ -195,7 +195,7 @@ class ReminderCog(commands.Cog):
     async def remindme_slash(self, interaction: discord.Interaction, when: str, message: str):
         await self.create_reminder(interaction, interaction.user, when, message)
 
-    async def create_reminder(self, src, user, when, message):
+async def create_reminder(self, src, user, when, message):
     seconds = parse_time(when)
     if seconds is None:
         err = "❌ Invalid time format. Example: `10m`, `1h30min`, `2week`, `1mon`"
