@@ -161,7 +161,7 @@ class ReminderCog(commands.Cog):
             return
 
         if message.content.strip().lower() == "remind":
-            # Stop user's loop(s) and mark inactive
+            # Stop the user's active loop
             if message.author.id in self.active_loops:
                 try:
                     self.active_loops[message.author.id].cancel()
@@ -169,15 +169,19 @@ class ReminderCog(commands.Cog):
                     pass
                 del self.active_loops[message.author.id]
 
-            changed = False
+            # Only deactivate the first triggered reminder
+            now = datetime.utcnow().timestamp()
             for reminder in self.reminders:
-                if reminder["user"] == message.author.id and reminder.get("active", True):
+                if (
+                    reminder["user"] == message.author.id
+                    and reminder.get("active", True)
+                    and reminder["time"] <= now  # already started firing
+                ):
                     reminder["active"] = False
-                    changed = True
-            if changed:
-                save_reminders(self.reminders)
+                    save_reminders(self.reminders)
+                    break  # stop after deactivating one
 
-            await message.channel.send("✅ Successfully stopped the reminding.")
+            await message.channel.send("✅ Successfully stopped the current reminder.")
 
     # ======================
     # Commands
