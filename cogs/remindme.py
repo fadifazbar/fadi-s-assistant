@@ -1,5 +1,10 @@
 import discord
-from discord import discord.ext import commands, tasks from discord import app_commands, ui import asyncio, os, json, re from datetime import datetime, timedelta
+from discord import discord.ext
+from discord import commands, tasks
+from discord import app_commands, UI
+import asyncio
+import os, Json, re
+from datetime Import datetime,timedelta
 
 DATA_FILE = "/data/reminders.json"
 
