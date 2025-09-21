@@ -56,9 +56,12 @@ class ReminderCog(commands.Cog):
         self.bot = bot
         self.reminders = load_reminders()
         self.check_reminders.start()
+        self.active_loops = {}  # user_id -> task
 
     def cog_unload(self):
         self.check_reminders.cancel()
+        for loop in self.active_loops.values():
+            loop.cancel()
 
     # background checker
     @tasks.loop(seconds=10)
@@ -66,43 +69,55 @@ class ReminderCog(commands.Cog):
         now = datetime.utcnow().timestamp()
         to_run = [r for r in self.reminders if r["time"] <= now]
         for reminder in to_run:
-            user = self.bot.get_user(reminder["user"])
-            if user:
-                try:
-                    await user.send(f"⏰ Reminder: **{reminder['message']}**")
-                except discord.Forbidden:
-                    pass
+            await self.start_repeating_reminder(reminder)
             self.reminders.remove(reminder)
         if to_run:
             save_reminders(self.reminders)
 
     async def reminder_task(self, reminder, seconds):
         await asyncio.sleep(seconds)
-        user = self.bot.get_user(reminder["user"])
-        if user:
-            try:
-                await user.send(f"⏰ Reminder: **{reminder['message']}**")
-            except discord.Forbidden:
-                pass
+        await self.start_repeating_reminder(reminder)
         if reminder in self.reminders:
             self.reminders.remove(reminder)
             save_reminders(self.reminders)
 
-    # ======================
-    # Prefix Command - $remindme
-    # ======================
-    @commands.command(name="remindme")
-    async def remindme_prefix(self, ctx, when: str = None, *, message: str = "No message"):
-        await self._create_reminder(ctx, ctx.author, when, message)
+    async def start_repeating_reminder(self, reminder):
+        user = self.bot.get_user(reminder["user"])
+        if not user:
+            return
+
+        async def loop_func():
+            try:
+                while True:
+                    await user.send(
+                        f"⏰ Reminder: **{reminder['message']}**\n"
+                        f"💡 Reply with `Remind` to stop further reminders."
+                    )
+                    await asyncio.sleep(30)  # 5 minutes
+            except asyncio.CancelledError:
+                return
+
+        # start loop
+        loop_task = self.bot.loop.create_task(loop_func())
+        self.active_loops[user.id] = loop_task
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if message.author.bot:
+            return
+        if message.guild:
+            return  # only check DMs
+        if message.content.strip().lower() == "remind":
+            if message.author.id in self.active_loops:
+                self.active_loops[message.author.id].cancel()
+                del self.active_loops[message.author.id]
+                await message.channel.send("✅ Successfully stopped the reminding.")
+            else:
+                await message.channel.send("❌ You don’t have an active repeating reminder.")
 
     # ======================
-    # Slash Command - /remindme
+    # Create Reminder
     # ======================
-    @app_commands.command(name="remindme", description="Set a reminder")
-    async def remindme_slash(self, interaction: discord.Interaction, when: str = None, message: str = "No message"):
-        await self._create_reminder(interaction, interaction.user, when, message, is_slash=True)
-
-    # Core reminder logic
     async def _create_reminder(self, ctx_or_inter, user, when: str, message: str, is_slash=False):
         seconds = parse_time(when)
         if seconds is None:
@@ -110,13 +125,15 @@ class ReminderCog(commands.Cog):
             return await (ctx_or_inter.response.send_message(text, ephemeral=True) if is_slash else ctx_or_inter.send(text))
 
         end_time = int(datetime.utcnow().timestamp() + seconds)
+        exact_date = datetime.utcfromtimestamp(end_time).strftime("%d %B %Y %H:%M UTC")
+
         reminder = {"user": user.id, "message": message, "time": end_time}
         self.reminders.append(reminder)
         save_reminders(self.reminders)
 
         # instant reminder
         if seconds == 0:
-            await user.send(f"⏰ Reminder: **{message}**")
+            await self.start_repeating_reminder(reminder)
             self.reminders.remove(reminder)
             save_reminders(self.reminders)
             text = f"✅ Sent your instant reminder: **{message}**"
@@ -126,7 +143,11 @@ class ReminderCog(commands.Cog):
 
         embed = discord.Embed(
             title="⏰ Reminder Set",
-            description=f"**Message:** {message}\n**Time:** <t:{int(end_time)}:R>",
+            description=(
+                f"**Message:** {message}\n"
+                f"**Relative:** <t:{end_time}:R>\n"
+                f"**Exact Date:** {exact_date}"
+            ),
             color=discord.Color.green()
         )
         embed.set_footer(text=f"Requested by {user}", icon_url=user.avatar.url if user.avatar else None)
@@ -136,80 +157,19 @@ class ReminderCog(commands.Cog):
         else:
             await ctx_or_inter.send(embed=embed)
 
-    # ======================
-    # List Reminders
-    # ======================
-    @commands.command(name="reminders")
-    async def reminders_prefix(self, ctx):
-        await self._list_reminders(ctx, ctx.author)
+    # Prefix
+    @commands.command(name="remindme")
+    async def remindme_prefix(self, ctx, when: str = None, *, message: str = "No message"):
+        await self._create_reminder(ctx, ctx.author, when, message)
 
-    @app_commands.command(name="reminders", description="List your active reminders")
-    async def reminders_slash(self, interaction: discord.Interaction):
-        await self._list_reminders(interaction, interaction.user, is_slash=True)
-
-    async def _list_reminders(self, ctx_or_inter, user, is_slash=False):
-        user_reminders = [r for r in self.reminders if r["user"] == user.id]
-        if not user_reminders:
-            text = "📭 You have no active reminders."
-            return await (ctx_or_inter.response.send_message(text, ephemeral=True) if is_slash else ctx_or_inter.send(text))
-
-        page = 0
-        per_page = 5
-
-        def make_embed(page):
-            embed = discord.Embed(
-                title=f"📝 Your Reminders (Page {page+1}/{(len(user_reminders)-1)//per_page+1})",
-                color=discord.Color.blue()
-            )
-            start = page * per_page
-            end = start + per_page
-            for idx, r in enumerate(user_reminders[start:end], start=1):
-                embed.add_field(
-                    name=f"{idx+start}. {r['message']}",
-                    value=f"⏰ <t:{int(r['time'])}:R>",
-                    inline=False
-                )
-            embed.set_footer(text=f"Requested by {user}", icon_url=user.avatar.url if user.avatar else None)
-            return embed
-
-        class ReminderView(ui.View):
-            def __init__(self):
-                super().__init__(timeout=60)
-
-            @ui.button(label="◀️ Prev", style=discord.ButtonStyle.secondary)
-            async def back(self, interaction, button):
-                nonlocal page
-                if interaction.user != user:
-                    return await interaction.response.send_message("❌ This isn’t your menu!", ephemeral=True)
-                if page > 0:
-                    page -= 1
-                    await interaction.response.edit_message(embed=make_embed(page), view=self)
-
-            @ui.button(label="Next ▶️", style=discord.ButtonStyle.secondary)
-            async def forward(self, interaction, button):
-                nonlocal page
-                if interaction.user != user:
-                    return await interaction.response.send_message("❌ This isn’t your menu!", ephemeral=True)
-                if (page+1) * per_page < len(user_reminders):
-                    page += 1
-                    await interaction.response.edit_message(embed=make_embed(page), view=self)
-
-        if is_slash:
-            await ctx_or_inter.response.send_message(embed=make_embed(page), view=ReminderView(), ephemeral=True)
-        else:
-            await ctx_or_inter.send(embed=make_embed(page), view=ReminderView())
+    # Slash
+    @app_commands.command(name="remindme", description="Set a reminder")
+    async def remindme_slash(self, interaction: discord.Interaction, when: str = None, message: str = "No message"):
+        await self._create_reminder(interaction, interaction.user, when, message, is_slash=True)
 
     # ======================
     # Cancel Reminder
     # ======================
-    @commands.command(name="cancelreminder", aliases=["cr", "rcancel"])
-    async def cancel_prefix(self, ctx):
-        await self._cancel_reminder(ctx, ctx.author)
-
-    @app_commands.command(name="cancelreminder", description="Cancel one of your reminders")
-    async def cancel_slash(self, interaction: discord.Interaction):
-        await self._cancel_reminder(interaction, interaction.user, is_slash=True)
-
     async def _cancel_reminder(self, ctx_or_inter, user, is_slash=False):
         user_reminders = [r for r in self.reminders if r["user"] == user.id]
         if not user_reminders:
@@ -261,6 +221,14 @@ class ReminderCog(commands.Cog):
             await ctx_or_inter.response.send_message("📋 Select a reminder to cancel:", view=CancelView(), ephemeral=True)
         else:
             await ctx_or_inter.send("📋 Select a reminder to cancel:", view=CancelView())
+
+    @commands.command(name="cancelreminder", aliases=["cr", "rcancel"])
+    async def cancel_prefix(self, ctx):
+        await self._cancel_reminder(ctx, ctx.author)
+
+    @app_commands.command(name="cancelreminder", description="Cancel one of your reminders")
+    async def cancel_slash(self, interaction: discord.Interaction):
+        await self._cancel_reminder(interaction, interaction.user, is_slash=True)
 
 # ======================
 # Setup
