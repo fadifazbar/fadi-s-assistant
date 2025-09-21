@@ -174,7 +174,7 @@ class ReminderCog(commands.Cog):
     # ======================
     # $cancelreminder
     # ======================
-    @commands.command(name="cancelreminder")
+    @commands.command(name="cancelreminder" aliases=["cr", "rcancel"])
     async def cancel_reminder(self, ctx):
         user_reminders = [r for r in self.reminders if r["user"] == ctx.author.id]
         if not user_reminders:
