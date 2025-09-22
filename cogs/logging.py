@@ -5,7 +5,7 @@ from discord import app_commands, ui
 import os, json, difflib
 from datetime import datetime  # fixed typo
 
-DATA_FILE = "data/log_config.json"
+DATA_FILE = "/data/logs.json"
 
 
 # ======================
