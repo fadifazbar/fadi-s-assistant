@@ -40,17 +40,20 @@ class LoggingCog(commands.Cog):
         self.bot = bot
         self.config = load_config()
         self.valid_categories = {
-    "messages": "💬 Messages",
-    "members": "👥 Members",
-    "roles": "🎭 Roles",
-    "channels": "📢 Channels",
-    "moderation": "🛡️ Moderation",
-    "voice": "🔊 Voice",
-    "server": "🛠️ Server Settings",
-    "bots": "🤖 Bots & Integrations",
-    "threads": "🧵 Threads",
-    "emojis": "😃 Emojis & Stickers"
-}
+            "messages": "💬 Messages",
+            "members": "👥 Members",
+            "roles": "🎭 Roles",
+            "channels": "📢 Channels",
+            "moderation": "🛡️ Moderation",
+            "voice": "🔊 Voice",
+            "guild": "🏰 Server Updates",
+            "bots": "🤖 Bots & Integrations",
+            "threads": "🧵 Threads",
+            "emojis": "😃 Emojis & Stickers",
+            "invites": "📨 Invites",
+            "webhooks": "🪝 Webhooks",
+            "events": "📅 Scheduled Events"
+        }
 
     # ----------------------
     # Helpers
@@ -139,22 +142,214 @@ class LoggingCog(commands.Cog):
 
 
     # ----------------------
-    # Events
-    # ----------------------
-
-
-    # ----------------------
-    # Bot / Integration Events
+    # Message Events
     # ----------------------
     @commands.Cog.listener()
-    async def on_webhooks_update(self, channel: discord.abc.GuildChannel):
+    async def on_message_delete(self, message: discord.Message):
+        if not message.guild or message.author.bot:
+            return
+
         embed = discord.Embed(
-            title="🤖 Webhook Updated",
-            description=f"A webhook was added/removed/edited in {channel.mention}",
-            color=discord.Color.blurple(),
+            title="🗑️ Message Deleted",
+            color=discord.Color.red(),
             timestamp=datetime.utcnow()
         )
-        await self.send_log(channel.guild, "bots", embed)
+        embed.add_field(name="Author", value=f"{message.author.mention} ({message.author})", inline=False)
+        embed.add_field(name="Channel", value=message.channel.mention, inline=True)
+        embed.add_field(name="Author ID", value=message.author.id, inline=True)
+        embed.add_field(name="Message ID", value=message.id, inline=True)
+
+        content = message.content or "*No content*"
+        embed.add_field(name="Content", value=content[:1024], inline=False)
+
+        embed.set_thumbnail(url=message.author.display_avatar.url)
+        embed.set_footer(text=f"Channel ID: {message.channel.id} | Guild ID: {message.guild.id}")
+
+        await self.send_log(message.guild, "messages", embed)
+
+    @commands.Cog.listener()
+    async def on_message_edit(self, before: discord.Message, after: discord.Message):
+        if not before.guild or before.author.bot or before.content == after.content:
+            return
+
+        embed = discord.Embed(
+            title="✏️ Message Edited",
+            color=discord.Color.orange(),
+            timestamp=datetime.utcnow()
+        )
+        embed.add_field(name="Author", value=f"{before.author.mention} ({before.author})", inline=False)
+        embed.add_field(name="Channel", value=before.channel.mention, inline=True)
+        embed.add_field(name="Author ID", value=before.author.id, inline=True)
+        embed.add_field(name="Message ID", value=before.id, inline=True)
+        embed.add_field(name="Before", value=before.content[:1024] or "*Empty*", inline=False)
+        embed.add_field(name="After", value=after.content[:1024] or "*Empty*", inline=False)
+
+        embed.set_thumbnail(url=before.author.display_avatar.url)
+        embed.set_footer(text=f"Channel ID: {before.channel.id} | Guild ID: {before.guild.id}")
+
+        await self.send_log(before.guild, "messages", embed)
+
+
+    # ----------------------
+    # Member Events
+    # ----------------------
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        embed = discord.Embed(
+            title="👤 Member Joined",
+            description=f"{member.mention} ({member})",
+            color=discord.Color.green(),
+            timestamp=datetime.utcnow()
+        )
+        embed.add_field(name="User ID", value=member.id, inline=True)
+        embed.add_field(name="Account Created", value=discord.utils.format_dt(member.created_at, style='R'), inline=True)
+
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Guild ID: {member.guild.id}")
+
+        await self.send_log(member.guild, "members", embed)
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        embed = discord.Embed(
+            title="👤 Member Left",
+            description=f"{member.mention} ({member})",
+            color=discord.Color.red(),
+            timestamp=datetime.utcnow()
+        )
+        embed.add_field(name="User ID", value=member.id, inline=True)
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Guild ID: {member.guild.id}")
+
+        await self.send_log(member.guild, "members", embed)
+
+    @commands.Cog.listener()
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        if before.nick != after.nick:
+            embed = discord.Embed(
+                title="📝 Nickname Changed",
+                color=discord.Color.blue(),
+                timestamp=datetime.utcnow()
+            )
+            embed.add_field(name="Member", value=after.mention, inline=False)
+            embed.add_field(name="Before", value=before.nick or "*None*", inline=True)
+            embed.add_field(name="After", value=after.nick or "*None*", inline=True)
+
+            embed.set_thumbnail(url=after.display_avatar.url)
+            embed.set_footer(text=f"User ID: {after.id} | Guild ID: {after.guild.id}")
+
+            await self.send_log(after.guild, "members", embed)
+
+        if before.roles != after.roles:
+            before_roles = ", ".join(r.mention for r in before.roles if r.name != "@everyone")
+            after_roles = ", ".join(r.mention for r in after.roles if r.name != "@everyone")
+            embed = discord.Embed(
+                title="🎭 Roles Updated",
+                color=discord.Color.purple(),
+                timestamp=datetime.utcnow()
+            )
+            embed.add_field(name="Member", value=after.mention, inline=False)
+            embed.add_field(name="Before", value=before_roles or "*None*", inline=False)
+            embed.add_field(name="After", value=after_roles or "*None*", inline=False)
+
+            embed.set_thumbnail(url=after.display_avatar.url)
+            embed.set_footer(text=f"User ID: {after.id} | Guild ID: {after.guild.id}")
+
+            await self.send_log(after.guild, "members", embed)
+
+    # ----------------------
+    # Role Events
+    # ----------------------
+    @commands.Cog.listener()
+    async def on_guild_role_create(self, role: discord.Role):
+        guild = role.guild
+        moderator = "Unknown"
+
+        try:
+            async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.role_create):
+                if entry.target.id == role.id:
+                    moderator = entry.user.mention
+                    break
+        except discord.Forbidden:
+            pass
+
+        embed = discord.Embed(
+            title="🎭 Role Created",
+            description=f"{role.mention} ({role.name})",
+            color=discord.Color.green(),
+            timestamp=datetime.utcnow()
+        )
+        embed.add_field(name="Moderator", value=moderator, inline=True)
+        embed.add_field(name="Role ID", value=role.id, inline=True)
+
+        embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
+        embed.set_footer(text=f"Guild ID: {guild.id}")
+
+        await self.send_log(guild, "roles", embed)
+
+    @commands.Cog.listener()
+    async def on_guild_role_delete(self, role: discord.Role):
+        guild = role.guild
+        moderator = "Unknown"
+
+        try:
+            async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.role_delete):
+                if entry.target.id == role.id:
+                    moderator = entry.user.mention
+                    break
+        except discord.Forbidden:
+            pass
+
+        embed = discord.Embed(
+            title="🎭 Role Deleted",
+            description=f"{role.name}",
+            color=discord.Color.red(),
+            timestamp=datetime.utcnow()
+        )
+        embed.add_field(name="Moderator", value=moderator, inline=True)
+        embed.add_field(name="Role ID", value=role.id, inline=True)
+
+        embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
+        embed.set_footer(text=f"Guild ID: {guild.id}")
+
+        await self.send_log(guild, "roles", embed)
+
+    @commands.Cog.listener()
+    async def on_guild_role_update(self, before: discord.Role, after: discord.Role):
+        guild = after.guild
+        moderator = "Unknown"
+
+        try:
+            async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.role_update):
+                if entry.target.id == after.id:
+                    moderator = entry.user.mention
+                    break
+        except discord.Forbidden:
+            pass
+
+        changes = []
+        if before.name != after.name:
+            changes.append(f"**Name:** {before.name} → {after.name}")
+        if before.permissions != after.permissions:
+            changes.append("**Permissions Updated**")
+        if before.color != after.color:
+            changes.append(f"**Color:** {before.color} → {after.color}")
+
+        if changes:
+            embed = discord.Embed(
+                title="🎭 Role Updated",
+                description="\n".join(changes),
+                color=discord.Color.orange(),
+                timestamp=datetime.utcnow()
+            )
+            embed.add_field(name="Moderator", value=moderator, inline=False)
+            embed.add_field(name="Role ID", value=after.id, inline=True)
+
+            embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
+            embed.set_footer(text=f"Guild ID: {guild.id}")
+
+            await self.send_log(guild, "roles", embed)
+
 
     # ----------------------
     # Emoji & Sticker Events
@@ -174,9 +369,12 @@ class LoggingCog(commands.Cog):
             embed = discord.Embed(
                 title="😃 Emojis Updated",
                 description="\n".join(changes),
-                color=discord.Color.green(),
+                color=discord.Color.green() if added else discord.Color.red(),
                 timestamp=datetime.utcnow()
             )
+            embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
+            embed.set_footer(text=f"Guild ID: {guild.id}")
+
             await self.send_log(guild, "emojis", embed)
 
     @commands.Cog.listener()
@@ -194,10 +392,14 @@ class LoggingCog(commands.Cog):
             embed = discord.Embed(
                 title="🎟️ Stickers Updated",
                 description="\n".join(changes),
-                color=discord.Color.orange(),
+                color=discord.Color.green() if added else discord.Color.red(),
                 timestamp=datetime.utcnow()
             )
+            embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
+            embed.set_footer(text=f"Guild ID: {guild.id}")
+
             await self.send_log(guild, "emojis", embed)
+
 
     # ----------------------
     # Thread Events
@@ -210,6 +412,12 @@ class LoggingCog(commands.Cog):
             color=discord.Color.green(),
             timestamp=datetime.utcnow()
         )
+        embed.add_field(name="Thread ID", value=thread.id, inline=True)
+        embed.add_field(name="Parent Channel", value=thread.parent.mention, inline=True)
+
+        embed.set_thumbnail(url=thread.guild.icon.url if thread.guild.icon else discord.Embed.Empty)
+        embed.set_footer(text=f"Guild ID: {thread.guild.id}")
+
         await self.send_log(thread.guild, "threads", embed)
 
     @commands.Cog.listener()
@@ -220,206 +428,181 @@ class LoggingCog(commands.Cog):
             color=discord.Color.red(),
             timestamp=datetime.utcnow()
         )
+        embed.add_field(name="Thread ID", value=thread.id, inline=True)
+        embed.add_field(name="Parent Channel", value=thread.parent.name, inline=True)
+
+        embed.set_thumbnail(url=thread.guild.icon.url if thread.guild.icon else discord.Embed.Empty)
+        embed.set_footer(text=f"Guild ID: {thread.guild.id}")
+
         await self.send_log(thread.guild, "threads", embed)
 
     @commands.Cog.listener()
     async def on_thread_update(self, before: discord.Thread, after: discord.Thread):
+        changes = []
         if before.name != after.name:
+            changes.append(f"**Name:** {before.name} → {after.name}")
+        if before.archived != after.archived:
+            changes.append(f"**Archived:** {before.archived} → {after.archived}")
+        if before.locked != after.locked:
+            changes.append(f"**Locked:** {before.locked} → {after.locked}")
+
+        if changes:
             embed = discord.Embed(
-                title="🧵 Thread Renamed",
+                title="🧵 Thread Updated",
+                description="\n".join(changes),
                 color=discord.Color.orange(),
                 timestamp=datetime.utcnow()
             )
-            embed.add_field(name="Before", value=before.name, inline=True)
-            embed.add_field(name="After", value=after.name, inline=True)
+            embed.add_field(name="Thread", value=after.mention, inline=False)
+            embed.add_field(name="Thread ID", value=after.id, inline=True)
+
+            embed.set_thumbnail(url=after.guild.icon.url if after.guild.icon else discord.Embed.Empty)
+            embed.set_footer(text=f"Guild ID: {after.guild.id}")
+
             await self.send_log(after.guild, "threads", embed)
 
-    # ----------------------
-    # Message Events
-    # ----------------------
-    @commands.Cog.listener()
-    async def on_message_delete(self, message: discord.Message):
-        if not message.guild or message.author.bot:
-            return
-
-        embed = discord.Embed(
-            title="🗑️ Message Deleted",
-            color=discord.Color.red(),
-            timestamp=datetime.utcnow()
-        )
-        embed.add_field(name="Author", value=message.author.mention, inline=True)
-        embed.add_field(name="Channel", value=message.channel.mention, inline=True)
-        content = message.content or "*No content*"
-        embed.add_field(name="Content", value=content[:1024], inline=False)
-
-        await self.send_log(message.guild, "messages", embed)
-
-    @commands.Cog.listener()
-    async def on_message_edit(self, before: discord.Message, after: discord.Message):
-        if not before.guild or before.author.bot or before.content == after.content:
-            return
-
-        embed = discord.Embed(
-            title="✏️ Message Edited",
-            color=discord.Color.orange(),
-            timestamp=datetime.utcnow()
-        )
-        embed.add_field(name="Author", value=before.author.mention, inline=True)
-        embed.add_field(name="Channel", value=before.channel.mention, inline=True)
-        embed.add_field(name="Before", value=before.content[:1024] or "*Empty*", inline=False)
-        embed.add_field(name="After", value=after.content[:1024] or "*Empty*", inline=False)
-
-        await self.send_log(before.guild, "messages", embed)
-
-    # ----------------------
-    # Member Events
-    # ----------------------
-    @commands.Cog.listener()
-    async def on_member_join(self, member: discord.Member):
-        embed = discord.Embed(
-            title="👤 Member Joined",
-            description=f"{member.mention} ({member})",
-            color=discord.Color.green(),
-            timestamp=datetime.utcnow()
-        )
-        await self.send_log(member.guild, "members", embed)
-
-    @commands.Cog.listener()
-    async def on_member_remove(self, member: discord.Member):
-        embed = discord.Embed(
-            title="👤 Member Left",
-            description=f"{member.mention} ({member})",
-            color=discord.Color.red(),
-            timestamp=datetime.utcnow()
-        )
-        await self.send_log(member.guild, "members", embed)
-
-    @commands.Cog.listener()
-    async def on_member_update(self, before: discord.Member, after: discord.Member):
-        if before.nick != after.nick:
-            embed = discord.Embed(
-                title="📝 Nickname Changed",
-                color=discord.Color.blue(),
-                timestamp=datetime.utcnow()
-            )
-            embed.add_field(name="Member", value=after.mention, inline=True)
-            embed.add_field(name="Before", value=before.nick or "*None*", inline=True)
-            embed.add_field(name="After", value=after.nick or "*None*", inline=True)
-            await self.send_log(after.guild, "members", embed)
-
-        if before.roles != after.roles:
-            before_roles = ", ".join(r.mention for r in before.roles if r.name != "@everyone")
-            after_roles = ", ".join(r.mention for r in after.roles if r.name != "@everyone")
-            embed = discord.Embed(
-                title="🎭 Roles Updated",
-                color=discord.Color.purple(),
-                timestamp=datetime.utcnow()
-            )
-            embed.add_field(name="Member", value=after.mention, inline=False)
-            embed.add_field(name="Before", value=before_roles or "*None*", inline=False)
-            embed.add_field(name="After", value=after_roles or "*None*", inline=False)
-            await self.send_log(after.guild, "members", embed)
-
-    @commands.Cog.listener()
-    async def on_member_ban(self, guild: discord.Guild, user: discord.User):
-        embed = discord.Embed(
-            title="🔨 Member Banned",
-            description=f"{user.mention} ({user})",
-            color=discord.Color.dark_red(),
-            timestamp=datetime.utcnow()
-        )
-        await self.send_log(guild, "members", embed)
-
-    @commands.Cog.listener()
-    async def on_member_unban(self, guild: discord.Guild, user: discord.User):
-        embed = discord.Embed(
-            title="⚖️ Member Unbanned",
-            description=f"{user.mention} ({user})",
-            color=discord.Color.green(),
-            timestamp=datetime.utcnow()
-        )
-        await self.send_log(guild, "members", embed)
 
     # ----------------------
     # Channel Events
     # ----------------------
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel: discord.abc.GuildChannel):
+        guild = channel.guild
+        moderator = "Unknown"
+
+        try:
+            async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.channel_create):
+                if entry.target.id == channel.id:
+                    moderator = entry.user.mention
+                    break
+        except discord.Forbidden:
+            pass
+
         embed = discord.Embed(
             title="📢 Channel Created",
             description=f"{channel.mention} ({channel.name})",
             color=discord.Color.green(),
             timestamp=datetime.utcnow()
         )
-        await self.send_log(channel.guild, "channels", embed)
+        embed.add_field(name="Type", value=str(channel.type).capitalize(), inline=True)
+        embed.add_field(name="Moderator", value=moderator, inline=True)
+
+        embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
+        embed.set_footer(text=f"Channel ID: {channel.id} | Guild ID: {guild.id}")
+
+        await self.send_log(guild, "channels", embed)
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel: discord.abc.GuildChannel):
+        guild = channel.guild
+        moderator = "Unknown"
+
+        try:
+            async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.channel_delete):
+                if entry.target.id == channel.id:
+                    moderator = entry.user.mention
+                    break
+        except discord.Forbidden:
+            pass
+
         embed = discord.Embed(
             title="📢 Channel Deleted",
             description=f"{channel.name}",
             color=discord.Color.red(),
             timestamp=datetime.utcnow()
         )
-        await self.send_log(channel.guild, "channels", embed)
+        embed.add_field(name="Moderator", value=moderator, inline=True)
+
+        embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
+        embed.set_footer(text=f"Channel ID: {channel.id} | Guild ID: {guild.id}")
+
+        await self.send_log(guild, "channels", embed)
 
     @commands.Cog.listener()
     async def on_guild_channel_update(self, before: discord.abc.GuildChannel, after: discord.abc.GuildChannel):
-        if before.name != after.name:
-            embed = discord.Embed(
-                title="📢 Channel Renamed",
-                color=discord.Color.orange(),
-                timestamp=datetime.utcnow()
-            )
-            embed.add_field(name="Before", value=before.name, inline=True)
-            embed.add_field(name="After", value=after.name, inline=True)
-            await self.send_log(after.guild, "channels", embed)
+        guild = after.guild
+        moderator = "Unknown"
 
-    # ----------------------
-    # Role Events
-    # ----------------------
-    @commands.Cog.listener()
-    async def on_guild_role_create(self, role: discord.Role):
-        embed = discord.Embed(
-            title="🎭 Role Created",
-            description=f"{role.mention} ({role.name})",
-            color=discord.Color.green(),
-            timestamp=datetime.utcnow()
-        )
-        await self.send_log(role.guild, "roles", embed)
+        try:
+            async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.channel_update):
+                if entry.target.id == after.id:
+                    moderator = entry.user.mention
+                    break
+        except discord.Forbidden:
+            pass
 
-    @commands.Cog.listener()
-    async def on_guild_role_delete(self, role: discord.Role):
-        embed = discord.Embed(
-            title="🎭 Role Deleted",
-            description=f"{role.name}",
-            color=discord.Color.red(),
-            timestamp=datetime.utcnow()
-        )
-        await self.send_log(role.guild, "roles", embed)
-
-    @commands.Cog.listener()
-    async def on_guild_role_update(self, before: discord.Role, after: discord.Role):
         changes = []
         if before.name != after.name:
             changes.append(f"**Name:** {before.name} → {after.name}")
-        if before.permissions != after.permissions:
-            changes.append("**Permissions Updated**")
-        if before.color != after.color:
-            changes.append(f"**Color:** {before.color} → {after.color}")
+        if before.category != after.category:
+            changes.append(f"**Category:** {before.category} → {after.category}")
 
         if changes:
             embed = discord.Embed(
-                title="🎭 Role Updated",
+                title="📢 Channel Updated",
                 description="\n".join(changes),
                 color=discord.Color.orange(),
                 timestamp=datetime.utcnow()
             )
-            embed.add_field(name="Role", value=after.mention, inline=False)
-            await self.send_log(after.guild, "roles", embed)
+            embed.add_field(name="Moderator", value=moderator, inline=False)
+
+            embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
+            embed.set_footer(text=f"Channel ID: {after.id} | Guild ID: {guild.id}")
+
+            await self.send_log(guild, "channels", embed)
 
     # ----------------------
-    # Guild Events
+    # Bot Events
+    # ----------------------
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        if member.bot:
+            guild = member.guild
+            moderator = "Unknown"
+
+            try:
+                async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.bot_add):
+                    if entry.target.id == member.id:
+                        moderator = entry.user.mention
+                        break
+            except discord.Forbidden:
+                pass
+
+            embed = discord.Embed(
+                title="🤖 Bot Added",
+                description=f"{member.mention} ({member.name}#{member.discriminator})",
+                color=discord.Color.green(),
+                timestamp=datetime.utcnow()
+            )
+            embed.add_field(name="Added By", value=moderator, inline=True)
+            embed.add_field(name="Bot ID", value=member.id, inline=True)
+
+            embed.set_thumbnail(url=member.display_avatar.url)
+            embed.set_footer(text=f"Guild ID: {guild.id}")
+
+            await self.send_log(guild, "bots", embed)
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        if member.bot:
+            guild = member.guild
+
+            embed = discord.Embed(
+                title="🤖 Bot Removed",
+                description=f"{member.name}#{member.discriminator}",
+                color=discord.Color.red(),
+                timestamp=datetime.utcnow()
+            )
+            embed.add_field(name="Bot ID", value=member.id, inline=True)
+
+            embed.set_thumbnail(url=member.display_avatar.url)
+            embed.set_footer(text=f"Guild ID: {guild.id}")
+
+            await self.send_log(guild, "bots", embed)
+
+
+    # ----------------------
+    # Server (Guild) Updates
     # ----------------------
     @commands.Cog.listener()
     async def on_guild_update(self, before: discord.Guild, after: discord.Guild):
@@ -430,57 +613,205 @@ class LoggingCog(commands.Cog):
             changes.append("**Icon Updated**")
         if before.banner != after.banner:
             changes.append("**Banner Updated**")
-        if before.owner_id != after.owner_id:
-            before_owner = before.get_member(before.owner_id)
-            after_owner = after.get_member(after.owner_id)
-            changes.append(f"**Owner:** {before_owner} → {after_owner}")
+        if before.afk_channel != after.afk_channel:
+            changes.append(f"**AFK Channel:** {before.afk_channel} → {after.afk_channel}")
+        if before.verification_level != after.verification_level:
+            changes.append(f"**Verification Level:** {before.verification_level} → {after.verification_level}")
 
         if changes:
             embed = discord.Embed(
-                title="🏰 Server Updated",
+                title="🏛️ Server Updated",
                 description="\n".join(changes),
-                color=discord.Color.teal(),
+                color=discord.Color.orange(),
                 timestamp=datetime.utcnow()
             )
-            await self.send_log(after, "guild", embed)
+            embed.add_field(name="Server ID", value=after.id, inline=True)
+
+            if after.icon:
+                embed.set_thumbnail(url=after.icon.url)
+            embed.set_footer(text=f"Guild ID: {after.id}")
+
+            await self.send_log(after, "server", embed)
+
 
     # ----------------------
-    # Voice State Events
+    # Voice Events
     # ----------------------
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+        guild = member.guild
         changes = []
 
         if before.channel != after.channel:
-            if before.channel is None and after.channel is not None:
-                changes.append(f"🎙️ Joined voice channel: {after.channel.mention}")
-            elif before.channel is not None and after.channel is None:
-                changes.append(f"📤 Left voice channel: {before.channel.mention}")
+            if after.channel is None:
+                changes.append(f"❌ Left {before.channel.mention}")
+                color = discord.Color.red()
+            elif before.channel is None:
+                changes.append(f"✅ Joined {after.channel.mention}")
+                color = discord.Color.green()
             else:
-                changes.append(f"🔄 Moved: {before.channel.mention} → {after.channel.mention}")
+                changes.append(f"🔀 Moved {before.channel.mention} → {after.channel.mention}")
+                color = discord.Color.orange()
+        else:
+            color = discord.Color.blurple()
 
         if before.mute != after.mute:
-            changes.append(f"🔇 Server mute: {before.mute} → {after.mute}")
+            changes.append(f"🔇 Mute: {before.mute} → {after.mute}")
         if before.deaf != after.deaf:
-            changes.append(f"🔈 Server deaf: {before.deaf} → {after.deaf}")
-        if before.self_mute != after.self_mute:
-            changes.append(f"🎙️ Self mute: {before.self_mute} → {after.self_mute}")
-        if before.self_deaf != after.self_deaf:
-            changes.append(f"🎧 Self deaf: {before.self_deaf} → {after.self_deaf}")
+            changes.append(f"🔊 Deaf: {before.deaf} → {after.deaf}")
         if before.self_stream != after.self_stream:
             changes.append(f"📺 Streaming: {before.self_stream} → {after.self_stream}")
         if before.self_video != after.self_video:
-            changes.append(f"📹 Video: {before.self_video} → {after.self_video}")
+            changes.append(f"📹 Camera: {before.self_video} → {after.self_video}")
 
         if changes:
             embed = discord.Embed(
-                title="🔊 Voice State Updated",
+                title="🎙️ Voice State Updated",
                 description="\n".join(changes),
-                color=discord.Color.gold(),
+                color=color,
                 timestamp=datetime.utcnow()
             )
-            embed.add_field(name="Member", value=member.mention, inline=False)
-            await self.send_log(member.guild, "voice", embed)
+            embed.add_field(name="User", value=member.mention, inline=True)
+            embed.add_field(name="User ID", value=member.id, inline=True)
+
+            embed.set_thumbnail(url=member.display_avatar.url)
+            embed.set_footer(text=f"Guild ID: {guild.id}")
+
+            await self.send_log(guild, "voice", embed)
+
+
+    # ----------------------
+    # Invite Events
+    # ----------------------
+    @commands.Cog.listener()
+    async def on_invite_create(self, invite: discord.Invite):
+        guild = invite.guild
+        embed = discord.Embed(
+            title="📨 Invite Created",
+            color=discord.Color.green(),
+            timestamp=datetime.utcnow()
+        )
+        embed.add_field(name="Code", value=invite.code, inline=True)
+        embed.add_field(name="Channel", value=invite.channel.mention, inline=True)
+        embed.add_field(name="Uses", value=invite.max_uses or "Unlimited", inline=True)
+        embed.add_field(name="Expires In", value=invite.max_age or "Never", inline=True)
+        embed.add_field(name="Created By", value=invite.inviter.mention if invite.inviter else "Unknown", inline=False)
+
+        embed.set_footer(text=f"Guild ID: {guild.id}")
+        await self.send_log(guild, "invites", embed)
+
+    @commands.Cog.listener()
+    async def on_invite_delete(self, invite: discord.Invite):
+        guild = invite.guild
+        embed = discord.Embed(
+            title="❌ Invite Deleted",
+            color=discord.Color.red(),
+            timestamp=datetime.utcnow()
+        )
+        embed.add_field(name="Code", value=invite.code, inline=True)
+        embed.add_field(name="Channel", value=invite.channel.mention if invite.channel else "Unknown", inline=True)
+
+        embed.set_footer(text=f"Guild ID: {guild.id}")
+        await self.send_log(guild, "invites", embed)
+
+
+    # ----------------------
+    # Webhook Events
+    # ----------------------
+    @commands.Cog.listener()
+    async def on_webhooks_update(self, channel: discord.abc.GuildChannel):
+        guild = channel.guild
+        embed = discord.Embed(
+            title="🪝 Webhooks Updated",
+            description=f"Webhooks were updated in {channel.mention}",
+            color=discord.Color.orange(),
+            timestamp=datetime.utcnow()
+        )
+        embed.add_field(name="Channel", value=channel.mention, inline=True)
+        embed.set_footer(text=f"Guild ID: {guild.id}")
+        await self.send_log(guild, "webhooks", embed)
+
+
+    # ----------------------
+    # Scheduled Events
+    # ----------------------
+    @commands.Cog.listener()
+    async def on_scheduled_event_create(self, event: discord.ScheduledEvent):
+        embed = discord.Embed(
+            title="📅 Scheduled Event Created",
+            description=f"**{event.name}**",
+            color=discord.Color.green(),
+            timestamp=datetime.utcnow()
+        )
+        embed.add_field(name="Starts", value=event.start_time.strftime('%Y-%m-%d %H:%M UTC'))
+        if event.end_time:
+            embed.add_field(name="Ends", value=event.end_time.strftime('%Y-%m-%d %H:%M UTC'))
+        if event.location:
+            embed.add_field(name="Location", value=event.location, inline=False)
+        embed.set_footer(text=f"Guild ID: {event.guild.id}")
+        if event.cover_image:
+            embed.set_image(url=event.cover_image.url)
+
+        await self.send_log(event.guild, "events", embed)
+
+    @commands.Cog.listener()
+    async def on_scheduled_event_delete(self, event: discord.ScheduledEvent):
+        embed = discord.Embed(
+            title="❌ Scheduled Event Deleted",
+            description=f"**{event.name}**",
+            color=discord.Color.red(),
+            timestamp=datetime.utcnow()
+        )
+        embed.set_footer(text=f"Guild ID: {event.guild.id}")
+        await self.send_log(event.guild, "events", embed)
+
+    @commands.Cog.listener()
+    async def on_scheduled_event_update(self, before: discord.ScheduledEvent, after: discord.ScheduledEvent):
+        changes = []
+        if before.name != after.name:
+            changes.append(f"**Name:** {before.name} → {after.name}")
+        if before.start_time != after.start_time:
+            changes.append(f"**Start:** {before.start_time} → {after.start_time}")
+        if before.end_time != after.end_time:
+            changes.append(f"**End:** {before.end_time} → {after.end_time}")
+        if before.location != after.location:
+            changes.append(f"**Location:** {before.location} → {after.location}")
+        if before.description != after.description:
+            changes.append("**Description Updated**")
+
+        if changes:
+            embed = discord.Embed(
+                title="♻️ Scheduled Event Updated",
+                description="\n".join(changes),
+                color=discord.Color.orange(),
+                timestamp=datetime.utcnow()
+            )
+            embed.set_footer(text=f"Guild ID: {after.guild.id}")
+            await self.send_log(after.guild, "events", embed)
+
+    @commands.Cog.listener()
+    async def on_scheduled_event_user_add(self, event: discord.ScheduledEvent, user: discord.User):
+        embed = discord.Embed(
+            title="👤 User Subscribed",
+            description=f"{user.mention} subscribed to **{event.name}**",
+            color=discord.Color.blurple(),
+            timestamp=datetime.utcnow()
+        )
+        embed.set_footer(text=f"Guild ID: {event.guild.id}")
+        await self.send_log(event.guild, "events", embed)
+
+    @commands.Cog.listener()
+    async def on_scheduled_event_user_remove(self, event: discord.ScheduledEvent, user: discord.User):
+        embed = discord.Embed(
+            title="👤 User Unsubscribed",
+            description=f"{user.mention} unsubscribed from **{event.name}**",
+            color=discord.Color.red(),
+            timestamp=datetime.utcnow()
+        )
+        embed.set_footer(text=f"Guild ID: {event.guild.id}")
+        await self.send_log(event.guild, "events", embed)
+
+
 
     # ----------------------
     # Log settings viewer
