@@ -37,6 +37,7 @@ class ModBot(commands.Bot):
         await self.load_extension("cogs.reactionrole")
         await self.load_extension("cogs.snipeeditsnipe")
         await self.load_extension("cogs.music")
+        await self.load_extension("cogs.logging")
         await self.load_extension("cogs.url_download")
         await self.load_extension("cogs.deathbattle")
         await self.load_extension("cogs.roleall")
