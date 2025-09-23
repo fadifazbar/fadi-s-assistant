@@ -700,22 +700,26 @@ class LoggingCog(commands.Cog):
 
         # Added emojis
         for e in added:
-            anim = "🌀" if e.animated else "⚪"
+            anim = "🌀 Animated" if e.animated else "⚪ Static"
             embed.add_field(
-                name=f"🟢 Added {anim}",
-                value=f"Name:📛 {e.name} ({e.id})",
+                name=f"🟢 Added",
+                value=f"Name:📛 {e.name} ({e.id})\n 💨",
                 inline=False
             )
+            embed.add_field(name="💨 Statues", value={anim}, inline=False)
+            
             embed.set_thumbnail(url=e.url)
 
         # Removed emojis
         for e in removed:
-            anim = "🌀" if e.animated else "⚪"
+            anim = "🌀 Animated" if e.animated else "⚪ Static"
             embed.add_field(
                 name=f"🔴 Removed {anim}",
                 value=f"📛 Name: {e.name} ({e.id})",
                 inline=False
             )
+            embed.add_field(name="💨 Statues", value={anim}, inline=False)
+            
             embed.set_thumbnail(url=e.url)
 
         # Renamed emojis
@@ -723,12 +727,14 @@ class LoggingCog(commands.Cog):
             b = next((x for x in before if x.id == a.id), None)
             if not b:
                 continue
-            anim = "🌀" if a.animated else "⚪"
+            anim = "🌀 Animated" if a.animated else "⚪ Static"
             embed.add_field(
                 name=f"🔄 Renamed {anim}",
                 value=f"📛 {b.name} → {a.name} ({a.id})",
                 inline=False
             )
+            embed.add_field(name="💨 Statues", value={anim}, inline=False)
+            
             embed.set_thumbnail(url=a.url)
 
         embed.add_field(name="🥀 Moderator", value=moderator.mention if isinstance(moderator, discord.Member) else moderator, inline=False)
@@ -777,7 +783,7 @@ class LoggingCog(commands.Cog):
         # Added stickers
         for s in added:
             embed.add_field(
-                name=f"🟢 Added",
+                name=f"🟢 Sticker Added",
                 value=f"📛 Name: {s.name} ({s.id})\n⚙ Type: {s.format}",
                 inline=False
             )
@@ -787,7 +793,7 @@ class LoggingCog(commands.Cog):
         # Removed stickers
         for s in removed:
             embed.add_field(
-                name=f"🔴 Removed",
+                name=f"🔴 Sticker Removed",
                 value=f"📛 Name: {s.name} ({s.id})\n⚙ Type: {s.format}",
                 inline=False
             )
@@ -800,7 +806,7 @@ class LoggingCog(commands.Cog):
             if not b:
                 continue
             embed.add_field(
-                name=f"🔄 Renamed",
+                name=f"🔄 Sticker Renamed",
                 value=f"📛 {b.name} → {a.name} ({a.id})\n⚙ Type: {a.format}",
                 inline=False
             )
