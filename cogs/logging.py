@@ -703,7 +703,7 @@ class LoggingCog(commands.Cog):
             anim = "🌀" if e.animated else "⚪"
             embed.add_field(
                 name=f"🟢 Added {anim}",
-                value=f"Name: {e.name}\nID: {e.id}",
+                value=f"Name:📛 {e.name} ({e.id})",
                 inline=False
             )
             embed.set_thumbnail(url=e.url)
