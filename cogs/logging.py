@@ -111,7 +111,7 @@ class LoggingCog(commands.Cog):
     # ----------------------
     # Commands
     # ----------------------
-    @commands.command(name="setlog")
+    @commands.command(name="setlog", aliases=["log", "slog"])
     @commands.has_permissions(manage_guild=True)
     async def setlog_prefix(self, ctx, category: str, channel: discord.TextChannel):
         closest = self.fuzzy_category(category)
@@ -713,7 +713,7 @@ class LoggingCog(commands.Cog):
             anim = "🌀" if e.animated else "⚪"
             embed.add_field(
                 name=f"🔴 Removed {anim}",
-                value=f"📛 Name: {e.name}\n🆔 ID: {e.id}",
+                value=f"📛 Name: {e.name} ({e.id})",
                 inline=False
             )
             embed.set_thumbnail(url=e.url)
@@ -726,7 +726,7 @@ class LoggingCog(commands.Cog):
             anim = "🌀" if a.animated else "⚪"
             embed.add_field(
                 name=f"🔄 Renamed {anim}",
-                value=f"📛 {b.name} → {a.name}\n🆔 ID: {a.id}",
+                value=f"📛 {b.name} → {a.name} ({a.id})",
                 inline=False
             )
             embed.set_thumbnail(url=a.url)
@@ -778,7 +778,7 @@ class LoggingCog(commands.Cog):
         for s in added:
             embed.add_field(
                 name=f"🟢 Added",
-                value=f"📛 Name: {s.name}\nID: {s.id}\n⚙ Type: {s.format}",
+                value=f"📛 Name: {s.name} ({s.id})\n⚙ Type: {s.format}",
                 inline=False
             )
             if s.url:
@@ -788,7 +788,7 @@ class LoggingCog(commands.Cog):
         for s in removed:
             embed.add_field(
                 name=f"🔴 Removed",
-                value=f"📛 Name: {s.name}\nID: {s.id}\n⚙ Type: {s.format}",
+                value=f"📛 Name: {s.name} ({s.id})\n⚙ Type: {s.format}",
                 inline=False
             )
             if s.url:
@@ -801,7 +801,7 @@ class LoggingCog(commands.Cog):
                 continue
             embed.add_field(
                 name=f"🔄 Renamed",
-                value=f"📛 {b.name} → {a.name}\nID: {a.id}\n⚙ Type: {a.format}",
+                value=f"📛 {b.name} → {a.name} ({a.id})\n⚙ Type: {a.format}",
                 inline=False
             )
             if a.url:
