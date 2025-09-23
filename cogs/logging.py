@@ -15,7 +15,7 @@ Embed_Colors = {
     "blue": discord.Color(0x009DFF),
     "darkblue": discord.Color(0x1100FF),
     "purple": discord.Color(0x9900FF),
-    "pink": discord.Color(0xFF00A6)
+    "pink": discord.Color(0xFF00A6),
 }
 
 
