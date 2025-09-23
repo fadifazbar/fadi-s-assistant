@@ -1197,10 +1197,19 @@ class LoggingCog(commands.Cog):
             moderator = "Unknown"
 
             try:
-                async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.bot_remove):
+                # Try to find if the bot was kicked
+                async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.kick):
                     if entry.target.id == member.id:
                         moderator = entry.user
                         break
+
+                # Try to find if the bot was banned
+                if moderator == "Unknown":
+                    async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.ban):
+                        if entry.target.id == member.id:
+                            moderator = entry.user
+                            break
+
             except discord.Forbidden:
                 pass
 
@@ -1211,8 +1220,16 @@ class LoggingCog(commands.Cog):
                 timestamp=datetime.utcnow()
             )
 
-            embed.add_field(name="🥀 Removed By", value=moderator.mention if moderator != "Unknown" else moderator, inline=True)
-            embed.add_field(name="🚩 Verification", value="✅" if member.public_flags.verified_bot else "❌", inline=True)
+            embed.add_field(
+                name="🥀 Removed By",
+                value=moderator.mention if moderator != "Unknown" and hasattr(moderator, "mention") else moderator,
+                inline=True
+            )
+            embed.add_field(
+                name="🚩 Verification",
+                value="✅" if member.public_flags.verified_bot else "❌",
+                inline=True
+            )
 
             embed.set_thumbnail(url=member.display_avatar.url)
             embed.set_footer(text=f"Guild ID: {guild.id}")
