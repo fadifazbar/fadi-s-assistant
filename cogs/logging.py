@@ -539,14 +539,12 @@ class LoggingCog(commands.Cog):
         guild = role.guild
         moderator = "Unknown"
         moderator_avatar = None
-        created_by_bot = False
 
         try:
             async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.role_create):
                 if entry.target.id == role.id:
                     moderator = entry.user.mention
                     moderator_avatar = entry.user.display_avatar.url
-                    created_by_bot = entry.user.bot  # True if bot created the role
                     break
         except discord.Forbidden:
             pass
@@ -560,8 +558,6 @@ class LoggingCog(commands.Cog):
 
         embed.add_field(name="👤 Moderator", value=moderator, inline=True)
         embed.add_field(name="🆔 Role ID", value=role.id, inline=True)
-        embed.add_field(name="🤖 Created By Bot", value=str(created_by_bot), inline=True)
-        embed.add_field(name="📌 Position", value=role.position, inline=True)
         embed.add_field(name="🎨 Color", value=str(role.color), inline=True)
 
         # Use moderator avatar as thumbnail if available
@@ -599,8 +595,6 @@ class LoggingCog(commands.Cog):
 
         embed.add_field(name="👤 Moderator", value=moderator, inline=True)
         embed.add_field(name="🆔 Role ID", value=role.id, inline=True)
-        embed.add_field(name="🤖 Deleted By Bot", value=str(deleted_by_bot), inline=True)
-        embed.add_field(name="📌 Position", value=role.position, inline=True)
         embed.add_field(name="🎨 Color", value=str(role.color), inline=True)
 
         if moderator_avatar:
@@ -653,12 +647,8 @@ class LoggingCog(commands.Cog):
             embed.add_field(name="⚙️ Permissions Updated", value="Yes", inline=False)
             changes = True
 
-        # Position change
-        if before.position != after.position:
-            embed.add_field(name="📌 Position Change", value=f"{before.position} → {after.position}", inline=False)
-            changes = True
-
         # Role ID
+        embed.add_field(name="📛 Role", value=after.mention, inline=True)
         embed.add_field(name="🆔 Role ID", value=after.id, inline=True)
 
         if changes:
@@ -702,11 +692,11 @@ class LoggingCog(commands.Cog):
         for e in added:
             anim = "🌀 Animated" if e.animated else "⚪ Static"
             embed.add_field(
-                name=f"🟢 Added",
+                name=f"🟢 Emoji Added",
                 value=f"Name:📛 {e.name} ({e.id})\n 💨",
                 inline=False
             )
-            embed.add_field(name="💨 Statues", value={anim}, inline=False)
+            embed.add_field(name="💨 Statues", value=anim, inline=False)
             
             embed.set_thumbnail(url=e.url)
 
@@ -714,11 +704,11 @@ class LoggingCog(commands.Cog):
         for e in removed:
             anim = "🌀 Animated" if e.animated else "⚪ Static"
             embed.add_field(
-                name=f"🔴 Removed {anim}",
+                name=f"🔴 Emoji Removed",
                 value=f"📛 Name: {e.name} ({e.id})",
                 inline=False
             )
-            embed.add_field(name="💨 Statues", value={anim}, inline=False)
+            embed.add_field(name="💨 Statues", value=anim, inline=False)
             
             embed.set_thumbnail(url=e.url)
 
@@ -733,7 +723,7 @@ class LoggingCog(commands.Cog):
                 value=f"📛 {b.name} → {a.name} ({a.id})",
                 inline=False
             )
-            embed.add_field(name="💨 Statues", value={anim}, inline=False)
+            embed.add_field(name="💨 Statues", value=anim, inline=False)
             
             embed.set_thumbnail(url=a.url)
 
