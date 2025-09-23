@@ -1351,7 +1351,7 @@ class LoggingCog(commands.Cog):
         embed = discord.Embed(
             title="🪝 Webhooks Updated",
             description=f"Webhooks were updated in {channel.mention}",
-            color=Embed_Colors["yellow"]
+            color=Embed_Colors["yellow"],
             timestamp=datetime.utcnow()
         )
         embed.add_field(name="Channel", value=channel.mention, inline=True)
