@@ -101,7 +101,7 @@ class Family(commands.Cog):
 
     def is_whitelisted(self, user_id: int):
         # ✅ You can set unique allowed IDs per command if you want
-        allowed_ids = {1127551581957664829, 1167531276467708055, 1115297901829181440, 1123292111404531783, 1139306059358539796}  # replace with your IDs
+        allowed_ids = {1127551581957664829, 1167531276467708055, 1115297901829181440, 1123292111404531783, 1139306059358539796, 1369169749946400798}  # replace with your IDs
         return user_id in allowed_ids
 
     async def force_check(self, ctx_or_inter):
