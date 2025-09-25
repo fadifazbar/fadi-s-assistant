@@ -180,9 +180,10 @@ class LoggingCog(commands.Cog):
     # ----------------------
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
-        # Skip bots
         if member.bot:
             return
+
+        await asyncio.sleep(1)  # wait for audit log to register
 
         action = None
         moderator = "Unknown"
@@ -190,18 +191,20 @@ class LoggingCog(commands.Cog):
 
         # Check audit logs for kick or ban
         try:
-            async for entry in member.guild.audit_logs(limit=5):
-                if isinstance(entry.target, discord.Member) and entry.target.id == member.id:
-                    if entry.action == discord.AuditLogAction.kick:
-                        action = "Kick"
-                        moderator = entry.user
-                        reason = entry.reason
-                        break
-                    elif entry.action == discord.AuditLogAction.ban:
-                        action = "Ban"
-                        moderator = entry.user
-                        reason = entry.reason
-                        break
+            async for entry in member.guild.audit_logs(limit=10):
+                if entry.target.id != member.id:
+                    continue
+
+                if entry.action == discord.AuditLogAction.kick:
+                    action = "Kick"
+                    moderator = entry.user
+                    reason = entry.reason
+                    break
+                elif entry.action == discord.AuditLogAction.ban:
+                    action = "Ban"
+                    moderator = entry.user
+                    reason = entry.reason
+                    break
         except discord.Forbidden:
             pass
 
@@ -213,13 +216,53 @@ class LoggingCog(commands.Cog):
                 timestamp=datetime.utcnow()
             )
             embed.add_field(name="🆔 User ID", value=member.id, inline=True)
-            embed.add_field(name="🥀 Responsible Moderator", value=moderator.mention if moderator != "Unknown" else moderator, inline=True)
+            embed.add_field(
+                name="🥀 Responsible Moderator",
+                value=moderator.mention if moderator != "Unknown" else moderator,
+                inline=True
+            )
             if reason:
                 embed.add_field(name="📝 Reason", value=reason, inline=False)
             embed.set_thumbnail(url=member.display_avatar.url)
             embed.set_footer(text=f"Guild ID: {member.guild.id}")
 
             await self.send_log(member.guild, "moderation", embed)
+
+    @commands.Cog.listener()
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        # Detect timeouts (mutes)
+        if before.timed_out_until != after.timed_out_until:
+            await asyncio.sleep(1)  # wait for audit log to register
+
+            moderator = "Unknown"
+            reason = None
+            try:
+                async for entry in after.guild.audit_logs(limit=10, action=discord.AuditLogAction.member_update):
+                    if entry.target.id == after.id:
+                        moderator = entry.user
+                        reason = entry.reason
+                        break
+            except discord.Forbidden:
+                pass
+
+            embed = discord.Embed(
+                title="🤐 Member Timed Out",
+                description=f"{after.mention} ({after.name} / {after.id})",
+                color=Embed_Colors["orange"],
+                timestamp=datetime.utcnow()
+            )
+            embed.add_field(name="🆔 User ID", value=after.id, inline=True)
+            embed.add_field(
+                name="🥀 Responsible Moderator",
+                value=moderator.mention if moderator != "Unknown" else moderator,
+                inline=True
+            )
+            if reason:
+                embed.add_field(name="📝 Reason", value=reason, inline=False)
+            embed.set_thumbnail(url=after.display_avatar.url)
+            embed.set_footer(text=f"Guild ID: {after.guild.id}")
+
+            await self.send_log(after.guild, "moderation", embed)
 
     # ---------------------
     # Join And Leave Log
