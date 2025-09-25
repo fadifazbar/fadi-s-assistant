@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands, ui
 import os, json, difflib
-from datetime import datetime  # fixed typo
+from datetime import datetime, timedelta, timezone  # fixed typo
 
 Embed_Colors = {
     "red": discord.Color(0xFF0000),
