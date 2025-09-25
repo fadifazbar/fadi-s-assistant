@@ -67,6 +67,7 @@ class LoggingCog(commands.Cog):
             "invites": "📨 Invites",
             "webhooks": "🪝 Webhooks",
             "events": "📅 Scheduled Events"
+            "joinleave": "👋 Joining And Leaving"
         }
 
     # ----------------------
@@ -183,6 +184,90 @@ class LoggingCog(commands.Cog):
     # ---------------------
     # Logs Events
     # ----------------------
+
+    # ---------------------
+    # Join And Leave Log
+    # ----------------------
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        if member.bot:
+            return
+
+        now = datetime.utcnow()
+        account_age_str = self.format_duration(now - member.created_at)
+        join_pos = self.get_human_member_position(member)
+
+        embed = discord.Embed(
+            title="👤 Member Joined",
+            description=f"{member.mention} ({member.name} / {member.id})",
+            color=Embed_Colors["green"],
+            timestamp=now
+        )
+        embed.add_field(
+            name="📆 Account Age",
+            value=f"Created {account_age_str}\n({discord.utils.format_dt(member.created_at, style='F')})",
+            inline=False
+        )
+        embed.add_field(
+            name="🔢 Member #",
+            value=f"#{join_pos:,}",
+            inline=True
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"User ID: {member.id} | Guild ID: {member.guild.id}")
+
+        await self.send_log(member.guild, "joinleave", embed)
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        if member.bot:
+            return
+
+        now = datetime.utcnow()
+        account_age_str = self.format_duration(now - member.created_at)
+        join_pos = self.get_human_member_position(member)
+
+        if member.joined_at:
+            guild_time_str = (
+                f"{self.format_duration(now - member.joined_at)}\n"
+                f"({discord.utils.format_dt(member.joined_at, style='R')})"
+            )
+        else:
+            guild_time_str = "Unknown"
+
+        roles = [r.mention for r in member.roles if r != member.guild.default_role]
+        roles_str = ", ".join(roles) if roles else "None"
+
+        embed = discord.Embed(
+            title="👤 Member Left",
+            description=f"{member.mention} ({member.name} / {member.id})",
+            color=Embed_Colors["red"],
+            timestamp=now
+        )
+        embed.add_field(
+            name="🔢 Member #",
+            value=f"#{join_pos:,}",
+            inline=True
+        )
+        embed.add_field(
+            name="📆 Account Age",
+            value=f"Created {account_age_str}\n({discord.utils.format_dt(member.created_at, style='F')})",
+            inline=False
+        )
+        embed.add_field(
+            name="⏳ Time in Guild",
+            value=guild_time_str,
+            inline=False
+        )
+        embed.add_field(
+            name="🎭 Roles",
+            value=roles_str[:1024],
+            inline=False
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"User ID: {member.id} | Guild ID: {member.guild.id}")
+
+        await self.send_log(member.guild, "joinleave", embed)
 
 
     # ----------------------
@@ -335,71 +420,7 @@ class LoggingCog(commands.Cog):
 
 
     # ----------------------
-    # Member Join
-    # ----------------------
-    @commands.Cog.listener()
-    async def on_member_join(self, member: discord.Member):
-        if member.bot:
-            return
-
-        now = datetime.utcnow()
-        account_age_str = self.format_duration(now - member.created_at)
-        join_pos = self.get_human_member_position(member)
-
-        embed = discord.Embed(
-            title="👤 Member Joined",
-            description=f"{member.mention} ({member} / {member.id})",
-            color=Embed_Colors["green"],
-            timestamp=now
-        )
-        embed.add_field(name="📆 Account Age", value=f"Created {account_age_str}", inline=False)
-        embed.add_field(name="🔢 Member #", value=f"#{join_pos:,}", inline=True)
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"Guild ID: {member.guild.id}")
-
-        await self.send_log(member.guild, "members", embed)
-
-
-
-    # ----------------------
-    # Member Leave
-    # ----------------------
-    @commands.Cog.listener()
-    async def on_member_remove(self, member: discord.Member):
-        if member.bot:
-            return
-
-        now = datetime.utcnow()
-        account_age_str = self.format_duration(now - member.created_at)
-        join_pos = self.get_human_member_position(member)
-
-        # Time spent in guild
-        if member.joined_at:
-            guild_time_str = self.format_duration(now - member.joined_at)
-        else:
-            guild_time_str = "Unknown"
-
-        roles_str = self.get_member_roles(member)
-
-        embed = discord.Embed(
-            title="👤 Member Left",
-            description=f"{member.mention} ({member} / {member.id})",
-            color=Embed_Colors["red"],
-            timestamp=now
-        )
-        embed.add_field(name="🔢 Member #", value=f"#{join_pos:,}", inline=True)
-        embed.add_field(name="📆 Account Age", value=f"Created {account_age_str}", inline=False)
-        embed.add_field(name="⏳ Time in Guild", value=guild_time_str, inline=False)
-        embed.add_field(name="🎭 Roles", value=roles_str[:1024], inline=False)
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"Guild ID: {member.guild.id}")
-
-        await self.send_log(member.guild, "members", embed)
-
-
-
-    # ----------------------
-    # Member Updates (Roles + Nickname)
+    # Member Log
     # ----------------------
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
