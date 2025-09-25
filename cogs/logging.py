@@ -458,7 +458,7 @@ class LoggingCog(commands.Cog):
 
             embed = discord.Embed(
                 title="🎭 Roles Updated",
-                color= if field.name="🟢 Roles Added" then Embed_Colors["green"] else Embed_Colors["Red"],
+                color=Embed_Colors["yellow"],
                 timestamp=now
             )
             embed.add_field(name="👤 Member", value=after.mention, inline=False)
