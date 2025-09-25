@@ -177,23 +177,47 @@ class LoggingCog(commands.Cog):
     # ---------------------
     # Join And Leave Log
     # ----------------------
+    # Dictionary to track current members per guild
+# Key: guild.id, Value: set of member IDs
+tracked_members = {}
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        # Initialize tracked_members for all guilds the bot is in
+        for guild in self.bot.guilds:
+            tracked_members[guild.id] = set(member.id for member in guild.members)
+        print("✅ Member tracking initialized.")
+
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         if member.bot:
             return
 
+        # Initialize tracking set if not exists
+        if member.guild.id not in tracked_members:
+            tracked_members[member.guild.id] = set()
+
+        # Check if the member was previously in the set
+        returning = member.id in tracked_members[member.guild.id]
+
+        # Update tracking
+        tracked_members[member.guild.id].add(member.id)
+
         now = datetime.utcnow()
         account_age_str = self.format_duration(now - member.created_at)
 
+        title = "👤 Member Rejoined" if returning else "👤 Member Joined"
+
         embed = discord.Embed(
-            title="👤 Member Joined",
+            title=title,
             description=f"{member.mention} ({member.name} / {member.id})",
             color=Embed_Colors["green"],
             timestamp=now
         )
         embed.add_field(
             name="📆 Account Age",
-            value=f"Created {account_age_str}\n({discord.utils.format_dt(member.created_at, style='F')})",
+            value=f"Created {account_age_str}\n"
+                  f"({discord.utils.format_dt(member.created_at, style='F')})",
             inline=False
         )
         embed.set_thumbnail(url=member.display_avatar.url)
@@ -206,6 +230,10 @@ class LoggingCog(commands.Cog):
         if member.bot:
             return
 
+        # Remove from tracking
+        if member.guild.id in tracked_members:
+            tracked_members[member.guild.id].discard(member.id)
+
         now = datetime.utcnow()
         account_age_str = self.format_duration(now - member.created_at)
 
@@ -217,7 +245,8 @@ class LoggingCog(commands.Cog):
         )
         embed.add_field(
             name="📆 Account Age",
-            value=f"Created {account_age_str}\n({discord.utils.format_dt(member.created_at, style='F')})",
+            value=f"Created {account_age_str}\n"
+                  f"({discord.utils.format_dt(member.created_at, style='F')})",
             inline=False
         )
         embed.set_thumbnail(url=member.display_avatar.url)
