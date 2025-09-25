@@ -1193,13 +1193,23 @@ class LoggingCog(commands.Cog):
     async def on_guild_update(self, before: discord.Guild, after: discord.Guild):
         changes = []
 
-        # Track only the requested changes
+        # Track the requested changes
         if before.name != after.name:
             changes.append(f"🏷️ **Server Name:** {before.name} → {after.name}")
         if before.icon != after.icon:
             changes.append("🖼️ **Server Icon Changed**")
         if before.banner != after.banner:
             changes.append("🖼️ **Server Banner Changed**")
+        if before.splash != after.splash:
+            changes.append("🖼️ **Server Splash Changed**")
+        if before.verification_level != after.verification_level:
+            changes.append(f"🔒 **Verification Level:** {before.verification_level} → {after.verification_level}")
+        if before.afk_channel != after.afk_channel:
+            changes.append(f"🛌 **AFK Channel:** {before.afk_channel} → {after.afk_channel}")
+        if before.afk_timeout != after.afk_timeout:
+            changes.append(f"⏱️ **AFK Timeout:** {before.afk_timeout}s → {after.afk_timeout}s")
+        if before.vanity_url_code != after.vanity_url_code:
+            changes.append(f"🌐 **Vanity URL:** {before.vanity_url_code} → {after.vanity_url_code}")
 
         if changes:
             # Responsible moderator from audit logs
@@ -1219,7 +1229,11 @@ class LoggingCog(commands.Cog):
             )
 
             embed.add_field(name="🆔 Server ID", value=after.id, inline=True)
-            embed.add_field(name="🥀 Responsible Moderator", value=moderator.mention if moderator != "Unknown" else moderator, inline=True)
+            embed.add_field(
+                name="🥀 Responsible Moderator",
+                value=moderator.mention if moderator != "Unknown" else moderator,
+                inline=True
+            )
 
             # Thumbnail: server icon if exists
             if after.icon:
