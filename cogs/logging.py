@@ -474,37 +474,6 @@ class LoggingCog(commands.Cog):
             await self.send_log(after.guild, "members", embed)
 
         # ----------------------
-        # Timeout updates
-        # ----------------------
-        if before.communication_disabled_until != after.communication_disabled_until:
-            responsible = None
-            try:
-                async for entry in after.guild.audit_logs(limit=1, action=discord.AuditLogAction.member_update):
-                    if entry.target.id == after.id and entry.before.communication_disabled_until != entry.after.communication_disabled_until:
-                        responsible = entry.user
-                        break
-            except Exception:
-                pass
-
-            embed = discord.Embed(
-                title="⏱️ Timeout Updated",
-                color=Embed_Colors["cyan"],
-                timestamp=now
-            )
-            embed.add_field(name="👤 Member", value=after.mention, inline=False)
-            embed.add_field(
-                name="⏱️ Timeout Until",
-                value=str(after.communication_disabled_until) if after.communication_disabled_until else "None",
-                inline=False
-            )
-            if responsible:
-                embed.add_field(name="🥀 Updated By", value=responsible.mention, inline=False)
-
-            embed.set_thumbnail(url=after.display_avatar.url)
-            embed.set_footer(text=f"🆔 User ID: {after.id} | Guild ID: {after.guild.id}")
-            await self.send_log(after.guild, "members", embed)
-
-        # ----------------------
         # Role changes
         # ----------------------
         if before.roles != after.roles:
