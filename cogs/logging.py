@@ -53,6 +53,7 @@ class LoggingCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = load_config()
+        self.tracked_members = {}
         self.valid_categories = {
             "messages": "💬 Messages",
             "members": "👥 Members",
@@ -177,15 +178,13 @@ class LoggingCog(commands.Cog):
     # ---------------------
     # Join And Leave Log
     # ----------------------
-    # Dictionary to track current members per guild
-# Key: guild.id, Value: set of member IDs
-tracked_members = {}
+    
 
     @commands.Cog.listener()
     async def on_ready(self):
         # Initialize tracked_members for all guilds the bot is in
         for guild in self.bot.guilds:
-            tracked_members[guild.id] = set(member.id for member in guild.members)
+            self.tracked_members[guild.id] = set(member.id for member in guild.members)
         print("✅ Member tracking initialized.")
 
     @commands.Cog.listener()
@@ -194,14 +193,14 @@ tracked_members = {}
             return
 
         # Initialize tracking set if not exists
-        if member.guild.id not in tracked_members:
-            tracked_members[member.guild.id] = set()
+        if member.guild.id not in self.tracked_members:
+            self.tracked_members[member.guild.id] = set()
 
         # Check if the member was previously in the set
-        returning = member.id in tracked_members[member.guild.id]
+        returning = member.id in self.tracked_members[member.guild.id]
 
         # Update tracking
-        tracked_members[member.guild.id].add(member.id)
+        self.tracked_members[member.guild.id].add(member.id)
 
         now = datetime.utcnow()
         account_age_str = self.format_duration(now - member.created_at)
@@ -231,8 +230,8 @@ tracked_members = {}
             return
 
         # Remove from tracking
-        if member.guild.id in tracked_members:
-            tracked_members[member.guild.id].discard(member.id)
+        if member.guild.id in self.tracked_members:
+            self.tracked_members[member.guild.id].discard(member.id)
 
         now = datetime.utcnow()
         account_age_str = self.format_duration(now - member.created_at)
