@@ -176,6 +176,52 @@ class LoggingCog(commands.Cog):
     # ----------------------
 
     # ---------------------
+    # Moderation Event
+    # ----------------------
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        # Skip bots
+        if member.bot:
+            return
+
+        action = None
+        moderator = "Unknown"
+        reason = None
+
+        # Check audit logs for kick or ban
+        try:
+            async for entry in member.guild.audit_logs(limit=5):
+                if isinstance(entry.target, discord.Member) and entry.target.id == member.id:
+                    if entry.action == discord.AuditLogAction.kick:
+                        action = "Kick"
+                        moderator = entry.user
+                        reason = entry.reason
+                        break
+                    elif entry.action == discord.AuditLogAction.ban:
+                        action = "Ban"
+                        moderator = entry.user
+                        reason = entry.reason
+                        break
+        except discord.Forbidden:
+            pass
+
+        if action:
+            embed = discord.Embed(
+                title=f"⚠️ Member {action}ed",
+                description=f"{member.mention} ({member.name} / {member.id})",
+                color=Embed_Colors["red"],
+                timestamp=datetime.utcnow()
+            )
+            embed.add_field(name="🆔 User ID", value=member.id, inline=True)
+            embed.add_field(name="🥀 Responsible Moderator", value=moderator.mention if moderator != "Unknown" else moderator, inline=True)
+            if reason:
+                embed.add_field(name="📝 Reason", value=reason, inline=False)
+            embed.set_thumbnail(url=member.display_avatar.url)
+            embed.set_footer(text=f"Guild ID: {member.guild.id}")
+
+            await self.send_log(member.guild, "moderation", embed)
+
+    # ---------------------
     # Join And Leave Log
     # ----------------------
     
