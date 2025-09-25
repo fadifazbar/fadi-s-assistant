@@ -66,7 +66,7 @@ class LoggingCog(commands.Cog):
             "emojis": "😃 Emojis & Stickers",
             "invites": "📨 Invites",
             "webhooks": "🪝 Webhooks",
-            "events": "📅 Scheduled Events"
+            "events": "📅 Scheduled Events",
             "joinleave": "👋 Joining And Leaving"
         }
 
