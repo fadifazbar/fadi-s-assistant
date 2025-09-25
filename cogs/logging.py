@@ -108,6 +108,32 @@ class LoggingCog(commands.Cog):
             # Something went wrong sending the message → ignore
             pass
 
+
+    def format_duration(self, td: timedelta) -> str:
+        years, remainder = divmod(td.total_seconds(), 31536000)
+        days, remainder = divmod(remainder, 86400)
+        hours, remainder = divmod(remainder, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        parts = []
+        if years: parts.append(f"{int(years)} Year(s)")
+        if days: parts.append(f"{int(days)} Day(s)")
+        if hours: parts.append(f"{int(hours)} Hour(s)")
+        if minutes: parts.append(f"{int(minutes)} Minute(s)")
+        if seconds: parts.append(f"{int(seconds)} Second(s)")
+        return ", ".join(parts) + " Ago" if parts else "0 Second(s) Ago"
+
+
+    def get_human_member_position(self, member: discord.Member) -> int:
+        human_members = [m for m in member.guild.members if not m.bot]
+        sorted_members = sorted(human_members, key=lambda m: m.joined_at or datetime.utcnow())
+        return sorted_members.index(member) + 1 if member in sorted_members else -1
+
+
+    def get_member_roles(self, member: discord.Member) -> str:
+        roles = [role.mention for role in member.roles if role != member.guild.default_role]
+        return ", ".join(roles) if roles else "None"
+
     # ----------------------
     # Commands
     # ----------------------
@@ -307,43 +333,19 @@ class LoggingCog(commands.Cog):
 
 
 
+
     # ----------------------
     # Member Join
     # ----------------------
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
-        # Ignore bots
         if member.bot:
             return
 
         now = datetime.utcnow()
+        account_age_str = self.format_duration(now - member.created_at)
+        join_pos = self.get_human_member_position(member)
 
-        # ----------------------
-        # Account age
-        # ----------------------
-        account_age = now - member.created_at
-        years, remainder = divmod(account_age.total_seconds(), 31536000)
-        days, remainder = divmod(remainder, 86400)
-        hours, remainder = divmod(remainder, 3600)
-        minutes, seconds = divmod(remainder, 60)
-
-        account_parts = []
-        if years: account_parts.append(f"{int(years)} Year(s)")
-        if days: account_parts.append(f"{int(days)} Day(s)")
-        if hours: account_parts.append(f"{int(hours)} Hour(s)")
-        if minutes: account_parts.append(f"{int(minutes)} Minute(s)")
-        if seconds: account_parts.append(f"{int(seconds)} Second(s)")
-        account_age_str = ", ".join(account_parts) + " Ago"
-
-        # ----------------------
-        # Member position (humans only)
-        # ----------------------
-        human_members = [m for m in member.guild.members if not m.bot]
-        join_pos = sorted(human_members, key=lambda m: m.joined_at or now).index(member) + 1
-
-        # ----------------------
-        # Build embed
-        # ----------------------
         embed = discord.Embed(
             title="👤 Member Joined",
             description=f"{member.mention} ({member} / {member.id})",
@@ -364,69 +366,28 @@ class LoggingCog(commands.Cog):
     # ----------------------
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
-        # Ignore bots
         if member.bot:
             return
 
         now = datetime.utcnow()
+        account_age_str = self.format_duration(now - member.created_at)
+        join_pos = self.get_human_member_position(member)
 
-        # ----------------------
-        # Member position (humans only)
-        # ----------------------
-        human_members = [m for m in member.guild.members if not m.bot]
-        join_position = sorted(human_members, key=lambda m: m.joined_at or now).index(member) + 1
-
-        # ----------------------
-        # Account age
-        # ----------------------
-        account_age = now - member.created_at
-        years, remainder = divmod(account_age.total_seconds(), 31536000)
-        days, remainder = divmod(remainder, 86400)
-        hours, remainder = divmod(remainder, 3600)
-        minutes, seconds = divmod(remainder, 60)
-
-        account_parts = []
-        if years: account_parts.append(f"{int(years)} Year(s)")
-        if days: account_parts.append(f"{int(days)} Day(s)")
-        if hours: account_parts.append(f"{int(hours)} Hour(s)")
-        if minutes: account_parts.append(f"{int(minutes)} Minute(s)")
-        if seconds: account_parts.append(f"{int(seconds)} Second(s)")
-        account_age_str = ", ".join(account_parts) + " Ago"
-
-        # ----------------------
         # Time spent in guild
-        # ----------------------
         if member.joined_at:
-            time_in_guild = now - member.joined_at
-            guild_days = time_in_guild.days
-            guild_hours, remainder = divmod(time_in_guild.seconds, 3600)
-            guild_minutes, guild_seconds = divmod(remainder, 60)
-
-            guild_parts = []
-            if guild_days: guild_parts.append(f"{guild_days} Day(s)")
-            if guild_hours: guild_parts.append(f"{guild_hours} Hour(s)")
-            if guild_minutes: guild_parts.append(f"{guild_minutes} Minute(s)")
-            if guild_seconds: guild_parts.append(f"{guild_seconds} Second(s)")
-            guild_time_str = ", ".join(guild_parts)
+            guild_time_str = self.format_duration(now - member.joined_at)
         else:
             guild_time_str = "Unknown"
 
-        # ----------------------
-        # Roles
-        # ----------------------
-        roles = [role.mention for role in member.roles if role != member.guild.default_role]
-        roles_str = ", ".join(roles) if roles else "None"
+        roles_str = self.get_member_roles(member)
 
-        # ----------------------
-        # Build embed
-        # ----------------------
         embed = discord.Embed(
             title="👤 Member Left",
             description=f"{member.mention} ({member} / {member.id})",
             color=Embed_Colors["red"],
             timestamp=now
         )
-        embed.add_field(name="🔢 Member #", value=f"#{join_position:,}", inline=True)
+        embed.add_field(name="🔢 Member #", value=f"#{join_pos:,}", inline=True)
         embed.add_field(name="📆 Account Age", value=f"Created {account_age_str}", inline=False)
         embed.add_field(name="⏳ Time in Guild", value=guild_time_str, inline=False)
         embed.add_field(name="🎭 Roles", value=roles_str[:1024], inline=False)
@@ -437,9 +398,11 @@ class LoggingCog(commands.Cog):
 
 
 
+    # ----------------------
+    # Member Updates (Roles + Nickname)
+    # ----------------------
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
-        # Ignore bots
         if before.bot or after.bot:
             return
 
@@ -466,11 +429,14 @@ class LoggingCog(commands.Cog):
             embed.add_field(name="👤 Member", value=after.mention, inline=False)
             embed.add_field(name="📝 Before", value=before.nick or "*None*", inline=True)
             embed.add_field(name="📝 After", value=after.nick or "*None*", inline=True)
-            if responsible:
-                embed.add_field(name="🥀 Changed By", value=responsible.mention, inline=False)
-
+            embed.add_field(
+                name="🥀 Changed By",
+                value=responsible.mention if responsible else "Unknown",
+                inline=False
+            )
             embed.set_thumbnail(url=after.display_avatar.url)
             embed.set_footer(text=f"🆔 User ID: {after.id} | Guild ID: {after.guild.id}")
+
             await self.send_log(after.guild, "members", embed)
 
         # ----------------------
@@ -510,11 +476,14 @@ class LoggingCog(commands.Cog):
                     value=", ".join(r.mention for r in removed_roles),
                     inline=False
                 )
-            if responsible:
-                embed.add_field(name="🥀 Updated By", value=responsible.mention, inline=False)
-
+            embed.add_field(
+                name="🥀 Updated By",
+                value=responsible.mention if responsible else "Unknown",
+                inline=False
+            )
             embed.set_thumbnail(url=after.display_avatar.url)
             embed.set_footer(text=f"🆔 User ID: {after.id} | Guild ID: {after.guild.id}")
+
             await self.send_log(after.guild, "members", embed)
 
 
