@@ -403,8 +403,6 @@ class LoggingCog(commands.Cog):
     # ----------------------
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
-        if before.bot or after.bot:
-            return
 
         now = datetime.utcnow()
 
@@ -460,7 +458,7 @@ class LoggingCog(commands.Cog):
 
             embed = discord.Embed(
                 title="🎭 Roles Updated",
-                color=Embed_Colors["purple"],
+                color= if field.name="🟢 Roles Added" then Embed_Colors["green"] else Embed_Colors["Red"],
                 timestamp=now
             )
             embed.add_field(name="👤 Member", value=after.mention, inline=False)
