@@ -61,7 +61,7 @@ class LoggingCog(commands.Cog):
             "channels": "📢 Channels",
             "moderation": "🛡️ Moderation",
             "voice": "🔊 Voice",
-            "guild": "🏰 Server Updates",
+            "server": "🏰 Server Updates",
             "bots": "🤖 Bots & Integrations",
             "threads": "🧵 Threads",
             "emojis": "😃 Emojis & Stickers",
