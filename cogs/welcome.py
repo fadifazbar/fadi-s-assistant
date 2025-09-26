@@ -5,7 +5,7 @@ import json
 import os
 import re
 
-CONFIG_FILE = "/data/welcome_config.json"
+CONFIG_FILE = "data/welcome_config.json"
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".gif")
 
 # Ensure data folder exists
@@ -25,7 +25,7 @@ def save_config(data):
         json.dump(data, f, indent=4)
 
 def format_placeholders(template: str, member: discord.Member):
-    """Only text placeholders (no image placeholders)."""
+    """Text placeholders only."""
     if not template:
         return ""
     return (
@@ -57,26 +57,34 @@ class WelcomeLeave(commands.Cog):
         if not settings:
             return
 
-        # Validate channel
         channel_id = settings.get("channel_id")
         channel = member.guild.get_channel(channel_id) if channel_id else None
         if not channel:
-            return  # channel deleted or not set
+            return
 
-        # Plain text
         if settings.get("mode") == "text":
             msg = format_placeholders(settings.get("text", "{mention} joined {server}!"), member)
             await channel.send(msg)
             if settings.get("image_url"):
-                await channel.send(settings["image_url"])
+                url = settings["image_url"]
+                url = url.replace("{member_pfp}", str(member.display_avatar.url))
+                url = url.replace("{server_icon}", str(member.guild.icon.url) if member.guild.icon else "")
+                await channel.send(url)
 
-        # Embed
         elif settings.get("mode") == "embed":
             title = format_placeholders(settings.get("title"), member) or discord.Embed.Empty
             desc = format_placeholders(settings.get("description"), member) or discord.Embed.Empty
             color = int(settings.get("color", "0x00ff00"), 16)
 
             embed = discord.Embed(title=title, description=desc, color=color)
+
+            # Replace image placeholders
+            for key in ["image_url", "thumbnail_url", "icon_url"]:
+                if settings.get(key):
+                    url = settings[key]
+                    url = url.replace("{member_pfp}", str(member.display_avatar.url))
+                    url = url.replace("{server_icon}", str(member.guild.icon.url) if member.guild.icon else "")
+                    settings[key] = url
 
             if settings.get("image_url"):
                 embed.set_image(url=settings["image_url"])
@@ -116,21 +124,32 @@ class WelcomeLeave(commands.Cog):
     # ======================
     # HELPER FUNCTIONS
     # ======================
-    async def ask(self, dm, user, question, allow_skip=False, show_placeholders=False):
-        """Ask a normal text question."""
+    async def ask(self, dm, user, question, allow_skip=False, show_placeholders=False, history=None, key=None):
+        """Ask normal text question with back support."""
+        if history is None:
+            history = []
         if allow_skip:
             question += "\n(Say 'skip' if you don't want this feature.)"
         if show_placeholders:
             question += "\nAvailable placeholders: {mention}, {user}, {server}, {count}"
         await dm.send(question)
 
-        msg = await self.bot.wait_for("message", check=lambda m: m.author == user and m.channel == dm)
-        if allow_skip and msg.content.lower() == "skip":
-            return None
-        return msg.content.strip()
+        while True:
+            msg = await self.bot.wait_for("message", check=lambda m: m.author == user and m.channel == dm)
+            content = msg.content.strip()
 
-    async def ask_image(self, dm, user, question, member, allow_skip=True):
-        """Ask for image (upload or link). Only accept images. Replace {member_pfp} and {server_icon}."""
+            if content.lower() == "back" and history:
+                return "back"
+
+            if allow_skip and content.lower() == "skip":
+                return None
+
+            return content
+
+    async def ask_image(self, dm, user, question, member, history=None, key=None, allow_skip=True):
+        """Ask for image (upload, link, or special placeholders) with back support."""
+        if history is None:
+            history = []
         if allow_skip:
             question += "\n(Say 'skip' if you don't want this feature.)"
         question += "\nAvailable placeholders for image URLs: {member_pfp}, {server_icon}"
@@ -138,31 +157,32 @@ class WelcomeLeave(commands.Cog):
 
         while True:
             msg = await self.bot.wait_for("message", check=lambda m: m.author == user and m.channel == dm)
+            content = msg.content.strip()
 
-            # Skip
-            if allow_skip and msg.content.lower() == "skip":
+            if content.lower() == "back" and history:
+                return "back"
+
+            if allow_skip and content.lower() == "skip":
                 return None
+
+            # Accept placeholders
+            if content.lower() in ("{member_pfp}", "{server_icon}"):
+                return content
 
             # Attachment
             if msg.attachments:
                 url = msg.attachments[0].url
                 if url.lower().endswith(IMAGE_EXTENSIONS):
-                    url = url.replace("{member_pfp}", str(member.display_avatar.url))
-                    url = url.replace("{server_icon}", str(member.guild.icon.url) if member.guild.icon else "")
                     return url
                 else:
                     await dm.send("❌ That is not a valid image/image link.")
                     continue
 
             # URL check
-            content = msg.content.strip()
             if re.match(r"^https?://.*\.(png|jpg|jpeg|webp|gif)$", content, re.IGNORECASE):
-                content = content.replace("{member_pfp}", str(member.display_avatar.url))
-                content = content.replace("{server_icon}", str(member.guild.icon.url) if member.guild.icon else "")
                 return content
 
-            # Invalid input
-            await dm.send("❌ That is not a valid image/image link. Please upload an image or paste a direct image URL.")
+            await dm.send("❌ That is not a valid image/image link. Please upload an image, paste a direct image URL, or use a valid placeholder.")
 
     # ======================
     # SETUP WIZARD
@@ -172,24 +192,41 @@ class WelcomeLeave(commands.Cog):
             dm = await user.create_dm()
             await dm.send(f"⚙️ Let's set up **{event_type}** messages for `{guild.name}`!")
 
+            wizard_history = []
+
             # Channel ID
-            channel_id = await self.ask(dm, user, "Provide the **Channel ID** where messages should be sent.")
-            try:
-                channel_id = int(channel_id)
-            except Exception:
-                return await dm.send("❌ Invalid channel ID. Setup cancelled.")
+            while True:
+                channel_id = await self.ask(dm, user, "Provide the **Channel ID** where messages should be sent.", history=wizard_history)
+                if channel_id == "back":
+                    await dm.send("❌ This is the first question, cannot go back further.")
+                    continue
+                try:
+                    channel_id = int(channel_id)
+                    break
+                except Exception:
+                    await dm.send("❌ Invalid channel ID. Please enter a valid number.")
+
+            wizard_history.append({"key": "channel_id", "value": channel_id})
 
             # Mode
-            mode = await self.ask(dm, user, "Do you want a `text` message or an `embed`?", show_placeholders=False)
-            mode = mode.lower()
-            if mode not in ["text", "embed"]:
-                return await dm.send("❌ Invalid choice. Setup cancelled.")
+            while True:
+                mode = await self.ask(dm, user, "Do you want a `text` message or an `embed`?", history=wizard_history)
+                if mode == "back":
+                    wizard_history.pop()
+                    channel_id = wizard_history.pop()["value"]
+                    continue
+                mode = mode.lower()
+                if mode not in ["text", "embed"]:
+                    await dm.send("❌ Invalid choice. Enter 'text' or 'embed'.")
+                    continue
+                break
+            wizard_history.append({"key": "mode", "value": mode})
 
             data = {"channel_id": channel_id, "mode": mode}
 
             if mode == "text":
-                data["text"] = await self.ask(dm, user, "Enter your **text message**.", allow_skip=False, show_placeholders=True)
-                data["image_url"] = await self.ask_image(dm, user, "Upload or paste an **image** for the message.", user, member=user)
+                data["text"] = await self.ask(dm, user, "Enter your **text message**.", show_placeholders=True)
+                data["image_url"] = await self.ask_image(dm, user, "Upload or paste an **image** for the message.", member=user)
 
             else:  # embed mode
                 data["title"] = await self.ask(dm, user, "Enter the **embed TITLE**.", allow_skip=True, show_placeholders=True)
@@ -200,7 +237,7 @@ class WelcomeLeave(commands.Cog):
                 data["thumbnail_url"] = await self.ask_image(dm, user, "Upload or paste the **embed THUMBNAIL (top-right)**.", member=user)
                 data["icon_url"] = await self.ask_image(dm, user, "Upload or paste the **embed ICON (author icon, top-left)**.", member=user)
 
-            # Save config
+            # Save
             gid = str(guild.id)
             self.config.setdefault(gid, {})
             self.config[gid][event_type] = data
@@ -213,6 +250,7 @@ class WelcomeLeave(commands.Cog):
                 await user.send("❌ I couldn't DM you. Please enable DMs and try again.")
             except:
                 pass
+
 
 async def setup(bot):
     await bot.add_cog(WelcomeLeave(bot))
