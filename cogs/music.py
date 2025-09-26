@@ -421,25 +421,6 @@ class Music(commands.Cog):
         await self._ensure_voice(ctx.guild, ctx.author.voice.channel)
         await self._handle_play(ctx.guild, ctx.channel, ctx.author, query)
 
-    # =========================
-    # SLASH COMMAND
-    # =========================
-    @app_commands.command(name="play", description="Play a song or playlist (YouTube URL or search).")
-
-    @commands.command(name="queue", help="Show the current queue (with buttons).")
-    async def queue_prefix(self, ctx: commands.Context):
-        view = QueueView(self, ctx.guild.id, ctx.author)
-        await ctx.send(embed=view.format_page(), view=view)
-
-    @commands.command(name="skip", help="Skip the current song.")
-    async def skip_prefix(self, ctx: commands.Context):
-        vc = ctx.guild.voice_client
-        if vc and vc.is_playing():
-            vc.stop()
-            await ctx.send("⏭️ Skipped.")
-        else:
-            await ctx.send("❌ Nothing is playing.")
-
     @commands.command(name="pause", help="Pause playback.")
     async def pause_prefix(self, ctx: commands.Context):
         vc = ctx.guild.voice_client
@@ -499,7 +480,7 @@ class Music(commands.Cog):
     # =====================
     # SLASH COMMANDS (/) 🎯
     # =====================
-    @app_commands.describe(query="YouTube URL or search terms")
+    @app_commands.command(name="play", description="Play a music through discord voice chat") @app_commands.describe(query="YouTube URL or search terms")
     async def play_slash(self, interaction: discord.Interaction, query: str):
         if not interaction.user or not isinstance(interaction.user, discord.Member) or not interaction.user.voice or not interaction.user.voice.channel:
             return await interaction.response.send_message("❌ You must be in a voice channel.", ephemeral=True)
