@@ -26,6 +26,8 @@ class General(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.deleted_messages = {}  # channel_id -> [discord.Message]
+        self.edited_messages = {}   # channel_id -> [{"before": before, "after": after}]
 
 
     @commands.Cog.listener()
