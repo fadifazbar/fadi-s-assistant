@@ -233,18 +233,15 @@ class Family(commands.Cog):
         async def add_both_parents(child_id):
             if child_id:
                 child_data = self.get_user(child_id)
-                # Add the child's parent
                 if child_data["parent"]:
                     gp1 = await self.fetch_username(child_data["parent"])
                     grandparents.add(gp1)
-                # Add the partner of the child's parent (other grandparent)
                 if child_data["parent"]:
                     parent_data = self.get_user(child_data["parent"])
                     if parent_data["married_to"]:
                         gp2 = await self.fetch_username(parent_data["married_to"])
                         grandparents.add(gp2)
 
-        # Collect from both parent and other parent
         if data["parent"]:
             await add_both_parents(data["parent"])
         if other_parent_id:
@@ -252,16 +249,25 @@ class Family(commands.Cog):
 
         grandparents_text = "\n".join(grandparents) if grandparents else "None"
 
+        # --- Brothers / Siblings ---
+        siblings = "None"
+        if data["parent"]:
+            parent_data = self.get_user(data["parent"])
+            sibs = [kid for kid in parent_data["kids"] if kid != user.id]
+            if sibs:
+                siblings = "\n".join([await self.fetch_username(s) for s in sibs])
+
         # Build embed
         embed = discord.Embed(
             title=f"{user.display_name}'s Family!",
-            color=Embed_Colors["purple"]
+            color=Embed_Colors["yellow"]
         )
         embed.add_field(name="👴 Grandparents", value=grandparents_text, inline=False)
         embed.add_field(name="💍 Partner", value=partner, inline=False)
         embed.add_field(name="👨 Parent", value=parent, inline=False)
         embed.add_field(name="👩 Other Parent", value=other_parent, inline=False)
         embed.add_field(name="👼 Kids", value=kids, inline=False)
+        embed.add_field(name="👦 Siblings", value=siblings, inline=False)
 
         await self._send(ctx, embed=embed)
 
