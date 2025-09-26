@@ -216,7 +216,7 @@ async def _adopt(self, ctx, author, member):
         self.save()
         return await self._send(ctx, "😭 You are now divorced.")
 
-    async def _family(self, ctx, author, member=None):
+async def _family(self, ctx, author, member=None):
     user = member or author
     data = self.get_user(user.id)
 
