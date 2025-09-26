@@ -4,7 +4,7 @@ from discord import app_commands
 import json
 import os
 
-CONFIG_FILE = "welcome_config.json"
+CONFIG_FILE = "/data/welcome_config.json"
 
 
 def load_config():
