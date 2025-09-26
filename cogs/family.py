@@ -138,7 +138,7 @@ class Family(commands.Cog):
         return user.name
 
     # ---------- Shared logic ----------
-    async def _marry(self, ctx, author, member):
+async def _marry(self, ctx, author, member):
     if author.id == member.id:  # Prevent self-marriage
         return await self._send(ctx, "❌ You cannot marry yourself!")
 
