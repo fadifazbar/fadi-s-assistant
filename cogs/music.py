@@ -18,17 +18,18 @@ NP_EMOJI = "<a:music_note:1408941536044908684>"
 # ======================
 YTDL_BASE = {
     "format": "bestaudio/best",
-    "noplaylist": False,  # prevent grabbing full playlists
+    "noplaylist": False,            # allow full playlists (set True if you want single tracks only)
     "quiet": True,
     "no_warnings": True,
-    "default_search": "auto",  # so users can type song names
-    "source_address": "0.0.0.0",
-    "retries": 5,
+    "default_search": "auto",       # users can type search queries instead of full URLs
+    "source_address": "0.0.0.0",    # bind to IPv4
+    "retries": 5,                   # retry failed downloads
     "skip_unavailable_fragments": True,
-    "ignoreerrors": True,
-    "cookiefile": "cookies.txt",  # must be Netscape format
-    "cachedir": False,
-    # remove extractor_args entirely
+    "ignoreerrors": True,           # skip unavailable videos
+    "cookiefile": "cookies.txt",    # optional: only if you need login cookies
+    "cachedir": False,              # disable caching
+    "nocheckcertificate": True,     # sometimes helps with SSL errors
+    "extract_flat": True            # can speed up playlist extraction if you just need URLs
 }
 
 # Main YDL (full extraction)
