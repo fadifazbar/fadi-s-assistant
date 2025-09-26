@@ -84,7 +84,6 @@ class WelcomeLeave(commands.Cog):
 
             embed = discord.Embed(title=title, description=desc, color=color)
 
-            # Replace image placeholders
             for key in ["image_url", "thumbnail_url", "icon_url"]:
                 if settings.get(key):
                     url = settings[key]
@@ -134,7 +133,7 @@ class WelcomeLeave(commands.Cog):
         await self.start_setup(interaction.user, interaction.guild, "leave")
 
     # ======================
-    # HELPER FUNCTIONS
+    # INPUT HELPER
     # ======================
     async def ask_input(
         self,
@@ -146,7 +145,6 @@ class WelcomeLeave(commands.Cog):
         placeholders=None,
         image=False,
         history=None,
-        member=None,
     ):
         """Unified input function for text or image with back/skip support."""
         if history is None:
@@ -171,10 +169,8 @@ class WelcomeLeave(commands.Cog):
                 return None
 
             if image:
-                # Image placeholders
                 if content.lower() in ("{member_pfp}", "{server_icon}"):
                     return content
-                # Attachment
                 if msg.attachments:
                     url = msg.attachments[0].url
                     if url.lower().endswith(IMAGE_EXTENSIONS):
@@ -182,7 +178,6 @@ class WelcomeLeave(commands.Cog):
                     else:
                         await dm.send("❌ That is not a valid image/image link.")
                         continue
-                # URL check
                 if re.match(r"^https?://.*\.(png|jpg|jpeg|webp|gif)$", content, re.IGNORECASE):
                     return content
                 await dm.send(
@@ -237,109 +232,79 @@ class WelcomeLeave(commands.Cog):
             data = {"channel_id": channel_id, "mode": mode}
 
             if mode == "text":
-                # TEXT
-                text_msg = await self.ask_input(
-                    dm,
-                    user,
-                    "Enter your **text message**.",
-                    placeholders="{mention}, {user}, {server}, {count}",
-                    history=wizard_history,
-                )
-                if text_msg == "back":
-                    wizard_history.pop()
-                else:
-                    data["text"] = text_msg
-                    wizard_history.append({"key": "text", "value": text_msg})
-
-                # IMAGE
-                img = await self.ask_input(
-                    dm,
-                    user,
-                    "Upload or paste an **image** for the message.",
-                    image=True,
-                    placeholders="{member_pfp}, {server_icon}",
-                    history=wizard_history,
-                )
-                if img == "back":
-                    wizard_history.pop()
-                else:
-                    data["image_url"] = img
-                    wizard_history.append({"key": "image_url", "value": img})
-
-            else:  # embed
-                # TITLE
-                title = await self.ask_input(
-                    dm,
-                    user,
-                    "Enter the **embed TITLE**.",
-                    allow_skip=True,
-                    placeholders="{mention}, {user}, {server}, {count}",
-                    history=wizard_history,
-                )
-                if title == "back":
-                    wizard_history.pop()
-                else:
-                    data["title"] = title
-                    wizard_history.append({"key": "title", "value": title})
-
-                # DESCRIPTION
-                desc = await self.ask_input(
-                    dm,
-                    user,
-                    "Enter the **embed DESCRIPTION**.",
-                    allow_skip=True,
-                    placeholders="{mention}, {user}, {server}, {count}",
-                    history=wizard_history,
-                )
-                if desc == "back":
-                    wizard_history.pop()
-                else:
-                    data["description"] = desc
-                    wizard_history.append({"key": "description", "value": desc})
-
-                # COLOR
+                # TEXT MESSAGE
                 while True:
-                    color = await self.ask_input(
+                    text_msg = await self.ask_input(
                         dm,
                         user,
-                        "Enter the **embed COLOR** in HEX (example: #00ff00).",
-                        allow_skip=True,
+                        "Enter your **text message**.",
+                        placeholders="{mention}, {user}, {server}, {count}",
                         history=wizard_history,
                     )
-                    if color == "back":
+                    if text_msg == "back":
                         wizard_history.pop()
-                        break  # go back to previous step
-                    if not color:
-                        data["color"] = "0x00ff00"
-                        break
-                    color_value = color.replace("#", "0x") if color.startswith("#") else color
-                    try:
-                        int(color_value, 16)
-                        data["color"] = color_value
-                        break
-                    except ValueError:
-                        await dm.send("❌ Invalid HEX color. Example: #00ff00")
+                        continue
+                    data["text"] = text_msg
+                    wizard_history.append({"key": "text", "value": text_msg})
+                    break
 
-                # IMAGE FIELDS
-                for key, q in [
-                    ("image_url", "embed IMAGE (big bottom)"),
-                    ("thumbnail_url", "embed THUMBNAIL (top-right)"),
-                    ("icon_url", "embed ICON (author icon, top-left)"),
-                ]:
+                # IMAGE
+                while True:
+                    img = await self.ask_input(
+                        dm,
+                        user,
+                        "Upload or paste an **image** for the message.",
+                        image=True,
+                        placeholders="{member_pfp}, {server_icon}",
+                        history=wizard_history,
+                    )
+                    if img == "back":
+                        wizard_history.pop()
+                        continue
+                    data["image_url"] = img
+                    wizard_history.append({"key": "image_url", "value": img})
+                    break
+
+            else:  # EMBED
+                embed_fields = [
+                    ("title", "Enter the **embed TITLE**.", True),
+                    ("description", "Enter the **embed DESCRIPTION**.", True),
+                    ("color", "Enter the **embed COLOR** in HEX (example: #00ff00).", True),
+                    ("image_url", "embed IMAGE (big bottom)", True),
+                    ("thumbnail_url", "embed THUMBNAIL (top-right)", True),
+                    ("icon_url", "embed ICON (author icon, top-left)", True),
+                ]
+
+                for key, prompt, allow_skip in embed_fields:
                     while True:
-                        img = await self.ask_input(
+                        is_image = key in ["image_url", "thumbnail_url", "icon_url"]
+                        answer = await self.ask_input(
                             dm,
                             user,
-                            f"Upload or paste the **{q}**.",
-                            image=True,
-                            placeholders="{member_pfp}, {server_icon}",
+                            prompt,
+                            allow_skip=allow_skip,
+                            placeholders="{mention}, {user}, {server}, {count}" if not is_image else "{member_pfp}, {server_icon}",
+                            image=is_image,
                             history=wizard_history,
                         )
-                        if img == "back":
-                            wizard_history.pop()
-                            break  # go back to previous field
-                        data[key] = img
-                        wizard_history.append({"key": key, "value": img})
+                        if answer == "back":
+                            if wizard_history:
+                                wizard_history.pop()
+                            break
+                        if key == "color":
+                            if not answer:
+                                data["color"] = "0x00ff00"
+                            else:
+                                color_val = answer.replace("#", "0x") if answer.startswith("#") else answer
+                                try:
+                                    int(color_val, 16)
+                                    data["color"] = color_val
+                                except ValueError:
+                                    await dm.send("❌ Invalid HEX color. Example: #00ff00")
+                                    continue
+                        else:
+                            data[key] = answer
+                        wizard_history.append({"key": key, "value": answer})
                         break
 
             # SAVE CONFIG
