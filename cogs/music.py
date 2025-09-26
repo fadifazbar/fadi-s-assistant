@@ -173,107 +173,202 @@ class QueueView(discord.ui.View):
             self.page += 1
         await interaction.response.edit_message(embed=self.format_page(), view=self)
 
+class Music(commands.Cog):
+    LoopMode = Literal["off", "one", "all"]
 
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        self.queues: Dict[int, List[Track]] = {}
+        self.currents: Dict[int, Optional[Track]] = {}
+        self.shuffle_enabled: Dict[int, bool] = {}
+        self.loop_mode: Dict[int, Music.LoopMode] = {}
+        self.locks: Dict[int, asyncio.Lock] = {}
+        self.idle_tasks: Dict[int, asyncio.Task] = {}
 
-    # ------------- playback core -------------
-async def _start_if_idle(self, guild: discord.Guild, channel: discord.abc.Messageable):
-    async with self._lock(guild.id):
+    async def cog_load(self):
+        try:
+            await self.bot.tree.sync()
+        except Exception:
+            pass
+
+    # ---------------- State helpers ----------------
+    def _queue(self, guild_id: int) -> List[Track]:
+        return self.queues.setdefault(guild_id, [])
+
+    def _lock(self, guild_id: int) -> asyncio.Lock:
+        return self.locks.setdefault(guild_id, asyncio.Lock())
+
+    def _get_loop(self, guild_id: int) -> Music.LoopMode:
+        return self.loop_mode.get(guild_id, "off")
+
+    def _set_loop(self, guild_id: int, mode: Music.LoopMode):
+        self.loop_mode[guild_id] = mode
+
+    def _is_shuffle(self, guild_id: int) -> bool:
+        return self.shuffle_enabled.get(guild_id, False)
+
+    def _reset_state(self, guild_id: int):
+        self.queues[guild_id] = []
+        self.currents[guild_id] = None
+        self.shuffle_enabled[guild_id] = False
+        self.loop_mode[guild_id] = "off"
+        task = self.idle_tasks.pop(guild_id, None)
+        if task:
+            task.cancel()
+
+    def _dequeue_next(self, guild_id: int) -> Optional[Track]:
+        q = self._queue(guild_id)
+        if not q:
+            return None
+        if self._is_shuffle(guild_id):
+            idx = random.randrange(len(q))
+            return q.pop(idx)
+        return q.pop(0)
+
+    async def _ensure_voice(self, guild: discord.Guild, voice_channel: discord.VoiceChannel):
         vc = guild.voice_client
-        if not vc or vc.is_playing() or vc.is_paused():
+        if vc and vc.channel != voice_channel:
+            await vc.move_to(voice_channel)
+        elif not vc:
+            await voice_channel.connect()
+
+    # ---------------- Idle disconnect ----------------
+    def _schedule_idle_disconnect(self, guild: discord.Guild, channel: discord.abc.Messageable, seconds: int = 120):
+        async def _idle_task():
+            try:
+                await asyncio.sleep(seconds)
+                vc = guild.voice_client
+                if vc and not vc.is_playing() and not vc.is_paused() and not self._queue(guild.id):
+                    await channel.send("👋 Idle for a while — disconnecting and resetting.")
+                    await vc.disconnect()
+                    self._reset_state(guild.id)
+            except asyncio.CancelledError:
+                pass
+
+        old_task = self.idle_tasks.get(guild.id)
+        if old_task:
+            old_task.cancel()
+        self.idle_tasks[guild.id] = self.bot.loop.create_task(_idle_task())
+
+    # ---------------- Embeds ----------------
+    async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
+        dur = track.pretty_duration()
+        bar = _progress_bar(0, track.duration)
+        embed = discord.Embed(
+            title=f"{NP_EMOJI} Now Playing",
+            description=f"[{track.title}]({track.webpage_url})\n{bar}\n`0:00 / {dur}`",
+            color=discord.Color.green()
+        )
+        if track.thumbnail:
+            embed.set_thumbnail(url=track.thumbnail)
+        if track.uploader:
+            embed.add_field(name=f"{CHAN_EMOJI} Channel", value=track.uploader, inline=True)
+        embed.add_field(name="Requested by", value=getattr(track.requester, "mention", str(track.requester)), inline=True)
+        await channel.send(embed=embed)
+
+    async def _announce_added(self, channel: discord.abc.Messageable, track: Track, pos: int):
+        embed = discord.Embed(title="➕ Added to queue", description=f"[{track.title}]({track.webpage_url})", color=discord.Color.blurple())
+        if track.thumbnail:
+            embed.set_thumbnail(url=track.thumbnail)
+        if track.duration:
+            embed.add_field(name=f"{DUA_EMOJI} Duration", value=track.pretty_duration(), inline=True)
+        embed.add_field(name=f"{POSE_EMOJI} Position", value=str(pos), inline=True)
+        await channel.send(embed=embed)
+
+    # ---------------- Playback ----------------
+    async def _start_if_idle(self, guild: discord.Guild, channel: discord.abc.Messageable):
+        async with self._lock(guild.id):
+            vc = guild.voice_client
+            if not vc or vc.is_playing() or vc.is_paused():
+                return
+
+            next_track = self._dequeue_next(guild.id)
+            if not next_track:
+                self.currents[guild.id] = None
+                self._schedule_idle_disconnect(guild, channel)
+                return
+
+            self.currents[guild.id] = next_track
+            stream_data = await _fresh_stream_url(next_track.webpage_url)
+            if not stream_data:
+                await channel.send(f"⚠️ Could not fetch stream for **{next_track.title}** — skipping.")
+                self.currents[guild.id] = None
+                return await self._start_if_idle(guild, channel)
+
+            stream_url, _ = stream_data
+            next_track.source_url = stream_url
+
+            def _after(err: Optional[Exception]):
+                fut = self.bot.loop.create_task(self._after_track(guild, channel, next_track, err))
+                fut.add_done_callback(lambda f: f.exception())
+
+            vc.play(discord.FFmpegPCMAudio(stream_url, **FFMPEG_OPTS), after=_after)
+            await self._announce_now(channel, next_track)
+
+    async def _after_track(self, guild: discord.Guild, channel: discord.abc.Messageable, played: Optional[Track], err):
+        if err:
+            await channel.send(f"⚠️ Playback error: {err}")
+
+        mode = self._get_loop(guild.id)
+        if played:
+            if mode == "one":
+                self._queue(guild.id).insert(0, played)
+            elif mode == "all":
+                self._queue(guild.id).append(played)
+
+        self.currents[guild.id] = None
+        await self._start_if_idle(guild, channel)
+
+    # ---------------- Play / Queue ----------------
+    async def _handle_play(self, guild: discord.Guild, text_channel: discord.abc.Messageable, requester, query: str):
+        try_single_search = not _looks_like_url(query)
+        use_flat_playlist = _is_youtube_playlist_url(query)
+
+        try:
+            if try_single_search:
+                info = await _extract(f"ytsearch1:{query}", flat=False)
+            else:
+                info = await _extract(query, flat=use_flat_playlist)
+        except Exception as e:
+            await text_channel.send(f"❌ Error: `{e}`")
             return
 
-        next_track = self._dequeue_next(guild.id)
-        if not next_track:
-            self.currents[guild.id] = None
-            self._schedule_idle_disconnect(guild, channel)
+        if not info:
+            await text_channel.send("❌ No results.")
             return
 
-        self.currents[guild.id] = next_track
+        tracks_to_add: List[Track] = []
 
-        # Use cached stream_url if available, otherwise refresh
-        stream_url = getattr(next_track, "source_url", None)
-        if not stream_url:
-            stream_url = await _fresh_stream_url(next_track.webpage_url)
-            if stream_url:
-                next_track.source_url = stream_url  # cache it for potential reuse
-
-        if not stream_url:
-            await channel.send(f"⚠️ Could not fetch stream for **{next_track.title}** — skipping.")
-            self.currents[guild.id] = None
-            return await self._start_if_idle(guild, channel)
-
-        def _after(err: Optional[Exception]):
-            fut = self.bot.loop.create_task(self._after_track(guild, channel, next_track, err))
-            fut.add_done_callback(lambda f: f.exception())
-
-        vc.play(discord.FFmpegPCMAudio(stream_url, **FFMPEG_OPTS), after=_after)
-        await self._announce_now(channel, next_track)
-
-async def _after_track(self, guild: discord.Guild, channel: discord.abc.Messageable, played: Optional[Track], err):
-    if err:
-        await channel.send(f"⚠️ Playback error: {err}")
-
-    mode = self._get_loop(guild.id)
-    if played:
-        if mode == "one":
-            self._queue(guild.id).insert(0, played)  # replay immediately
-        elif mode == "all":
-            self._queue(guild.id).append(played)
-
-    self.currents[guild.id] = None
-    await self._start_if_idle(guild, channel)
-
-# ------------- play/queue logic -------------
-async def _handle_play(self, guild: discord.Guild, text_channel: discord.abc.Messageable, requester, query: str):
-    try_single_search = not _looks_like_url(query)
-    use_flat_playlist = _is_youtube_playlist_url(query)
-
-    try:
-        if try_single_search:
-            info = await _extract(f"ytsearch1:{query}", flat=False)
+        if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist":
+            for entry in info.get("entries") or []:
+                t = _entry_to_track(entry, requester)
+                if t:
+                    tracks_to_add.append(t)
+        elif "entries" in info:
+            for entry in info.get("entries") or []:
+                t = _entry_to_track(entry, requester)
+                if t:
+                    tracks_to_add.append(t)
         else:
-            info = await _extract(query, flat=use_flat_playlist)
-    except Exception as e:
-        await text_channel.send(f"❌ Error: `{e}`")
-        return
-
-    if not info:
-        await text_channel.send("❌ No results.")
-        return
-
-    tracks_to_add: List[Track] = []
-
-    if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist" and "search" in (info.get("extractor_key", "")).lower():
-        entries = (info.get("entries") or [])[:1]
-        for entry in entries:
-            t = _entry_to_track(entry, requester)
+            t = _entry_to_track(info, requester)
             if t:
                 tracks_to_add.append(t)
-    elif "entries" in info:
-        for entry in info.get("entries") or []:
-            t = _entry_to_track(entry, requester)
-            if t:
-                tracks_to_add.append(t)
-    else:
-        t = _entry_to_track(info, requester)
-        if t:
-            tracks_to_add.append(t)
 
-    if not tracks_to_add:
-        await text_channel.send("⚠️ No playable videos found (deleted/private/unavailable).")
-        return
+        if not tracks_to_add:
+            await text_channel.send("⚠️ No playable videos found (deleted/private/unavailable).")
+            return
 
-    q = self._queue(guild.id)
-    start_len = len(q)
-    q.extend(tracks_to_add)
+        q = self._queue(guild.id)
+        start_len = len(q)
+        q.extend(tracks_to_add)
 
-    if len(tracks_to_add) == 1:
-        await self._announce_added(text_channel, tracks_to_add[0], start_len + 1)
-    else:
-        title = info.get("title") or "playlist"
-        await text_channel.send(f"📑 Added **{len(tracks_to_add)}** tracks from **{title}**.")
+        if len(tracks_to_add) == 1:
+            await self._announce_added(text_channel, tracks_to_add[0], start_len + 1)
+        else:
+            title = info.get("title") or "playlist"
+            await text_channel.send(f"📑 Added **{len(tracks_to_add)}** tracks from **{title}**.")
 
-    await self._start_if_idle(guild, text_channel)
+        await self._start_if_idle(guild, text_channel)
 
     # =========================
     # PREFIX COMMANDS (classic)
