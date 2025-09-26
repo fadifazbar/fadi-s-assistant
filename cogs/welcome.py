@@ -3,32 +3,37 @@ from discord.ext import commands
 from discord import app_commands
 import json
 import os
+import re
 
 CONFIG_FILE = "/data/welcome_config.json"
+IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".gif")
 
+# Ensure data folder exists
+os.makedirs("data", exist_ok=True)
 
 def load_config():
     if not os.path.exists(CONFIG_FILE):
         return {}
-    with open(CONFIG_FILE, "r") as f:
-        return json.load(f)
-
+    try:
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, ValueError):
+        return {}
 
 def save_config(data):
     with open(CONFIG_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-
 def format_placeholders(template: str, member: discord.Member):
+    """Only text placeholders (no image placeholders)."""
     if not template:
         return ""
     return (
         template.replace("{mention}", member.mention)
-        .replace("{user}", member.name)  # Just the name
-        .replace("{server}", member.guild.name)
-        .replace("{count}", str(len(member.guild.members)))
+                .replace("{user}", str(member))
+                .replace("{server}", member.guild.name)
+                .replace("{count}", str(len(member.guild.members)))
     )
-
 
 class WelcomeLeave(commands.Cog):
     def __init__(self, bot):
@@ -48,7 +53,7 @@ class WelcomeLeave(commands.Cog):
 
     async def handle_event(self, member: discord.Member, event_type: str):
         gid = str(member.guild.id)
-        settings = self.config.get(gid, {}).get(event_type, None)
+        settings = self.config.get(gid, {}).get(event_type)
         if not settings:
             return
 
@@ -60,9 +65,7 @@ class WelcomeLeave(commands.Cog):
 
         # Plain text
         if settings.get("mode") == "text":
-            msg = format_placeholders(
-                settings.get("text", "{mention} joined {server}!"), member
-            )
+            msg = format_placeholders(settings.get("text", "{mention} joined {server}!"), member)
             await channel.send(msg)
             if settings.get("image_url"):
                 await channel.send(settings["image_url"])
@@ -87,20 +90,18 @@ class WelcomeLeave(commands.Cog):
             await channel.send(embed=embed)
 
     # ======================
-    # COMMANDS (Prefix)
+    # PREFIX COMMANDS
     # ======================
     @commands.command(name="join")
     async def join_setup_prefix(self, ctx):
-        """Setup join message (via DM wizard)."""
         await self.start_setup(ctx.author, ctx.guild, "join")
 
     @commands.command(name="leave")
     async def leave_setup_prefix(self, ctx):
-        """Setup leave message (via DM wizard)."""
         await self.start_setup(ctx.author, ctx.guild, "leave")
 
     # ======================
-    # COMMANDS (Slash)
+    # SLASH COMMANDS
     # ======================
     @app_commands.command(name="join", description="Setup join messages (DM wizard)")
     async def join_setup_slash(self, interaction: discord.Interaction):
@@ -113,31 +114,59 @@ class WelcomeLeave(commands.Cog):
         await self.start_setup(interaction.user, interaction.guild, "leave")
 
     # ======================
-    # DM SETUP WIZARD
+    # HELPER FUNCTIONS
     # ======================
     async def ask(self, dm, user, question, allow_skip=False, show_placeholders=False):
-        """Ask a question, wait for reply, handle skip, accept attachments or URLs."""
+        """Ask a normal text question."""
         if allow_skip:
             question += "\n(Say 'skip' if you don't want this feature.)"
         if show_placeholders:
-            question += "\nAvailable placeholders: {mention}, {user}, {name}, {server}, {count}"
+            question += "\nAvailable placeholders: {mention}, {user}, {server}, {count}"
         await dm.send(question)
 
-        msg = await self.bot.wait_for(
-            "message", check=lambda m: m.author == user and m.channel == dm
-        )
-
-        # Skip (case-insensitive)
+        msg = await self.bot.wait_for("message", check=lambda m: m.author == user and m.channel == dm)
         if allow_skip and msg.content.lower() == "skip":
             return None
-
-        # If an attachment exists, return its URL
-        if msg.attachments:
-            return msg.attachments[0].url
-
-        # Otherwise return text (URL or normal input)
         return msg.content.strip()
 
+    async def ask_image(self, dm, user, question, member, allow_skip=True):
+        """Ask for image (upload or link). Only accept images. Replace {member_pfp} and {server_icon}."""
+        if allow_skip:
+            question += "\n(Say 'skip' if you don't want this feature.)"
+        question += "\nAvailable placeholders for image URLs: {member_pfp}, {server_icon}"
+        await dm.send(question)
+
+        while True:
+            msg = await self.bot.wait_for("message", check=lambda m: m.author == user and m.channel == dm)
+
+            # Skip
+            if allow_skip and msg.content.lower() == "skip":
+                return None
+
+            # Attachment
+            if msg.attachments:
+                url = msg.attachments[0].url
+                if url.lower().endswith(IMAGE_EXTENSIONS):
+                    url = url.replace("{member_pfp}", str(member.display_avatar.url))
+                    url = url.replace("{server_icon}", str(member.guild.icon.url) if member.guild.icon else "")
+                    return url
+                else:
+                    await dm.send("❌ That is not a valid image/image link.")
+                    continue
+
+            # URL check
+            content = msg.content.strip()
+            if re.match(r"^https?://.*\.(png|jpg|jpeg|webp|gif)$", content, re.IGNORECASE):
+                content = content.replace("{member_pfp}", str(member.display_avatar.url))
+                content = content.replace("{server_icon}", str(member.guild.icon.url) if member.guild.icon else "")
+                return content
+
+            # Invalid input
+            await dm.send("❌ That is not a valid image/image link. Please upload an image or paste a direct image URL.")
+
+    # ======================
+    # SETUP WIZARD
+    # ======================
     async def start_setup(self, user: discord.User, guild: discord.Guild, event_type: str):
         try:
             dm = await user.create_dm()
@@ -159,35 +188,19 @@ class WelcomeLeave(commands.Cog):
             data = {"channel_id": channel_id, "mode": mode}
 
             if mode == "text":
-                data["text"] = await self.ask(
-                    dm, user, "Enter your **text message**.", allow_skip=False, show_placeholders=True
-                )
-                data["image_url"] = await self.ask(
-                    dm, user, "Upload or paste an **image URL** for the message.", allow_skip=True
-                )
+                data["text"] = await self.ask(dm, user, "Enter your **text message**.", allow_skip=False, show_placeholders=True)
+                data["image_url"] = await self.ask_image(dm, user, "Upload or paste an **image** for the message.", user, member=user)
 
             else:  # embed mode
-                data["title"] = await self.ask(
-                    dm, user, "Enter the **embed TITLE**.", allow_skip=True, show_placeholders=True
-                )
-                data["description"] = await self.ask(
-                    dm, user, "Enter the **embed DESCRIPTION**.", allow_skip=True, show_placeholders=True
-                )
-                color = await self.ask(
-                    dm, user, "Enter the **embed COLOR** in HEX (example: #00ff00).", allow_skip=True
-                )
+                data["title"] = await self.ask(dm, user, "Enter the **embed TITLE**.", allow_skip=True, show_placeholders=True)
+                data["description"] = await self.ask(dm, user, "Enter the **embed DESCRIPTION**.", allow_skip=True, show_placeholders=True)
+                color = await self.ask(dm, user, "Enter the **embed COLOR** in HEX (example: #00ff00).", allow_skip=True)
                 data["color"] = color.replace("#", "0x") if color else "0x00ff00"
-                data["image_url"] = await self.ask(
-                    dm, user, "Upload or paste the **embed IMAGE (big bottom)**.", allow_skip=True
-                )
-                data["thumbnail_url"] = await self.ask(
-                    dm, user, "Upload or paste the **embed THUMBNAIL (top-right)**.", allow_skip=True
-                )
-                data["icon_url"] = await self.ask(
-                    dm, user, "Upload or paste the **embed ICON (author icon, top-left)**.", allow_skip=True
-                )
+                data["image_url"] = await self.ask_image(dm, user, "Upload or paste the **embed IMAGE (big bottom)**.", member=user)
+                data["thumbnail_url"] = await self.ask_image(dm, user, "Upload or paste the **embed THUMBNAIL (top-right)**.", member=user)
+                data["icon_url"] = await self.ask_image(dm, user, "Upload or paste the **embed ICON (author icon, top-left)**.", member=user)
 
-            # Save
+            # Save config
             gid = str(guild.id)
             self.config.setdefault(gid, {})
             self.config[gid][event_type] = data
@@ -200,7 +213,6 @@ class WelcomeLeave(commands.Cog):
                 await user.send("❌ I couldn't DM you. Please enable DMs and try again.")
             except:
                 pass
-
 
 async def setup(bot):
     await bot.add_cog(WelcomeLeave(bot))
