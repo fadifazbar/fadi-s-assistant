@@ -96,22 +96,28 @@ async def _fresh_stream_url(webpage_url: str, *, max_tries: int = 2) -> Optional
     last_error = None
     for attempt in range(max_tries):
         try:
-            info = await _extract(webpage_url, flat=False)
+            info = await asyncio.to_thread(lambda: _ytdl.extract_info(webpage_url, download=False))
             if not info:
                 return None
+
+            # If it's a playlist, take first entry
             if "entries" in info:
                 info = info["entries"][0]
-            stream_url = info.get("url")
-            if not stream_url:
-                for fmt in info.get("formats", []):
-                    if fmt.get("acodec") not in (None, "none") and fmt.get("url"):
-                        stream_url = fmt["url"]
-                        break
+
+            # Pick best audio that actually works
+            stream_url = None
+            for fmt in info.get("formats", []):
+                if fmt.get("acodec") != "none" and fmt.get("url"):
+                    stream_url = fmt["url"]
+                    break
+
             if stream_url:
                 return stream_url, info.get("title", "Unknown")
+
         except Exception as e:
             last_error = e
             await asyncio.sleep(0.3 + attempt * 0.2)
+
     print(f"[ERROR] Could not fetch fresh stream: {last_error}")
     return None
 
