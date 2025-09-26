@@ -250,12 +250,21 @@ class Family(commands.Cog):
         grandparents_text = "\n".join(grandparents) if grandparents else "None"
 
         # --- Brothers / Siblings ---
-        siblings = "None"
+        siblings_set = set()
+
+        async def add_siblings(parent_id):
+            if parent_id:
+                parent_data = self.get_user(parent_id)
+                for kid in parent_data["kids"]:
+                    if kid != user.id:
+                        siblings_set.add(await self.fetch_username(kid))
+
         if data["parent"]:
-            parent_data = self.get_user(data["parent"])
-            sibs = [kid for kid in parent_data["kids"] if kid != user.id]
-            if sibs:
-                siblings = "\n".join([await self.fetch_username(s) for s in sibs])
+            await add_siblings(data["parent"])
+        if other_parent_id:
+            await add_siblings(other_parent_id)
+
+        siblings = "\n".join(siblings_set) if siblings_set else "None"
 
         # Build embed
         embed = discord.Embed(
