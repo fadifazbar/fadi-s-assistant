@@ -472,9 +472,11 @@ async def _adopt(self, ctx, author, member):
         await self._divorce(ctx, ctx.author)
 
     @commands.command(name="family")
-    @commands.cooldown(1, 5, commands.BucketType.user)
-    async def family_prefix(self, ctx, member: discord.User = None):
-        await self._family(ctx, ctx.author, member)
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def family_prefix(self, ctx, member: discord.User = None):
+    if member is None:
+        member = ctx.author  # default to author if no member is provided
+    await self._family(ctx, ctx.author, member)
 
     # ---------- Error handler for cooldown ----------
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
