@@ -76,30 +76,61 @@ class Track:
 # yt-dlp helper routines
 # ======================
 async def _extract(query: str, *, flat: bool = False):
-    # Offload to thread for snappier event loop
-    ydl = _flat_ytdl if flat else _ytdl
-    return await asyncio.to_thread(lambda: ydl.extract_info(query, download=False))
+    """
+    Extract info from yt_dlp.
+    - flat=True: only for listing playlists (fast, no playable URLs).
+    - flat=False: always returns playable formats (fresh audio URLs).
+    """
+    # If it's a YouTube playlist URL and we only need metadata, use flat
+    if flat and _is_youtube_playlist_url(query):
+        ydl = _flat_ytdl
+    else:
+        ydl = _ytdl
 
-async def _fresh_stream_url(webpage_url: str, *, max_tries: int = 2) -> Optional[str]:
-    """Re-extract the stream URL right before playback to avoid expiry/cutoffs."""
+    try:
+        return await asyncio.to_thread(lambda: ydl.extract_info(query, download=False))
+    except Exception as e:
+        print(f"[YTDL ERROR] Failed to extract {query}: {e}")
+        return None
+
+async def _fresh_stream_url(webpage_url: str, *, max_tries: int = 2) -> Optional[tuple[str, str]]:
+    """
+    Re-extract the stream URL right before playback to avoid expiry/cutoffs.
+    Returns (stream_url, title) or None if failed.
+    """
     last_error = None
-    for _ in range(max_tries):
+    for attempt in range(max_tries):
         try:
             info = await _extract(webpage_url, flat=False)
             if not info:
                 return None
+
+            # If it's a playlist, grab first entry
             if "entries" in info:
                 info = info["entries"][0]
-            url = info.get("url")
-            if url:
-                return url
-            # Fallback: pick first audio-capable format
-            for fmt in (info.get("formats") or []):
-                if fmt.get("acodec") not in (None, "none") and fmt.get("url"):
-                    return fmt["url"]
+
+            # Try the direct URL first
+            stream_url = info.get("url")
+            if not stream_url:
+                # Fallback: search for bestaudio
+                for fmt in (info.get("formats") or []):
+                    if (
+                        fmt.get("acodec") not in (None, "none")
+                        and fmt.get("url")
+                    ):
+                        stream_url = fmt["url"]
+                        break
+
+            if stream_url:
+                return stream_url, info.get("title", "Unknown")
+
         except Exception as e:
             last_error = e
-            await asyncio.sleep(0.3)
+            # Add jitter so retries aren’t instant
+            await asyncio.sleep(0.3 + attempt * 0.2)
+
+    # Optional: log last_error for debugging
+    print(f"[ERROR] Could not fetch fresh stream: {last_error}")
     return None
 
 # ==============
@@ -128,15 +159,18 @@ def _progress_bar(elapsed: int, total: Optional[int], width: int = 18) -> str:
 def _entry_to_track(entry: dict, requester) -> Optional[Track]:
     if not entry:
         return None
-    title = entry.get("title")
-    if title in (None, "[Deleted video]", "[Private video]"):
-        return None
+
+    # Skip unavailable content
     if entry.get("availability") in ("private", "needs_auth"):
         return None
-    live_status = entry.get("live_status")
-    if live_status in ("is_live", "is_upcoming"):
+    if entry.get("live_status") in ("is_live", "is_upcoming"):
         return None
 
+    title = entry.get("title") or "Unknown Title"
+    if title.lower() in ("[deleted video]", "[private video]"):
+        return None
+
+    # Resolve webpage_url
     webpage_url = entry.get("webpage_url")
     if not webpage_url:
         vid_id = entry.get("id")
@@ -144,13 +178,14 @@ def _entry_to_track(entry: dict, requester) -> Optional[Track]:
             webpage_url = f"https://www.youtube.com/watch?v={vid_id}"
         else:
             webpage_url = entry.get("url")
+
     if not webpage_url:
         return None
 
     return Track(
-        title=title or "Unknown Title",
+        title=title,
         webpage_url=webpage_url,
-        duration=entry.get("duration"),
+        duration=entry.get("duration") or 0,
         thumbnail=entry.get("thumbnail"),
         requester=requester,
         uploader=entry.get("uploader") or entry.get("channel"),
@@ -329,95 +364,103 @@ class Music(commands.Cog):
 
     # ------------- playback core -------------
     async def _start_if_idle(self, guild: discord.Guild, channel: discord.abc.Messageable):
-        async with self._lock(guild.id):
-            vc = guild.voice_client
-            if not vc or vc.is_playing() or vc.is_paused():
-                return
+    async with self._lock(guild.id):
+        vc = guild.voice_client
+        if not vc or vc.is_playing() or vc.is_paused():
+            return
 
-            next_track = self._dequeue_next(guild.id)
-            if not next_track:
-                self.currents[guild.id] = None
-                self._schedule_idle_disconnect(guild, channel)
-                return
+        next_track = self._dequeue_next(guild.id)
+        if not next_track:
+            self.currents[guild.id] = None
+            self._schedule_idle_disconnect(guild, channel)
+            return
 
-            self.currents[guild.id] = next_track
+        self.currents[guild.id] = next_track
 
+        # Use cached stream_url if available, otherwise refresh
+        stream_url = getattr(next_track, "source_url", None)
+        if not stream_url:
             stream_url = await _fresh_stream_url(next_track.webpage_url)
-            if not stream_url:
-                await channel.send(f"⚠️ Could not fetch stream for **{next_track.title}** — skipping.")
-                self.currents[guild.id] = None
-                return await self._start_if_idle(guild, channel)
+            if stream_url:
+                next_track.source_url = stream_url  # cache it for potential reuse
 
-            def _after(err: Optional[Exception]):
-                fut = self.bot.loop.create_task(self._after_track(guild, channel, next_track, err))
-                fut.add_done_callback(lambda f: f.exception())
+        if not stream_url:
+            await channel.send(f"⚠️ Could not fetch stream for **{next_track.title}** — skipping.")
+            self.currents[guild.id] = None
+            return await self._start_if_idle(guild, channel)
 
-            vc.play(discord.FFmpegPCMAudio(stream_url, **FFMPEG_OPTS), after=_after)
-            await self._announce_now(channel, next_track)
+        def _after(err: Optional[Exception]):
+            fut = self.bot.loop.create_task(self._after_track(guild, channel, next_track, err))
+            fut.add_done_callback(lambda f: f.exception())
 
-    async def _after_track(self, guild: discord.Guild, channel: discord.abc.Messageable, played: Optional[Track], err):
-        if err:
-            await channel.send(f"⚠️ Playback error: {err}")
-        mode = self._get_loop(guild.id)
-        if played:
-            if mode == "one":
-                self._queue(guild.id).insert(0, played)  # replay immediately
-            elif mode == "all":
-                self._queue(guild.id).append(played)
-        self.currents[guild.id] = None
-        await self._start_if_idle(guild, channel)
+        vc.play(discord.FFmpegPCMAudio(stream_url, **FFMPEG_OPTS), after=_after)
+        await self._announce_now(channel, next_track)
 
-    # ------------- play/queue logic -------------
-    async def _handle_play(self, guild: discord.Guild, text_channel: discord.abc.Messageable, requester, query: str):
-        try_single_search = not _looks_like_url(query)
-        use_flat_playlist = _is_youtube_playlist_url(query)
+async def _after_track(self, guild: discord.Guild, channel: discord.abc.Messageable, played: Optional[Track], err):
+    if err:
+        await channel.send(f"⚠️ Playback error: {err}")
 
-        try:
-            if try_single_search:
-                info = await _extract(f"ytsearch1:{query}", flat=False)
-            else:
-                info = await _extract(query, flat=use_flat_playlist)
-        except Exception as e:
-            await text_channel.send(f"❌ Error: `{e}`")
-            return
+    mode = self._get_loop(guild.id)
+    if played:
+        if mode == "one":
+            self._queue(guild.id).insert(0, played)  # replay immediately
+        elif mode == "all":
+            self._queue(guild.id).append(played)
 
-        if not info:
-            await text_channel.send("❌ No results.")
-            return
+    self.currents[guild.id] = None
+    await self._start_if_idle(guild, channel)
 
-        tracks_to_add: List[Track] = []
+# ------------- play/queue logic -------------
+async def _handle_play(self, guild: discord.Guild, text_channel: discord.abc.Messageable, requester, query: str):
+    try_single_search = not _looks_like_url(query)
+    use_flat_playlist = _is_youtube_playlist_url(query)
 
-        if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist" and "search" in (info.get("extractor_key", "")).lower():
-            entries = (info.get("entries") or [])[:1]
-            for entry in entries:
-                t = _entry_to_track(entry, requester)
-                if t:
-                    tracks_to_add.append(t)
-        elif "entries" in info:
-            for entry in info.get("entries") or []:
-                t = _entry_to_track(entry, requester)
-                if t:
-                    tracks_to_add.append(t)
+    try:
+        if try_single_search:
+            info = await _extract(f"ytsearch1:{query}", flat=False)
         else:
-            t = _entry_to_track(info, requester)
+            info = await _extract(query, flat=use_flat_playlist)
+    except Exception as e:
+        await text_channel.send(f"❌ Error: `{e}`")
+        return
+
+    if not info:
+        await text_channel.send("❌ No results.")
+        return
+
+    tracks_to_add: List[Track] = []
+
+    if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist" and "search" in (info.get("extractor_key", "")).lower():
+        entries = (info.get("entries") or [])[:1]
+        for entry in entries:
+            t = _entry_to_track(entry, requester)
             if t:
                 tracks_to_add.append(t)
+    elif "entries" in info:
+        for entry in info.get("entries") or []:
+            t = _entry_to_track(entry, requester)
+            if t:
+                tracks_to_add.append(t)
+    else:
+        t = _entry_to_track(info, requester)
+        if t:
+            tracks_to_add.append(t)
 
-        if not tracks_to_add:
-            await text_channel.send("⚠️ No playable videos found (deleted/private/unavailable).")
-            return
+    if not tracks_to_add:
+        await text_channel.send("⚠️ No playable videos found (deleted/private/unavailable).")
+        return
 
-        q = self._queue(guild.id)
-        start_len = len(q)
-        q.extend(tracks_to_add)
+    q = self._queue(guild.id)
+    start_len = len(q)
+    q.extend(tracks_to_add)
 
-        if len(tracks_to_add) == 1:
-            await self._announce_added(text_channel, tracks_to_add[0], start_len + 1)
-        else:
-            title = info.get("title") or "playlist"
-            await text_channel.send(f"📑 Added **{len(tracks_to_add)}** tracks from **{title}**.")
+    if len(tracks_to_add) == 1:
+        await self._announce_added(text_channel, tracks_to_add[0], start_len + 1)
+    else:
+        title = info.get("title") or "playlist"
+        await text_channel.send(f"📑 Added **{len(tracks_to_add)}** tracks from **{title}**.")
 
-        await self._start_if_idle(guild, text_channel)
+    await self._start_if_idle(guild, text_channel)
 
     # =========================
     # PREFIX COMMANDS (classic)
