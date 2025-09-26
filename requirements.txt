@@ -5,6 +5,7 @@ pilmoji
 emoji==2.2.0
 PyNaCl
 yt-dlp
+ffmpeg
 ffmpeg-python
 fastapi
 uvicorn[standard]
