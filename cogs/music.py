@@ -365,13 +365,14 @@ class Music(commands.Cog):
         await self._start_if_idle(guild, channel)
 
     # ------------- play/queue logic -------------
-    async def _handle_play(
+async def _handle_play(
     self,
     guild: discord.Guild,
     text_channel: discord.abc.Messageable,
     requester,
     query: str
 ):
+
     """Handle play logic: search, extract info, build tracks, and start playback."""
     try_single_search = not _looks_like_url(query)
     use_flat_playlist = _is_youtube_playlist_url(query)
