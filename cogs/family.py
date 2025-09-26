@@ -200,13 +200,54 @@ class Family(commands.Cog):
         user = member or author
         data = self.get_user(user.id)
 
+        # Direct relationships
         partner = await self.fetch_username(data["married_to"]) if data["married_to"] else "None"
         parent = await self.fetch_username(data["parent"]) if data["parent"] else "None"
         kids = "\n".join([await self.fetch_username(kid) for kid in data["kids"]]) if data["kids"] else "None"
 
-        embed = discord.Embed(title=f"{user.display_name}'s Family!", color=discord.Color.blurple())
+        # --- Other Parent ---
+        other_parent_id = None
+        other_parent = "None"
+        if data["parent"]:
+            parent_data = self.get_user(data["parent"])
+            if parent_data["married_to"]:
+                other_parent_id = parent_data["married_to"]
+                other_parent = await self.fetch_username(other_parent_id)
+
+        # --- Grandparents ---
+        grandparents = []
+
+        # Helper function to collect grandparents of a given parent
+        async def collect_grandparents(parent_id):
+            gp_list = []
+            if parent_id:
+                parent_data = self.get_user(parent_id)
+                if parent_data["parent"]:
+                    gp_list.append(await self.fetch_username(parent_data["parent"]))
+                # if the parent has a partner, check their parent too
+                if parent_data["married_to"]:
+                    partner_data = self.get_user(parent_data["married_to"])
+                    if partner_data["parent"]:
+                        gp_list.append(await self.fetch_username(partner_data["parent"]))
+            return gp_list
+
+        # Collect from both sides (parent + other parent)
+        if data["parent"]:
+            grandparents.extend(await collect_grandparents(data["parent"]))
+        if other_parent_id:
+            grandparents.extend(await collect_grandparents(other_parent_id))
+
+        grandparents_text = "\n".join(grandparents) if grandparents else "None"
+
+        # Build embed
+        embed = discord.Embed(
+            title=f"{user.display_name}'s Family!",
+            color=discord.Color.blurple()
+        )
+        embed.add_field(name="👴 Grandparents", value=grandparents_text, inline=False)
         embed.add_field(name="💍 Partner", value=partner, inline=False)
         embed.add_field(name="👨 Parent", value=parent, inline=False)
+        embed.add_field(name="👩 Other Parent", value=other_parent, inline=False)
         embed.add_field(name="👼 Kids", value=kids, inline=False)
 
         await self._send(ctx, embed=embed)
