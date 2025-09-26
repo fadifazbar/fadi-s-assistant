@@ -138,52 +138,45 @@ class Family(commands.Cog):
         return user.name
 
     # ---------- Shared logic ----------
-async def _marry(self, ctx, author, member):
-    if author.id == member.id:  # Prevent self-marriage
-        return await self._send(ctx, "❌ You cannot marry yourself!")
+    async def _marry(self, ctx, author, member):
+        proposer = self.get_user(author.id)
+        target = self.get_user(member.id)
 
-    proposer = self.get_user(author.id)
-    target = self.get_user(member.id)
+        if proposer["married_to"]:
+            return await self._send(ctx, "💍 You are already married!")
+        if target["married_to"]:
+            return await self._send(ctx, "💍 They are already married!")
 
-    if proposer["married_to"]:
-        return await self._send(ctx, "💍 You are already married!")
-    if target["married_to"]:
-        return await self._send(ctx, "💍 They are already married!")
+        view = AcceptDeclineView(author.id, member.id, "marriage proposal")
+        msg = await self._send(ctx, f"💍 {member.mention}, {author.mention} is proposing to you!", view=view)
+        view.message = msg
+        await view.wait()
 
-    view = AcceptDeclineView(author.id, member.id, "marriage proposal")
-    msg = await self._send(ctx, f"💍 {member.mention}, {author.mention} is proposing to you!", view=view)
-    view.message = msg
-    await view.wait()
+        if view.result:
+            proposer["married_to"] = member.id
+            target["married_to"] = author.id
+            self.save()
 
-    if view.result:
-        proposer["married_to"] = member.id
-        target["married_to"] = author.id
-        self.save()
+    async def _adopt(self, ctx, author, member):
+        parent = self.get_user(author.id)
+        child = self.get_user(member.id)
 
+        if len(parent["kids"]) >= 7:
+            return await self._send(ctx, "👼 You already have 7 kids!")
+        if child["parent"]:
+            return await self._send(ctx, "👨 They already have a parent!")
+        if parent["married_to"] == member.id or child["married_to"] == author.id:
+            return await self._send(ctx, "❌ You cannot adopt your spouse!")
 
-async def _adopt(self, ctx, author, member):
-    if author.id == member.id:  # Prevent self-adoption
-        return await self._send(ctx, "❌ You cannot adopt yourself!")
+        view = AcceptDeclineView(author.id, member.id, "adoption request")
+        msg = await self._send(ctx, f"{member.mention}, {author.mention} wants to adopt you!", view=view)
+        view.message = msg
+        await view.wait()
 
-    parent = self.get_user(author.id)
-    child = self.get_user(member.id)
-
-    if len(parent["kids"]) >= 7:
-        return await self._send(ctx, "👼 You already have 7 kids!")
-    if child["parent"]:
-        return await self._send(ctx, "👨 They already have a parent!")
-    if parent["married_to"] == member.id or child["married_to"] == author.id:
-        return await self._send(ctx, "❌ You cannot adopt your spouse!")
-
-    view = AcceptDeclineView(author.id, member.id, "adoption request")
-    msg = await self._send(ctx, f"{member.mention}, {author.mention} wants to adopt you!", view=view)
-    view.message = msg
-    await view.wait()
-
-    if view.result:
-        parent["kids"].append(member.id)
-        child["parent"] = author.id
-        self.save()
+        if view.result:
+            parent["kids"].append(member.id)
+            child["parent"] = author.id
+            self.save()
 
     async def _disown(self, ctx, author):
         parent = self.get_user(author.id)
@@ -216,73 +209,86 @@ async def _adopt(self, ctx, author, member):
         self.save()
         return await self._send(ctx, "😭 You are now divorced.")
 
-async def _family(self, ctx, author, member=None):
-    user = member or author
-    data = self.get_user(user.id)
+    async def _family(self, ctx, author, member=None):
+        user = member or author
+        data = self.get_user(user.id)
 
-    # --- Direct Relationships ---
-    partner = await self.fetch_username(data["married_to"]) if data["married_to"] else "None"
-    parent = await self.fetch_username(data["parent"]) if data["parent"] else "None"
-    kids = "\n".join([await self.fetch_username(kid) for kid in data["kids"]]) if data["kids"] else "None"
+        # Direct relationships
+        partner = await self.fetch_username(data["married_to"]) if data["married_to"] else "None"
+        parent = await self.fetch_username(data["parent"]) if data["parent"] else "None"
+        kids = "\n".join([await self.fetch_username(kid) for kid in data["kids"]]) if data["kids"] else "None"
 
-    # --- Other Parent ---
-    other_parent_id = None
-    other_parent = "None"
-    if data["parent"]:
-        parent_data = self.get_user(data["parent"])
-        if parent_data.get("married_to"):
-            other_parent_id = parent_data["married_to"]
-            other_parent = await self.fetch_username(other_parent_id)
+        # --- Other Parent ---
+        other_parent_id = None
+        other_parent = "None"
+        if data["parent"]:
+            parent_data = self.get_user(data["parent"])
+            if parent_data["married_to"]:
+                other_parent_id = parent_data["married_to"]
+                other_parent = await self.fetch_username(other_parent_id)
 
-    # --- Grandparents ---
-    grandparents = set()
+        # --- Grandparents ---
+        grandparents = set()
 
-    async def add_grandparents(child_id):
-        if not child_id:
-            return
-        child_data = self.get_user(child_id)
-        if child_data.get("parent"):
-            gp1 = await self.fetch_username(child_data["parent"])
-            grandparents.add(gp1)
-            parent_data = self.get_user(child_data["parent"])
-            if parent_data.get("married_to"):
-                gp2 = await self.fetch_username(parent_data["married_to"])
-                grandparents.add(gp2)
+        async def add_both_parents(child_id):
+            if child_id:
+                child_data = self.get_user(child_id)
+                if child_data["parent"]:
+                    gp1 = await self.fetch_username(child_data["parent"])
+                    grandparents.add(gp1)
+                if child_data["parent"]:
+                    parent_data = self.get_user(child_data["parent"])
+                    if parent_data["married_to"]:
+                        gp2 = await self.fetch_username(parent_data["married_to"])
+                        grandparents.add(gp2)
 
-    await add_grandparents(data.get("parent"))
-    await add_grandparents(other_parent_id)
+        if data["parent"]:
+            await add_both_parents(data["parent"])
+        if other_parent_id:
+            await add_both_parents(other_parent_id)
 
-    grandparents_text = "\n".join(sorted(grandparents)) if grandparents else "None"
+        grandparents_text = "\n".join(grandparents) if grandparents else "None"
 
-    # --- Siblings ---
-    siblings_set = set()
+        # --- Brothers / Siblings ---
+        siblings_set = set()
 
-    async def add_siblings(parent_id):
-        if not parent_id:
-            return
-        parent_data = self.get_user(parent_id)
-        for kid_id in parent_data.get("kids", []):
-            if kid_id != user.id:
-                siblings_set.add(await self.fetch_username(kid_id))
+        async def add_siblings(parent_id):
+            if parent_id:
+                parent_data = self.get_user(parent_id)
+                for kid in parent_data["kids"]:
+                    if kid != user.id:
+                        siblings_set.add(await self.fetch_username(kid))
 
-    await add_siblings(data.get("parent"))
-    await add_siblings(other_parent_id)
+        if data["parent"]:
+            await add_siblings(data["parent"])
+        if other_parent_id:
+            await add_siblings(other_parent_id)
 
-    siblings = "\n".join(sorted(siblings_set)) if siblings_set else "None"
+        siblings = "\n".join(siblings_set) if siblings_set else "None"
 
-    # --- Build Embed ---
-    embed = discord.Embed(
-        title=f"{user.display_name}'s Family",
-        color=Embed_Colors["yellow"]
-    )
-    embed.add_field(name="👴 Grandparents", value=grandparents_text, inline=False)
-    embed.add_field(name="💍 Partner", value=partner, inline=False)
-    embed.add_field(name="👨 Parent", value=parent, inline=False)
-    embed.add_field(name="👩 Other Parent", value=other_parent, inline=False)
-    embed.add_field(name="👼 Kids", value=kids, inline=False)
-    embed.add_field(name="👦 Siblings", value=siblings, inline=False)
+        # Build embed
+        embed = discord.Embed(
+            title=f"{user.display_name}'s Family!",
+            color=Embed_Colors["yellow"]
+        )
+        embed.add_field(name="👴 Grandparents", value=grandparents_text, inline=False)
+        embed.add_field(name="💍 Partner", value=partner, inline=False)
+        embed.add_field(name="👨 Parent", value=parent, inline=False)
+        embed.add_field(name="👩 Other Parent", value=other_parent, inline=False)
+        embed.add_field(name="👼 Kids", value=kids, inline=False)
+        embed.add_field(name="👦 Siblings", value=siblings, inline=False)
 
-    await self._send(ctx, embed=embed)
+        await self._send(ctx, embed=embed)
+
+    async def _send(self, ctx, content=None, *, embed=None, view=None, ephemeral=False):
+        """Helper: works for both Context and Interaction"""
+        if isinstance(ctx, commands.Context):
+            return await ctx.send(content, embed=embed, view=view)
+        else:
+            if ctx.response.is_done():
+                return await ctx.followup.send(content, embed=embed, view=view, ephemeral=ephemeral)
+            else:
+                return await ctx.response.send_message(content, embed=embed, view=view, ephemeral=ephemeral)
 
 
     # ================= Force Marry =================
@@ -436,15 +442,11 @@ async def _family(self, ctx, author, member=None):
     @commands.command(name="marry")
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def marry_prefix(self, ctx, member: discord.User):
-        if member.id == ctx.author.id:
-            return await self._send(ctx, "❌ You cannot marry yourself!")
         await self._marry(ctx, ctx.author, member)
 
     @commands.command(name="adopt")
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def adopt_prefix(self, ctx, member: discord.User):
-        if member.id == ctx.author.id:
-            return await self._send(ctx, "❌ You cannot adopt yourself!")
         await self._adopt(ctx, ctx.author, member)
 
     @commands.command(name="disown")
@@ -465,7 +467,6 @@ async def _family(self, ctx, author, member=None):
     @commands.command(name="family")
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def family_prefix(self, ctx, member: discord.User = None):
-        member = member or ctx.author  # default to author if no member is provided
         await self._family(ctx, ctx.author, member)
 
     # ---------- Error handler for cooldown ----------
