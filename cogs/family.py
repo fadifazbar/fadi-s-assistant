@@ -436,11 +436,15 @@ async def _family(self, ctx, author, member=None):
     @commands.command(name="marry")
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def marry_prefix(self, ctx, member: discord.User):
+        if member.id == ctx.author.id:
+            return await self._send(ctx, "❌ You cannot marry yourself!")
         await self._marry(ctx, ctx.author, member)
 
     @commands.command(name="adopt")
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def adopt_prefix(self, ctx, member: discord.User):
+        if member.id == ctx.author.id:
+            return await self._send(ctx, "❌ You cannot adopt yourself!")
         await self._adopt(ctx, ctx.author, member)
 
     @commands.command(name="disown")
@@ -458,12 +462,11 @@ async def _family(self, ctx, author, member=None):
     async def divorce_prefix(self, ctx):
         await self._divorce(ctx, ctx.author)
 
-@commands.command(name="family")
-@commands.cooldown(1, 5, commands.BucketType.user)
-async def family_prefix(self, ctx, member: discord.User = None):
-    if member is None:
-        member = ctx.author  # default to author if no member is provided
-    await self._family(ctx, ctx.author, member)
+    @commands.command(name="family")
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def family_prefix(self, ctx, member: discord.User = None):
+        member = member or ctx.author  # default to author if no member is provided
+        await self._family(ctx, ctx.author, member)
 
     # ---------- Error handler for cooldown ----------
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
