@@ -81,26 +81,24 @@ async def _extract(query: str, *, flat: bool = False):
     ydl = _flat_ytdl if flat else _ytdl
     return await asyncio.to_thread(lambda: ydl.extract_info(query, download=False))
 
-async def _fresh_stream_url(webpage_url: str, *, max_tries: int = 2) -> Optional[str]:
-    """Re-extract the stream URL right before playback to avoid expiry/cutoffs."""
-    last_error = None
+async def _fresh_stream_url(webpage_url: str, *, max_tries: int = 3) -> Optional[str]:
+    """Re-extract the stream URL before playback to avoid expiry/cutoffs."""
     for _ in range(max_tries):
         try:
             info = await _extract(webpage_url, flat=False)
             if not info:
-                return None
+                continue
             if "entries" in info:
-                info = info["entries"][0]
-            url = info.get("url")
-            if url:
+                info = info["entries"][0]  # in case of a playlist
+            # Prefer direct audio URL
+            if url := info.get("url"):
                 return url
-            # Fallback: pick first audio-capable format
-            for fmt in (info.get("formats") or []):
+            # fallback: pick first audio-capable format
+            for fmt in info.get("formats") or []:
                 if fmt.get("acodec") not in (None, "none") and fmt.get("url"):
                     return fmt["url"]
-        except Exception as e:
-            last_error = e
-            await asyncio.sleep(0.3)
+        except Exception:
+            await asyncio.sleep(0.5)
     return None
 
 # ==============
@@ -127,34 +125,32 @@ def _progress_bar(elapsed: int, total: Optional[int], width: int = 18) -> str:
     return ("⬛" * max(filled - 1, 0)) + "🟥" + ("⬛" * (width - filled))
 
 def _entry_to_track(entry: dict, requester) -> Optional[Track]:
+    """Convert a yt-dlp entry into a Track object, skipping unplayable entries."""
     if not entry:
         return None
+
     title = entry.get("title")
-    if title in (None, "[Deleted video]", "[Private video]"):
-        return None
-    if entry.get("availability") in ("private", "needs_auth"):
-        return None
-    live_status = entry.get("live_status")
-    if live_status in ("is_live", "is_upcoming"):
+    if not title or title in ("[Deleted video]", "[Private video]"):
         return None
 
-    webpage_url = entry.get("webpage_url")
-    if not webpage_url:
-        vid_id = entry.get("id")
-        if vid_id:
-            webpage_url = f"https://www.youtube.com/watch?v={vid_id}"
-        else:
-            webpage_url = entry.get("url")
+    # Skip videos that are private, require auth, or are live/upcoming
+    if entry.get("availability") in ("private", "needs_auth"):
+        return None
+    if entry.get("live_status") in ("is_live", "is_upcoming"):
+        return None
+
+    # Resolve a usable URL
+    webpage_url = entry.get("webpage_url") or (f"https://www.youtube.com/watch?v={entry.get('id')}" if entry.get("id") else entry.get("url"))
     if not webpage_url:
         return None
 
     return Track(
-        title=title or "Unknown Title",
+        title=title,
         webpage_url=webpage_url,
         duration=entry.get("duration"),
         thumbnail=entry.get("thumbnail"),
         requester=requester,
-        uploader=entry.get("uploader") or entry.get("channel"),
+        uploader=entry.get("uploader") or entry.get("channel")
     )
 
 # ==============
