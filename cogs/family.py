@@ -471,7 +471,7 @@ async def _adopt(self, ctx, author, member):
     async def divorce_prefix(self, ctx):
         await self._divorce(ctx, ctx.author)
 
-    @commands.command(name="family")
+@commands.command(name="family")
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def family_prefix(self, ctx, member: discord.User = None):
     if member is None:
