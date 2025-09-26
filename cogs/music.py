@@ -365,56 +365,76 @@ class Music(commands.Cog):
         await self._start_if_idle(guild, channel)
 
     # ------------- play/queue logic -------------
-    async def _handle_play(self, guild: discord.Guild, text_channel: discord.abc.Messageable, requester, query: str):
-        try_single_search = not _looks_like_url(query)
-        use_flat_playlist = _is_youtube_playlist_url(query)
+    async def _handle_play(
+    self,
+    guild: discord.Guild,
+    text_channel: discord.abc.Messageable,
+    requester,
+    query: str
+):
+    """Handle play logic: search, extract info, build tracks, and start playback."""
+    try_single_search = not _looks_like_url(query)
+    use_flat_playlist = _is_youtube_playlist_url(query)
 
-        try:
-            if try_single_search:
-                info = await _extract(f"ytsearch1:{query}", flat=False)
-            else:
-                info = await _extract(query, flat=use_flat_playlist)
-        except Exception as e:
-            await text_channel.send(f"❌ Error: `{e}`")
-            return
-
-        if not info:
-            await text_channel.send("❌ No results.")
-            return
-
-        tracks_to_add: List[Track] = []
-
-        if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist" and "search" in (info.get("extractor_key", "")).lower():
-            entries = (info.get("entries") or [])[:1]
-            for entry in entries:
-                t = _entry_to_track(entry, requester)
-                if t:
-                    tracks_to_add.append(t)
-        elif "entries" in info:
-            for entry in info.get("entries") or []:
-                t = _entry_to_track(entry, requester)
-                if t:
-                    tracks_to_add.append(t)
+    # Extract metadata from yt-dlp
+    try:
+        if try_single_search:
+            info = await _extract(f"ytsearch1:{query}", flat=False)  # take first search result
         else:
-            t = _entry_to_track(info, requester)
-            if t:
-                tracks_to_add.append(t)
+            info = await _extract(query, flat=use_flat_playlist)
+    except Exception as e:
+        await text_channel.send(f"❌ Error while extracting: `{e}`")
+        return
 
-        if not tracks_to_add:
-            await text_channel.send("⚠️ No playable videos found (deleted/private/unavailable).")
-            return
+    if not info:
+        await text_channel.send("❌ No results found.")
+        return
 
-        q = self._queue(guild.id)
-        start_len = len(q)
-        q.extend(tracks_to_add)
+    tracks_to_add: List[Track] = []
 
-        if len(tracks_to_add) == 1:
-            await self._announce_added(text_channel, tracks_to_add[0], start_len + 1)
-        else:
-            title = info.get("title") or "playlist"
-            await text_channel.send(f"📑 Added **{len(tracks_to_add)}** tracks from **{title}**.")
+    # Playlist search (ytsearch "playlist" bug workaround → only 1 entry)
+    if (
+        not try_single_search
+        and isinstance(info, dict)
+        and info.get("_type") == "playlist"
+        and "search" in (info.get("extractor_key") or "").lower()
+    ):
+        for entry in (info.get("entries") or [])[:1]:
+            track = _entry_to_track(entry, requester)
+            if track:
+                tracks_to_add.append(track)
 
-        await self._start_if_idle(guild, text_channel)
+    # Normal playlist or multiple entries
+    elif "entries" in info:
+        for entry in info.get("entries") or []:
+            track = _entry_to_track(entry, requester)
+            if track:
+                tracks_to_add.append(track)
+
+    # Single video
+    else:
+        track = _entry_to_track(info, requester)
+        if track:
+            tracks_to_add.append(track)
+
+    if not tracks_to_add:
+        await text_channel.send("⚠️ No playable videos found (deleted/private/unavailable).")
+        return
+
+    # Add to queue
+    queue = self._queue(guild.id)
+    start_len = len(queue)
+    queue.extend(tracks_to_add)
+
+    # Announce added
+    if len(tracks_to_add) == 1:
+        await self._announce_added(text_channel, tracks_to_add[0], start_len + 1)
+    else:
+        title = info.get("title") or "playlist"
+        await text_channel.send(f"📑 Added **{len(tracks_to_add)}** tracks from **{title}**.")
+
+    # Start playback if idle
+    await self._start_if_idle(guild, text_channel)
 
     # =========================
     # PREFIX COMMANDS (classic)
