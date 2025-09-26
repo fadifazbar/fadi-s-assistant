@@ -5,7 +5,7 @@ import json
 import os
 import re
 
-CONFIG_FILE = "welcome_config.json"
+CONFIG_FILE = "/data/welcome_config.json"
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".gif")
 
 
