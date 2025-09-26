@@ -228,20 +228,27 @@ class Family(commands.Cog):
                 other_parent = await self.fetch_username(other_parent_id)
 
         # --- Grandparents ---
-        grandparents = set()  # use set to avoid duplicates
+        grandparents = set()
 
-        async def add_grandparents(parent_id):
-            if parent_id:
-                parent_data = self.get_user(parent_id)
-                if parent_data["parent"]:
-                    gp = await self.fetch_username(parent_data["parent"])
-                    grandparents.add(gp)
+        async def add_both_parents(child_id):
+            if child_id:
+                child_data = self.get_user(child_id)
+                # Add the child's parent
+                if child_data["parent"]:
+                    gp1 = await self.fetch_username(child_data["parent"])
+                    grandparents.add(gp1)
+                # Add the partner of the child's parent (other grandparent)
+                if child_data["parent"]:
+                    parent_data = self.get_user(child_data["parent"])
+                    if parent_data["married_to"]:
+                        gp2 = await self.fetch_username(parent_data["married_to"])
+                        grandparents.add(gp2)
 
-        # Collect from both parent and other parent (but no double-fetch)
+        # Collect from both parent and other parent
         if data["parent"]:
-            await add_grandparents(data["parent"])
+            await add_both_parents(data["parent"])
         if other_parent_id:
-            await add_grandparents(other_parent_id)
+            await add_both_parents(other_parent_id)
 
         grandparents_text = "\n".join(grandparents) if grandparents else "None"
 
