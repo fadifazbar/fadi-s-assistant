@@ -363,7 +363,7 @@ class Music(commands.Cog):
         await channel.send(embed=embed)
 
     # ------------- playback core -------------
-    async def _start_if_idle(self, guild: discord.Guild, channel: discord.abc.Messageable):
+async def _start_if_idle(self, guild: discord.Guild, channel: discord.abc.Messageable):
     async with self._lock(guild.id):
         vc = guild.voice_client
         if not vc or vc.is_playing() or vc.is_paused():
