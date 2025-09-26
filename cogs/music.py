@@ -480,10 +480,19 @@ class Music(commands.Cog):
     # =====================
     # SLASH COMMANDS (/) 🎯
     # =====================
-    @app_commands.command(name="play", description="Play a music through discord voice chat") @app_commands.describe(query="YouTube URL or search terms")
+    @app_commands.command(
+        name="play",
+        description="Play music through discord voice chat"
+    )
+    @app_commands.describe(
+        query="YouTube URL or search terms"
+    )
     async def play_slash(self, interaction: discord.Interaction, query: str):
         if not interaction.user or not isinstance(interaction.user, discord.Member) or not interaction.user.voice or not interaction.user.voice.channel:
-            return await interaction.response.send_message("❌ You must be in a voice channel.", ephemeral=True)
+            return await interaction.response.send_message(
+                "❌ You must be in a voice channel.",
+                ephemeral=True
+            )
         await interaction.response.defer(thinking=True)
         await self._ensure_voice(interaction.guild, interaction.user.voice.channel)
         await self._handle_play(interaction.guild, interaction.channel, interaction.user, query)
