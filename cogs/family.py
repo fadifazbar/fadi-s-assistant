@@ -5,6 +5,19 @@ import asyncio
 import json
 import os
 
+Embed_Colors = {
+    "red": discord.Color(0xFF0000),
+    "orange": discord.Color(0xFF6A00),
+    "yellow": discord.Color(0xFFEA00),
+    "green": discord.Color(0x2FFF00),
+    "darkgreen": discord.Color(0x126300),
+    "cyan": discord.Color(0x00F2FF),
+    "blue": discord.Color(0x009DFF),
+    "darkblue": discord.Color(0x1100FF),
+    "purple": discord.Color(0x9900FF),
+    "pink": discord.Color(0xFF00A6)
+}
+
 DATA_FILE = "/data/family.json"
 
 def load_data():
@@ -171,7 +184,7 @@ class Family(commands.Cog):
             return await self._send(ctx, "❌ You don’t have any kids!")
 
         view = DisownView(self, author.id, parent["kids"])
-        embed = discord.Embed(title="😭 Disown a Child", description="Choose a kid to disown", color=discord.Color.red())
+        embed = discord.Embed(title="😭 Disown a Child", description="Choose a kid to disown", color=Embed_Colors["red"])
         await self._send(ctx, embed=embed, view=view)
 
     async def _runaway(self, ctx, author):
@@ -242,7 +255,7 @@ class Family(commands.Cog):
         # Build embed
         embed = discord.Embed(
             title=f"{user.display_name}'s Family!",
-            color=discord.Color.blurple()
+            color=Embed_Colors["purple"]
         )
         embed.add_field(name="👴 Grandparents", value=grandparents_text, inline=False)
         embed.add_field(name="💍 Partner", value=partner, inline=False)
