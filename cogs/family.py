@@ -139,44 +139,51 @@ class Family(commands.Cog):
 
     # ---------- Shared logic ----------
     async def _marry(self, ctx, author, member):
-        proposer = self.get_user(author.id)
-        target = self.get_user(member.id)
+    if author.id == member.id:  # Prevent self-marriage
+        return await self._send(ctx, "❌ You cannot marry yourself!")
 
-        if proposer["married_to"]:
-            return await self._send(ctx, "💍 You are already married!")
-        if target["married_to"]:
-            return await self._send(ctx, "💍 They are already married!")
+    proposer = self.get_user(author.id)
+    target = self.get_user(member.id)
 
-        view = AcceptDeclineView(author.id, member.id, "marriage proposal")
-        msg = await self._send(ctx, f"💍 {member.mention}, {author.mention} is proposing to you!", view=view)
-        view.message = msg
-        await view.wait()
+    if proposer["married_to"]:
+        return await self._send(ctx, "💍 You are already married!")
+    if target["married_to"]:
+        return await self._send(ctx, "💍 They are already married!")
 
-        if view.result:
-            proposer["married_to"] = member.id
-            target["married_to"] = author.id
-            self.save()
+    view = AcceptDeclineView(author.id, member.id, "marriage proposal")
+    msg = await self._send(ctx, f"💍 {member.mention}, {author.mention} is proposing to you!", view=view)
+    view.message = msg
+    await view.wait()
 
-    async def _adopt(self, ctx, author, member):
-        parent = self.get_user(author.id)
-        child = self.get_user(member.id)
+    if view.result:
+        proposer["married_to"] = member.id
+        target["married_to"] = author.id
+        self.save()
 
-        if len(parent["kids"]) >= 7:
-            return await self._send(ctx, "👼 You already have 7 kids!")
-        if child["parent"]:
-            return await self._send(ctx, "👨 They already have a parent!")
-        if parent["married_to"] == member.id or child["married_to"] == author.id:
-            return await self._send(ctx, "❌ You cannot adopt your spouse!")
 
-        view = AcceptDeclineView(author.id, member.id, "adoption request")
-        msg = await self._send(ctx, f"{member.mention}, {author.mention} wants to adopt you!", view=view)
-        view.message = msg
-        await view.wait()
+async def _adopt(self, ctx, author, member):
+    if author.id == member.id:  # Prevent self-adoption
+        return await self._send(ctx, "❌ You cannot adopt yourself!")
 
-        if view.result:
-            parent["kids"].append(member.id)
-            child["parent"] = author.id
-            self.save()
+    parent = self.get_user(author.id)
+    child = self.get_user(member.id)
+
+    if len(parent["kids"]) >= 7:
+        return await self._send(ctx, "👼 You already have 7 kids!")
+    if child["parent"]:
+        return await self._send(ctx, "👨 They already have a parent!")
+    if parent["married_to"] == member.id or child["married_to"] == author.id:
+        return await self._send(ctx, "❌ You cannot adopt your spouse!")
+
+    view = AcceptDeclineView(author.id, member.id, "adoption request")
+    msg = await self._send(ctx, f"{member.mention}, {author.mention} wants to adopt you!", view=view)
+    view.message = msg
+    await view.wait()
+
+    if view.result:
+        parent["kids"].append(member.id)
+        child["parent"] = author.id
+        self.save()
 
     async def _disown(self, ctx, author):
         parent = self.get_user(author.id)
