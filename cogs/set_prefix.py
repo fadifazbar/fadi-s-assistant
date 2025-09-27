@@ -6,6 +6,7 @@ import discord
 import datetime
 import json
 import os
+import asyncio
 
 # JSON log file
 LOG_FILE = "/data/prefix_logs.json"
@@ -36,7 +37,7 @@ def log_prefix_change(guild_id, user, old_prefix, new_prefix):
 
 
 class Prefix(commands.Cog):
-    """Manage server prefixes for both prefix and slash commands"""
+    """Manage server prefixes for both prefix and slash commands with custom status"""
 
     def __init__(self, bot):
         self.bot = bot
@@ -49,17 +50,14 @@ class Prefix(commands.Cog):
     async def setprefix_prefix(self, ctx, new_prefix):
         old_prefix = Config.get_prefix(ctx.guild.id)
         Config.set_prefix(ctx.guild.id, new_prefix)
-
-        # Send confirmation
         await ctx.send(f"✅ Prefix changed from `{old_prefix}` to `{new_prefix}`.")
 
-        # Immediately update bot presence
+        # Immediately update the bot's custom status
         await self.bot.change_presence(
             activity=discord.Activity(
-                type=discord.ActivityType.watching,
-                name=f"🤩 Use {new_prefix}help | {ctx.guild.name}"
-            ),
-            status=discord.Status.online
+                type=discord.ActivityType.custom,
+                name=f"🤩 Use {new_prefix}help | Moderation And Fun Bot :p"
+            )
         )
 
         # Logging
@@ -85,18 +83,16 @@ class Prefix(commands.Cog):
         old_prefix = Config.get_prefix(interaction.guild.id)
         Config.set_prefix(interaction.guild.id, new_prefix)
 
-        # Respond to user
         await interaction.response.send_message(
             f"✅ Prefix changed from `{old_prefix}` to `{new_prefix}`."
         )
 
-        # Immediately update bot presence
+        # Immediately update the bot's custom status
         await self.bot.change_presence(
             activity=discord.Activity(
-                type=discord.ActivityType.watching,
-                name=f"🤩 Use {new_prefix}help | {interaction.guild.name}"
-            ),
-            status=discord.Status.online
+                type=discord.ActivityType.custom,
+                name=f"🤩 Use {new_prefix}help | Moderation And Fun Bot :p"
+            )
         )
 
         # Logging
