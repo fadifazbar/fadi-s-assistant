@@ -82,7 +82,7 @@ class General(commands.Cog):
         embed = self.make_meter_embed(ctx, member, "Gay")
         await ctx.send(embed=embed)
 
-    @commands.command(name="freakymeter", aliases=["fm"])
+    @commands.command(name="freakymeter", aliases=["frm"])
     async def freakymeter_cmd(self, ctx, member: discord.Member):
         embed = self.make_meter_embed(ctx, member, "Freaky")
         await ctx.send(embed=embed)
