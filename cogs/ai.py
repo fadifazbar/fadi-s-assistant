@@ -10,7 +10,7 @@ import time
 # CONFIG
 # ==========================
 openai.api_key = os.getenv("OPENAI_API_KEY")  # Railway secret
-MEMORY_FILE = "chat_memory.json"
+MEMORY_FILE = "/data/chat_memory.json"
 IMPORTANT_MEMORY_DURATION = 3 * 60 * 60  # 3 hours
 
 # ==========================
