@@ -7,7 +7,7 @@ import re
 
 CONFIG_FILE = "/data/welcome_config.json"
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".gif")
-QUESTION_COLOR = 0x2F3136
+QUESTION_COLOR = 0xB87AFF
 ERROR_COLOR = 0xFF0000
 SUCCESS_COLOR = 0x00FF00
 
@@ -211,105 +211,161 @@ class WelcomeLeave(commands.Cog):
     # WIZARD
     # ======================
     async def start_setup(self, user: discord.User, guild: discord.Guild, event_type: str):
-        try:
-            dm = await user.create_dm()
-            await dm.send(embed=discord.Embed(title="⚙️ Setup Wizard", description=f"Let's configure **{event_type}** messages for `{guild.name}`!", color=QUESTION_COLOR))
+    try:
+        dm = await user.create_dm()
+        await dm.send(embed=discord.Embed(
+            title="⚙️ Setup Wizard",
+            description=f"Let's configure **{event_type}** messages for `{guild.name}`!",
+            color=QUESTION_COLOR
+        ))
 
-            data = {}
+        data = {}
 
-            # Steps
-            steps = []
+        # Steps list
+        steps = [
+            {"name": "Channel", "key": "channel_id", "prompt": "Provide the **Channel ID** where messages should be sent.", "allow_skip": False, "can_back": False, "image": False},
+            {"name": "Mode", "key": "mode", "prompt": "Do you want messages to be `text` or `embed`?", "allow_skip": False, "can_back": True, "image": False}
+        ]
 
-            # Step 1: Channel (cannot skip/back)
-            steps.append({"name": "Channel", "key": "channel_id", "prompt": "Provide the **Channel ID** where messages should be sent.", "allow_skip": False, "can_back": False, "image": False})
+        index = 0
+        while index < len(steps):
+            step = steps[index]
+            answer = await self.ask_input(
+                dm,
+                user,
+                title=step["name"],
+                description=step["prompt"],
+                allow_skip=step["allow_skip"],
+                image=step["image"]
+            )
 
-            # Step 2: Mode (can back, cannot skip)
-            steps.append({"name": "Mode", "key": "mode", "prompt": "Do you want messages to be `text` or `embed`?", "allow_skip": False, "can_back": True, "image": False})
+            if answer == "back":
+                if step.get("can_back") and index > 0:
+                    index -= 1
+                    continue
+                else:
+                    await dm.send(embed=discord.Embed(
+                        description="❌ Cannot go back from this step.",
+                        color=ERROR_COLOR
+                    ))
+                    continue
 
-            index = 0
-            while index < len(steps):
-                step = steps[index]
-                answer = await self.ask_input(dm, user, step["name"], step["prompt"], allow_skip=step["allow_skip"], image=step["image"])
-                if answer == "back":
-                    if step.get("can_back") and index > 0:
-                        index -= 1
+            if step["key"] == "channel_id":
+                try:
+                    ch_id = int(answer)
+                    ch_obj = guild.get_channel(ch_id)
+                    if not ch_obj:
+                        await dm.send(embed=discord.Embed(
+                            description="❌ Invalid channel ID.",
+                            color=ERROR_COLOR
+                        ))
                         continue
-                    else:
-                        await dm.send(embed=discord.Embed(description="❌ Cannot go back from this step.", color=ERROR_COLOR))
-                        continue
-                if step["key"] == "channel_id":
-                    try:
-                        ch_id = int(answer)
-                        ch_obj = guild.get_channel(ch_id)
-                        if not ch_obj:
-                            await dm.send(embed=discord.Embed(description="❌ Invalid channel ID.", color=ERROR_COLOR))
-                        continue
+                    answer = ch_id
+                except ValueError:
+                    await dm.send(embed=discord.Embed(
+                        description="❌ Invalid channel ID.",
+                        color=ERROR_COLOR
+                    ))
+                    continue
 
-                if step["key"] == "mode":
-                    mode = answer.lower()
-                    if mode not in ["text", "embed"]:
-                        await dm.send(embed=discord.Embed(description="❌ Invalid mode. Choose `text` or `embed`.", color=ERROR_COLOR))
-                        continue
-                    answer = mode
+            elif step["key"] == "mode":
+                mode = answer.lower()
+                if mode not in ["text", "embed"]:
+                    await dm.send(embed=discord.Embed(
+                        description="❌ Invalid mode. Choose `text` or `embed`.",
+                        color=ERROR_COLOR
+                    ))
+                    continue
+                answer = mode
 
-                data[step["key"]] = answer
-                index += 1
+            data[step["key"]] = answer
+            index += 1
 
-            # Now handle remaining steps based on mode
-            if data["mode"] == "text":
-                # Text message
-                text_msg = await self.ask_input(dm, user, "Text Message", "Enter the text message for the join/leave event.", allow_skip=True, placeholders="{mention}, {user}, {server}, {count}")
-                if text_msg != "back":
-                    data["text"] = text_msg
+        # Remaining steps based on mode
+        if data["mode"] == "text":
+            # Text message
+            text_msg = await self.ask_input(
+                dm,
+                user,
+                "Text Message",
+                "Enter the text message for the join/leave event.",
+                allow_skip=True,
+                placeholders="{mention}, {user}, {server}, {count}"
+            )
+            if text_msg != "back":
+                data["text"] = text_msg
 
-                # Optional image
-                img_msg = await self.ask_input(dm, user, "Image (optional)", "Upload or paste an image URL for the text message.", allow_skip=True, image=True, placeholders="{member_pfp}, {server_icon}")
-                if img_msg != "back":
-                    data["image_url"] = img_msg
+            # Optional image
+            img_msg = await self.ask_input(
+                dm,
+                user,
+                "Image (optional)",
+                "Upload or paste an image URL for the text message.",
+                allow_skip=True,
+                image=True,
+                placeholders="{member_pfp}, {server_icon}"
+            )
+            if img_msg != "back":
+                data["image_url"] = img_msg
 
-            else:  # Embed mode
-                embed_fields = [
-                    ("title", "Embed Title", False),
-                    ("description", "Embed Description", True),
-                    ("color", "Embed Color (HEX like #00ff00)", True),
-                    ("image_url", "Embed Image (bottom)", True),
-                    ("thumbnail_url", "Embed Thumbnail (top-right)", True),
-                    ("icon_url", "Embed Author Icon", True),
-                    ("footer_text", "Embed Footer Text", True),
-                    ("footer_icon", "Embed Footer Icon", True)
-                ]
-                for key, label, allow_skip in embed_fields:
-                    while True:
-                        answer = await self.ask_input(dm, user, label, f"Enter {label}.", allow_skip=allow_skip, placeholders="{member_pfp}, {server_icon}" if "url" in key or "icon" in key else "{mention}, {user}, {server}, {count}", image=("url" in key or "icon" in key))
-                        if answer == "back":
-                            break  # Go back to previous field
-                        if key == "color" and answer:
-                            color_val = answer.replace("#", "0x") if answer.startswith("#") else answer
-                            try:
-                                int(color_val, 16)
-                                data[key] = color_val
-                                break
-                            except ValueError:
-                                await dm.send(embed=discord.Embed(description="❌ Invalid HEX color. Example: #00ff00", color=ERROR_COLOR))
-                                continue
-                        else:
-                            data[key] = answer
+        else:  # Embed mode
+            embed_fields = [
+                ("title", "Embed Title", False),
+                ("description", "Embed Description", True),
+                ("color", "Embed Color (HEX like #00ff00)", True),
+                ("image_url", "Embed Image (bottom)", True),
+                ("thumbnail_url", "Embed Thumbnail (top-right)", True),
+                ("icon_url", "Embed Author Icon", True),
+                ("footer_text", "Embed Footer Text", True),
+                ("footer_icon", "Embed Footer Icon", True)
+            ]
+
+            for key, label, allow_skip in embed_fields:
+                while True:
+                    answer = await self.ask_input(
+                        dm,
+                        user,
+                        label,
+                        f"Enter {label}.",
+                        allow_skip=allow_skip,
+                        placeholders="{member_pfp}, {server_icon}" if "url" in key or "icon" in key else "{mention}, {user}, {server}, {count}",
+                        image=("url" in key or "icon" in key)
+                    )
+                    if answer == "back":
+                        break  # Go back to previous field
+                    if key == "color" and answer:
+                        color_val = answer.replace("#", "0x") if answer.startswith("#") else answer
+                        try:
+                            int(color_val, 16)
+                            data[key] = color_val
                             break
+                        except ValueError:
+                            await dm.send(embed=discord.Embed(
+                                description="❌ Invalid HEX color. Example: #00ff00",
+                                color=ERROR_COLOR
+                            ))
+                            continue
+                    else:
+                        data[key] = answer
+                        break
 
-            # Save configuration
-            cfg = load_config()
-            gid = str(guild.id)
-            cfg.setdefault(gid, {})
-            cfg[gid][event_type] = data
-            save_config(cfg)
+        # Save configuration
+        cfg = load_config()
+        gid = str(guild.id)
+        cfg.setdefault(gid, {})
+        cfg[gid][event_type] = data
+        save_config(cfg)
 
-            await dm.send(embed=discord.Embed(description=f"✅ Setup complete for **{event_type}** messages in <#{data['channel_id']}>!", color=SUCCESS_COLOR))
+        await dm.send(embed=discord.Embed(
+            description=f"✅ Setup complete for **{event_type}** messages in <#{data['channel_id']}>!",
+            color=SUCCESS_COLOR
+        ))
 
-        except discord.Forbidden:
-            try:
-                await user.send("❌ I couldn't DM you. Please enable DMs and try again.")
-            except:
-                pass
+    except discord.Forbidden:
+        try:
+            await user.send("❌ I couldn't DM you. Please enable DMs and try again.")
+        except:
+            pass
 
 
 async def setup(bot):
