@@ -182,7 +182,7 @@ class General(commands.Cog):
         percent = random.randint(0, 100)
         embed = discord.Embed(
             title="🔥 Aura Meter",
-            description=f"🔥 {member.mention} is **{percent}% Aura**",
+            description=f"🔥 {member.mention} has **{percent}% Aura**",
             color=discord.Color.random()
         )
         embed.set_thumbnail(url=member.display_avatar.url)
@@ -315,7 +315,7 @@ class General(commands.Cog):
         percent = random.randint(0, 100)
         embed = discord.Embed(
             title="🔥 Aura Meter",
-            description=f"🔥 {member.mention} is **{percent}% Aura**",
+            description=f"🔥 {member.mention} has **{percent}% Aura**",
             color=discord.Color.random()
         )
         embed.set_thumbnail(url=member.display_avatar.url)
