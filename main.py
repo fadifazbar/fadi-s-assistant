@@ -20,17 +20,8 @@ class ModBot(commands.Bot):
         intents.moderation = True
         intents.presences = True
 
-        # Load prefixes into memory at startup
-        Config.load_prefixes()
-
-        # Dynamic prefix function
-        def dynamic_prefix(bot, message):
-            if not message.guild:
-                return Config.DEFAULT_PREFIX  # fallback for DMs
-            return Config.get_prefix(message.guild.id)
-
         super().__init__(
-            command_prefix=dynamic_prefix,
+            command_prefix=Config.PREFIX,
             intents=intents,
             help_command=None,
             case_insensitive=True
@@ -56,7 +47,6 @@ class ModBot(commands.Bot):
         await self.load_extension("cogs.family")
         await self.load_extension("cogs.remindme")
         await self.load_extension("cogs.welcome")
-
 
         logger.info("✅ Loaded cogs (slash commands will now auto-sync)")
 
