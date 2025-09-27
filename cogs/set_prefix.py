@@ -1,6 +1,6 @@
 # cogs/prefix.py
 from discord.ext import commands
-from discord import app_commands
+from discord import app_commands, Interaction
 from config import Config
 import discord
 import datetime
