@@ -210,7 +210,7 @@ class WelcomeLeave(commands.Cog):
     # ======================
     # WIZARD
     # ======================
-    async def start_setup(self, user: discord.User, guild: discord.Guild, event_type: str):
+async def start_setup(self, user: discord.User, guild: discord.Guild, event_type: str):
     try:
         dm = await user.create_dm()
         await dm.send(embed=discord.Embed(
