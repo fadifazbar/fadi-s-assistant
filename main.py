@@ -60,7 +60,7 @@ class ModBot(commands.Bot):
         logger.info(f"📊 Serving {len(self.guilds)} guilds")
 
         await self.change_presence(
-            activity=discord.CustomActivity(name=f"{ASS_EMOJI} Use {PREFIX}help | Moderation And Fun Bot :p"),
+            activity=discord.CustomActivity(name=f"{ASS_EMOJI} Use {command_prefix}help | Moderation And Fun Bot :p"),
             status=discord.Status.online
         )
 
