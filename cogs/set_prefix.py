@@ -6,7 +6,7 @@ import discord
 import datetime
 import json
 
-LOG_FILE = "prefix_logs.json"
+LOG_FILE = "/data/prefix_logs.json"
 
 def log_prefix_change(guild_id, user, old_prefix, new_prefix):
     """Store prefix change in JSON file."""
