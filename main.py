@@ -5,6 +5,8 @@ import logging
 from config import Config
 from utils.logging_config import setup_logging
 
+ASS_EMOJI = "<:Assistant:1421595232893669488>"
+
 # Setup logging
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -69,7 +71,7 @@ class ModBot(commands.Bot):
         logger.info(f"📊 Serving {len(self.guilds)} guilds")
 
         await self.change_presence(
-            activity=discord.CustomActivity(name="🤩 Use {DEFAULT_PREFIX}help | Moderation And Fun Bot :p"),
+            activity=discord.CustomActivity(name="Use {PREFIX}help | Moderation And Fun Bot :p", emoji=f"{ASS_EMOJI}"),
             status=discord.Status.online
         )
 
