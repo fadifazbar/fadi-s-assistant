@@ -18,21 +18,25 @@ NP_EMOJI = "<a:music_note:1408941536044908684>"
 # ======================
 YTDL_BASE = {
     "format": "bestaudio/best",
-    "noplaylist": False,
+    "noplaylist": False,  # prevent grabbing full playlists
     "quiet": True,
     "no_warnings": True,
-    "default_search": "auto",
+    "default_search": "auto",  # so users can type song names
     "source_address": "0.0.0.0",
     "retries": 5,
     "skip_unavailable_fragments": True,
     "ignoreerrors": True,
-    "cookiefile": "cookies.txt",
+    "cookiefile": "cookies.txt",  # must be Netscape format
     "cachedir": False,
+    # remove extractor_args entirely
 }
 
+# Main YDL (full extraction)
 _ytdl = yt_dlp.YoutubeDL(YTDL_BASE)
+# Flat extractor for fast playlist enumeration
 _flat_ytdl = yt_dlp.YoutubeDL({**YTDL_BASE, "extract_flat": "in_playlist"})
 
+# FFMPEG flags (keep long songs stable)
 FFMPEG_OPTS = {
     "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
     "options": "-vn",
@@ -42,7 +46,7 @@ FFMPEG_OPTS = {
 # Track DTO
 # =========
 class Track:
-    __slots__ = ("title", "webpage_url", "duration", "thumbnail", "requester", "uploader", "source_url")
+    __slots__ = ("title", "webpage_url", "duration", "thumbnail", "requester", "uploader")
 
     def __init__(
         self,
@@ -60,7 +64,6 @@ class Track:
         self.thumbnail = thumbnail
         self.requester = requester
         self.uploader = uploader
-        self.source_url: Optional[str] = None
 
     def pretty_duration(self) -> str:
         if self.duration is None:
@@ -69,13 +72,40 @@ class Track:
         h, m = divmod(m, 60)
         return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
+# ======================
+# yt-dlp helper routines
+# ======================
+async def _extract(query: str, *, flat: bool = False):
+    # Offload to thread for snappier event loop
+    ydl = _flat_ytdl if flat else _ytdl
+    return await asyncio.to_thread(lambda: ydl.extract_info(query, download=False))
 
-# ======================
-# yt-dlp helpers
-# ======================
+async def _fresh_stream_url(webpage_url: str, *, max_tries: int = 2) -> Optional[str]:
+    """Re-extract the stream URL right before playback to avoid expiry/cutoffs."""
+    last_error = None
+    for _ in range(max_tries):
+        try:
+            info = await _extract(webpage_url, flat=False)
+            if not info:
+                return None
+            if "entries" in info:
+                info = info["entries"][0]
+            url = info.get("url")
+            if url:
+                return url
+            # Fallback: pick first audio-capable format
+            for fmt in (info.get("formats") or []):
+                if fmt.get("acodec") not in (None, "none") and fmt.get("url"):
+                    return fmt["url"]
+        except Exception as e:
+            last_error = e
+            await asyncio.sleep(0.3)
+    return None
+
+# ==============
+# URL detection
+# ==============
 _URL_RE = re.compile(r"^https?://", re.I)
-LoopMode = Literal["off", "one", "all"]
-
 def _looks_like_url(s: str) -> bool:
     return bool(_URL_RE.match(s or ""))
 
@@ -84,42 +114,10 @@ def _is_youtube_playlist_url(url: str) -> bool:
         return False
     return ("youtube.com" in url or "youtu.be" in url) and ("list=" in url)
 
-async def _extract(query: str, *, flat: bool = False):
-    ydl = _flat_ytdl if flat and _is_youtube_playlist_url(query) else _ytdl
-    try:
-        return await asyncio.to_thread(lambda: ydl.extract_info(query, download=False))
-    except Exception as e:
-        print(f"[YTDL ERROR] Failed to extract {query}: {e}")
-        return None
-
-async def _fresh_stream_url(webpage_url: str, *, max_tries: int = 2) -> Optional[tuple[str, str]]:
-    last_error = None
-    for attempt in range(max_tries):
-        try:
-            info = await asyncio.to_thread(lambda: _ytdl.extract_info(webpage_url, download=False))
-            if not info:
-                return None
-
-            # If it's a playlist, take first entry
-            if "entries" in info:
-                info = info["entries"][0]
-
-            # Pick best audio that actually works
-            stream_url = None
-            for fmt in info.get("formats", []):
-                if fmt.get("acodec") != "none" and fmt.get("url"):
-                    stream_url = fmt["url"]
-                    break
-
-            if stream_url:
-                return stream_url, info.get("title", "Unknown")
-
-        except Exception as e:
-            last_error = e
-            await asyncio.sleep(0.3 + attempt * 0.2)
-
-    print(f"[ERROR] Could not fetch fresh stream: {last_error}")
-    return None
+# ==============
+# Helpers
+# ==============
+LoopMode = Literal["off", "one", "all"]
 
 def _progress_bar(elapsed: int, total: Optional[int], width: int = 18) -> str:
     if not total or total <= 0:
@@ -128,28 +126,41 @@ def _progress_bar(elapsed: int, total: Optional[int], width: int = 18) -> str:
     return ("⬛" * max(filled - 1, 0)) + "🟥" + ("⬛" * (width - filled))
 
 def _entry_to_track(entry: dict, requester) -> Optional[Track]:
-    if not entry or entry.get("availability") in ("private", "needs_auth") or entry.get("live_status") in ("is_live", "is_upcoming"):
+    if not entry:
         return None
-    title = entry.get("title") or "Unknown Title"
-    if title.lower() in ("[deleted video]", "[private video]"):
+    title = entry.get("title")
+    if title in (None, "[Deleted video]", "[Private video]"):
         return None
-    webpage_url = entry.get("webpage_url") or (f"https://www.youtube.com/watch?v={entry.get('id')}" if entry.get("id") else entry.get("url"))
+    if entry.get("availability") in ("private", "needs_auth"):
+        return None
+    live_status = entry.get("live_status")
+    if live_status in ("is_live", "is_upcoming"):
+        return None
+
+    webpage_url = entry.get("webpage_url")
+    if not webpage_url:
+        vid_id = entry.get("id")
+        if vid_id:
+            webpage_url = f"https://www.youtube.com/watch?v={vid_id}"
+        else:
+            webpage_url = entry.get("url")
     if not webpage_url:
         return None
+
     return Track(
-        title=title,
+        title=title or "Unknown Title",
         webpage_url=webpage_url,
-        duration=entry.get("duration") or 0,
+        duration=entry.get("duration"),
         thumbnail=entry.get("thumbnail"),
         requester=requester,
         uploader=entry.get("uploader") or entry.get("channel"),
     )
 
-# ======================
-# Queue View
-# ======================
+# ==============
+# Queue View (buttons)
+# ==============
 class QueueView(discord.ui.View):
-    def __init__(self, cog, guild_id: int, user: discord.User | discord.Member, per_page: int = 10):
+    def __init__(self, cog: "Music", guild_id: int, user: discord.User | discord.Member, per_page: int = 10):
         super().__init__(timeout=120)
         self.cog = cog
         self.guild_id = guild_id
@@ -167,7 +178,11 @@ class QueueView(discord.ui.View):
             return discord.Embed(title="🎵 Queue", description="(empty)", color=discord.Color.blurple())
         start = self.page * self.per_page
         end = min(start + self.per_page, total)
-        lines = [f"**{i+1}.** [{t.title}]({t.webpage_url}) — {t.pretty_duration()} • {getattr(t.requester, 'mention', str(t.requester))}" for i, t in enumerate(q[start:end], start=start)]
+        lines = []
+        for i, t in enumerate(q[start:end], start=start):
+            lines.append(
+                f"**{i+1}.** [{t.title}]({t.webpage_url}) — {t.pretty_duration()} • {getattr(t.requester, 'mention', str(t.requester))}"
+            )
         embed = discord.Embed(
             title="🎵 Queue",
             description="\n".join(lines)[:4000] or "(no tracks on this page)",
@@ -199,12 +214,10 @@ class QueueView(discord.ui.View):
             self.page += 1
         await interaction.response.edit_message(embed=self.format_page(), view=self)
 
-# ======================
+# ==========
 # Music Cog
-# ======================
+# ==========
 class Music(commands.Cog):
-    LoopMode = LoopMode
-
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.queues: Dict[int, List[Track]] = {}
@@ -214,15 +227,14 @@ class Music(commands.Cog):
         self.locks: Dict[int, asyncio.Lock] = {}
         self.idle_tasks: Dict[int, asyncio.Task] = {}
 
+    # ------------- lifecycle -------------
     async def cog_load(self):
         try:
             await self.bot.tree.sync()
         except Exception:
             pass
 
-    # ----------------
-    # STATE HELPERS
-    # ----------------
+    # ------------- state helpers -------------
     def _queue(self, guild_id: int) -> List[Track]:
         return self.queues.setdefault(guild_id, [])
 
@@ -246,6 +258,7 @@ class Music(commands.Cog):
         task = self.idle_tasks.pop(guild_id, None)
         if task:
             task.cancel()
+        # Lock objects will be recreated lazily.
 
     def _dequeue_next(self, guild_id: int) -> Optional[Track]:
         q = self._queue(guild_id)
@@ -263,9 +276,7 @@ class Music(commands.Cog):
         elif not vc:
             await voice_channel.connect()
 
-    # ----------------
-    # IDLE DISCONNECT
-    # ----------------
+    # ------------- idle cleanup -------------
     def _schedule_idle_disconnect(self, guild: discord.Guild, channel: discord.abc.Messageable, seconds: int = 120):
         async def _idle_task():
             try:
@@ -283,9 +294,7 @@ class Music(commands.Cog):
             old.cancel()
         self.idle_tasks[guild.id] = self.bot.loop.create_task(_idle_task())
 
-    # ----------------
-    # ANNOUNCE
-    # ----------------
+    # ------------- embeds -------------
     async def _announce_now(self, channel: discord.abc.Messageable, track: Track):
         dur = track.pretty_duration()
         bar = _progress_bar(0, track.duration)
@@ -318,9 +327,7 @@ class Music(commands.Cog):
         embed.add_field(name=f"{POSE_EMOJI} Position", value=str(pos), inline=True)
         await channel.send(embed=embed)
 
-    # ----------------
-    # PLAYBACK
-    # ----------------
+    # ------------- playback core -------------
     async def _start_if_idle(self, guild: discord.Guild, channel: discord.abc.Messageable):
         async with self._lock(guild.id):
             vc = guild.voice_client
@@ -334,12 +341,8 @@ class Music(commands.Cog):
                 return
 
             self.currents[guild.id] = next_track
-            stream_url = getattr(next_track, "source_url", None)
-            if not stream_url:
-                fresh = await _fresh_stream_url(next_track.webpage_url)
-                if fresh:
-                    stream_url, _ = fresh
-                    next_track.source_url = stream_url
+
+            stream_url = await _fresh_stream_url(next_track.webpage_url)
             if not stream_url:
                 await channel.send(f"⚠️ Could not fetch stream for **{next_track.title}** — skipping.")
                 self.currents[guild.id] = None
@@ -358,15 +361,13 @@ class Music(commands.Cog):
         mode = self._get_loop(guild.id)
         if played:
             if mode == "one":
-                self._queue(guild.id).insert(0, played)
+                self._queue(guild.id).insert(0, played)  # replay immediately
             elif mode == "all":
                 self._queue(guild.id).append(played)
         self.currents[guild.id] = None
         await self._start_if_idle(guild, channel)
 
-    # ----------------
-    # HANDLE PLAY
-    # ----------------
+    # ------------- play/queue logic -------------
     async def _handle_play(self, guild: discord.Guild, text_channel: discord.abc.Messageable, requester, query: str):
         try_single_search = not _looks_like_url(query)
         use_flat_playlist = _is_youtube_playlist_url(query)
@@ -386,8 +387,9 @@ class Music(commands.Cog):
 
         tracks_to_add: List[Track] = []
 
-        if not try_single_search and isinstance(info, dict) and info.get("_type") == "playlist":
-            for entry in info.get("entries", []) or []:
+        if (not try_single_search) and isinstance(info, dict) and info.get("_type") == "playlist" and "search" in (info.get("extractor_key", "")).lower():
+            entries = (info.get("entries") or [])[:1]
+            for entry in entries:
                 t = _entry_to_track(entry, requester)
                 if t:
                     tracks_to_add.append(t)
@@ -418,7 +420,7 @@ class Music(commands.Cog):
         await self._start_if_idle(guild, text_channel)
 
     # =========================
-    # PREFIX COMMAND
+    # PREFIX COMMANDS (classic)
     # =========================
     @commands.command(name="play", help="Play a song or playlist (YouTube URL or search).")
     async def play_prefix(self, ctx: commands.Context, *, query: str):
@@ -500,19 +502,11 @@ class Music(commands.Cog):
     # =====================
     # SLASH COMMANDS (/) 🎯
     # =====================
-    @app_commands.command(
-        name="play",
-        description="Play music through discord voice chat"
-    )
-    @app_commands.describe(
-        query="YouTube URL or search terms"
-    )
+    @app_commands.command(name="play", description="Play a song or playlist (YouTube URL or search).")
+    @app_commands.describe(query="YouTube URL or search terms")
     async def play_slash(self, interaction: discord.Interaction, query: str):
-        if not interaction.user or not isinstance(interaction.user, discord.Member) or not interaction.user.voice or not interaction.user.voice.channel:
-            return await interaction.response.send_message(
-                "❌ You must be in a voice channel.",
-                ephemeral=True
-            )
+        if not interaction.user or not isinstance(interaction.user, discord.Member) or not interaction.user.voice:
+            return await interaction.response.send_message("❌ You must be in a voice channel.", ephemeral=True)
         await interaction.response.defer(thinking=True)
         await self._ensure_voice(interaction.guild, interaction.user.voice.channel)
         await self._handle_play(interaction.guild, interaction.channel, interaction.user, query)
@@ -552,16 +546,6 @@ class Music(commands.Cog):
             await interaction.response.send_message("▶️ Resumed.")
         else:
             await interaction.response.send_message("❌ Nothing is paused.", ephemeral=True)
-
-    @app_commands.command(name="nowplaying", description="Show the current track.")
-    async def nowplaying_slash(self, interaction: discord.Interaction):
-        track = self.currents.get(interaction.guild.id)
-        vc = interaction.guild.voice_client
-        if vc and track and (vc.is_playing() or vc.is_paused()):
-            await self._announce_now(interaction.channel, track)
-            await interaction.response.send_message("📻 Posted now playing.", ephemeral=True)
-        else:
-            await interaction.response.send_message("❌ Nothing is playing.", ephemeral=True)
 
     @app_commands.command(name="nowplaying", description="Show the current track.")
     async def nowplaying_slash(self, interaction: discord.Interaction):
