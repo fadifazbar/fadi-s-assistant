@@ -55,6 +55,128 @@ class General(commands.Cog):
                 f"{message.author.mention}, you can use my commands with **/** or **`{prefix}`**"
             )
 
+    # Helper function to make embed
+    def make_meter_embed(self, ctx_or_interaction, member: discord.Member, meter_name: str):
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title=f"{meter_name} Meter",
+            description=f"{member.mention} is **{percent}% {meter_name}**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        if isinstance(ctx_or_interaction, commands.Context):
+            embed.set_footer(text=f"Requested By: {ctx_or_interaction.author}")
+        else:
+            embed.set_footer(text=f"Requested By: {ctx_or_interaction.user}")
+        return embed
+
+
+    # ========== PREFIX COMMANDS ==========
+    @commands.command(name="susmeter", aliases=["sm"])
+    async def susmeter_cmd(self, ctx, member: discord.Member):
+        embed = self.make_meter_embed(ctx, member, "Sus")
+        await ctx.send(embed=embed)
+
+    @commands.command(name="gaymeter", aliases=["gm"])
+    async def gaymeter_cmd(self, ctx, member: discord.Member):
+        embed = self.make_meter_embed(ctx, member, "Gay")
+        await ctx.send(embed=embed)
+
+    @commands.command(name="freakymeter", aliases=["fm"])
+    async def freakymeter_cmd(self, ctx, member: discord.Member):
+        embed = self.make_meter_embed(ctx, member, "Freaky")
+        await ctx.send(embed=embed)
+
+    @commands.command(name="lesbianmeter", aliases=["lm"])
+    async def lesbianmeter_cmd(self, ctx, member: discord.Member):
+        embed = self.make_meter_embed(ctx, member, "Lesbian")
+        await ctx.send(embed=embed)
+
+    @commands.command(name="femboymeter", aliases=["fbm"])
+    async def femboymeter_cmd(self, ctx, member: discord.Member):
+        embed = self.make_meter_embed(ctx, member, "Femboy")
+        await ctx.send(embed=embed)
+
+    @commands.command(name="blackmeter", aliases=["bm"])
+    async def blackmeter_cmd(self, ctx, member: discord.Member):
+        embed = self.make_meter_embed(ctx, member, "Black")
+        await ctx.send(embed=embed)
+
+    @commands.command(name="racistmeter", aliases=["rm"])
+    async def racistmeter_cmd(self, ctx, member: discord.Member):
+        embed = self.make_meter_embed(ctx, member, "Racist")
+        await ctx.send(embed=embed)
+
+    @commands.command(name="uglymeter", aliases=["um"])
+    async def uglymeter_cmd(self, ctx, member: discord.Member):
+        embed = self.make_meter_embed(ctx, member, "Ugly")
+        await ctx.send(embed=embed)
+
+    @commands.command(name="sigmameter", aliases=["sgm"])
+    async def sigmameter_cmd(self, ctx, member: discord.Member):
+        embed = self.make_meter_embed(ctx, member, "Sigma")
+        await ctx.send(embed=embed)
+
+    @commands.command(name="aurameter", aliases=["am"])
+    async def aurameter_cmd(self, ctx, member: discord.Member):
+        embed = self.make_meter_embed(ctx, member, "Aura")
+        await ctx.send(embed=embed)
+
+    # ========== SLASH COMMANDS ==========
+    @app_commands.command(name="susmeter", description="Check how sus someone is")
+    async def susmeter_slash(self, interaction: discord.Interaction, member: discord.Member):
+        embed = self.make_meter_embed(interaction, member, "Sus")
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="gaymeter", description="Check how gay someone is")
+    async def gaymeter_slash(self, interaction: discord.Interaction, member: discord.Member):
+        embed = self.make_meter_embed(interaction, member, "Gay")
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="freakymeter", description="Check how freaky someone is")
+    async def freakymeter_slash(self, interaction: discord.Interaction, member: discord.Member):
+        embed = self.make_meter_embed(interaction, member, "Freaky")
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="lesbianmeter", description="Check how lesbian someone is")
+    async def lesbianmeter_slash(self, interaction: discord.Interaction, member: discord.Member):
+        embed = self.make_meter_embed(interaction, member, "Lesbian")
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="femboymeter", description="Check how femboy someone is")
+    async def femboymeter_slash(self, interaction: discord.Interaction, member: discord.Member):
+        embed = self.make_meter_embed(interaction, member, "Femboy")
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="blackmeter", description="Check how black someone is")
+    async def blackmeter_slash(self, interaction: discord.Interaction, member: discord.Member):
+        embed = self.make_meter_embed(interaction, member, "Black")
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="racistmeter", description="Check how racist someone is")
+    async def racistmeter_slash(self, interaction: discord.Interaction, member: discord.Member):
+        embed = self.make_meter_embed(interaction, member, "Racist")
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="uglymeter", description="Check how ugly someone is")
+    async def uglymeter_slash(self, interaction: discord.Interaction, member: discord.Member):
+        embed = self.make_meter_embed(interaction, member, "Ugly")
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="sigmameter", description="Check how sigma someone is")
+    async def sigmameter_slash(self, interaction: discord.Interaction, member: discord.Member):
+        embed = self.make_meter_embed(interaction, member, "Sigma")
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="aurameter", description="Check how strong someone's aura is")
+    async def aurameter_slash(self, interaction: discord.Interaction, member: discord.Member):
+        embed = self.make_meter_embed(interaction, member, "Aura")
+        await interaction.response.send_message(embed=embed)
+
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(General(bot))
+
 # -------- Prefix command --------
               
 
