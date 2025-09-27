@@ -7,7 +7,7 @@ import re
 
 CONFIG_FILE = "/data/welcome_config.json"
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".gif")
-QUESTION_COLOR = 0x2F3136
+QUESTION_COLOR = 0xFFB700
 ERROR_COLOR = 0xFF0000
 SUCCESS_COLOR = 0x00FF00
 
