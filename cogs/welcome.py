@@ -5,8 +5,15 @@ import json
 import os
 import re
 
+# ======================
+# CONFIG
+# ======================
 CONFIG_FILE = "/data/welcome_config.json"
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".gif")
+
+QUESTION_COLOR = 0x2F3136
+ERROR_COLOR = 0xFF0000
+SUCCESS_COLOR = 0x00FF00
 
 
 def load_config():
@@ -25,7 +32,7 @@ def save_config(data):
 
 
 def format_placeholders(template: str, member: discord.Member):
-    """Text placeholders only."""
+    """Replace text placeholders with real values."""
     if not template:
         return ""
     return (
@@ -63,9 +70,14 @@ class WelcomeLeave(commands.Cog):
         if not channel:
             return
 
+        perms = channel.permissions_for(member.guild.me)
+        if not perms.send_messages:
+            return
+
         if settings.get("mode") == "text":
             msg = format_placeholders(settings.get("text", "{mention} joined {server}!"), member)
             await channel.send(msg)
+
             if settings.get("image_url"):
                 url = settings["image_url"]
                 url = url.replace("{member_pfp}", str(member.display_avatar.url))
@@ -77,6 +89,7 @@ class WelcomeLeave(commands.Cog):
         elif settings.get("mode") == "embed":
             title = format_placeholders(settings.get("title"), member) or discord.Embed.Empty
             desc = format_placeholders(settings.get("description"), member) or discord.Embed.Empty
+
             try:
                 color = int(settings.get("color", "0x00ff00"), 16)
             except ValueError:
@@ -84,14 +97,15 @@ class WelcomeLeave(commands.Cog):
 
             embed = discord.Embed(title=title, description=desc, color=color)
 
-            for key in ["image_url", "thumbnail_url", "icon_url"]:
+            # Images & author
+            for key in ["image_url", "thumbnail_url", "icon_url", "footer_icon"]:
                 if settings.get(key):
                     url = settings[key]
                     url = url.replace("{member_pfp}", str(member.display_avatar.url))
                     url = url.replace(
                         "{server_icon}", str(member.guild.icon.url) if member.guild.icon else ""
                     )
-                    settings[key] = url
+                    settings[key] = url  # overwrite locally
 
             if settings.get("image_url"):
                 embed.set_image(url=settings["image_url"])
@@ -101,6 +115,13 @@ class WelcomeLeave(commands.Cog):
                 embed.set_author(name=str(member), icon_url=settings["icon_url"])
             else:
                 embed.set_author(name=str(member), icon_url=member.display_avatar.url)
+
+            # Footer
+            if settings.get("footer_text") or settings.get("footer_icon"):
+                embed.set_footer(
+                    text=format_placeholders(settings.get("footer_text", ""), member),
+                    icon_url=settings.get("footer_icon"),
+                )
 
             await channel.send(embed=embed)
 
@@ -120,42 +141,39 @@ class WelcomeLeave(commands.Cog):
     # ======================
     @app_commands.command(name="join", description="Setup join messages (DM wizard)")
     async def join_setup_slash(self, interaction: discord.Interaction):
-        await interaction.response.send_message(
-            "📩 Check your DMs to continue setup.", ephemeral=True
-        )
+        await interaction.response.send_message("📩 Check your DMs to continue setup.", ephemeral=True)
         await self.start_setup(interaction.user, interaction.guild, "join")
 
     @app_commands.command(name="leave", description="Setup leave messages (DM wizard)")
     async def leave_setup_slash(self, interaction: discord.Interaction):
-        await interaction.response.send_message(
-            "📩 Check your DMs to continue setup.", ephemeral=True
-        )
+        await interaction.response.send_message("📩 Check your DMs to continue setup.", ephemeral=True)
         await self.start_setup(interaction.user, interaction.guild, "leave")
 
     # ======================
-    # INPUT HELPER
+    # EMBED INPUT HELPER
     # ======================
     async def ask_input(
         self,
         dm,
         user,
-        question,
+        title,
+        description,
         *,
         allow_skip=False,
         placeholders=None,
         image=False,
-        history=None,
     ):
-        """Unified input function for text or image with back/skip support."""
-        if history is None:
-            history = []
-        hint = "\n(Type 'back' to go to the previous step)" if history else ""
+        """Ask user for input using embeds, handle skip/back, validate images."""
+        embed = discord.Embed(title=title, description=description, color=QUESTION_COLOR)
+
         if allow_skip:
-            question += "\n(Say 'skip' if you don't want this feature.)"
+            embed.add_field(name="⏭ Skip", value="Type `skip` to leave this blank.", inline=False)
+        embed.add_field(name="⏪ Back", value="Type `back` to return to the previous step.", inline=False)
+
         if placeholders:
-            question += f"\nAvailable placeholders: {placeholders}"
-        question += hint
-        await dm.send(question)
+            embed.add_field(name="🔑 Placeholders", value=placeholders, inline=False)
+
+        await dm.send(embed=embed)
 
         while True:
             msg = await self.bot.wait_for(
@@ -163,7 +181,7 @@ class WelcomeLeave(commands.Cog):
             )
             content = msg.content.strip()
 
-            if content.lower() == "back" and history:
+            if content.lower() == "back":
                 return "back"
             if allow_skip and content.lower() == "skip":
                 return None
@@ -172,125 +190,128 @@ class WelcomeLeave(commands.Cog):
                 if content.lower() in ("{member_pfp}", "{server_icon}"):
                     return content
                 if msg.attachments:
-                    url = msg.attachments[0].url
-                    if url.lower().endswith(IMAGE_EXTENSIONS):
-                        return url
-                    else:
-                        await dm.send("❌ That is not a valid image/image link.")
-                        continue
+                    att = msg.attachments[0]
+                    if any(att.filename.lower().endswith(ext) for ext in IMAGE_EXTENSIONS):
+                        return att.url
+                    await dm.send(embed=discord.Embed(
+                        description="❌ Invalid attachment. Please upload an image file.",
+                        color=ERROR_COLOR
+                    ))
+                    continue
                 if re.match(r"^https?://.*\.(png|jpg|jpeg|webp|gif)$", content, re.IGNORECASE):
                     return content
-                await dm.send(
-                    "❌ Invalid input. Upload an image, paste a direct URL, or use a valid placeholder."
-                )
+                await dm.send(embed=discord.Embed(
+                    description="❌ Invalid input. Upload an image, paste a direct image URL, or use a placeholder.",
+                    color=ERROR_COLOR
+                ))
             else:
                 return content
 
     # ======================
-    # SETUP WIZARD
+    # SETUP WIZARD (Embed-based)
     # ======================
     async def start_setup(self, user: discord.User, guild: discord.Guild, event_type: str):
         try:
             dm = await user.create_dm()
-            await dm.send(f"⚙️ Let's set up **{event_type}** messages for `{guild.name}`!")
+            await dm.send(embed=discord.Embed(
+                title="⚙️ Setup Wizard",
+                description=f"Let's configure **{event_type}** messages for `{guild.name}`!\n\nType `back` anytime to return to the previous step.",
+                color=QUESTION_COLOR
+            ))
 
-            wizard_history = []
+            data = {}
 
             # CHANNEL
             while True:
                 channel_id = await self.ask_input(
-                    dm, user, "Provide the **Channel ID** where messages should be sent.", history=wizard_history
+                    dm, user, "Step 1: Channel", "Provide the **Channel ID** where messages should be sent."
                 )
                 if channel_id == "back":
-                    await dm.send("❌ This is the first question, cannot go back further.")
+                    await dm.send(embed=discord.Embed(
+                        description="❌ This is the first step. You can't go back.",
+                        color=ERROR_COLOR
+                    ))
                     continue
                 try:
                     channel_id = int(channel_id)
+                    channel = guild.get_channel(channel_id)
+                    if not channel:
+                        await dm.send(embed=discord.Embed(
+                            description="❌ I can't find that channel. Try again.",
+                            color=ERROR_COLOR
+                        ))
+                        continue
                     break
-                except:
-                    await dm.send("❌ Invalid channel ID. Please enter a valid number.")
-            wizard_history.append({"key": "channel_id", "value": channel_id})
+                except ValueError:
+                    await dm.send(embed=discord.Embed(
+                        description="❌ Invalid channel ID. Please enter a number.",
+                        color=ERROR_COLOR
+                    ))
+            data["channel_id"] = channel_id
 
             # MODE
             while True:
                 mode = await self.ask_input(
-                    dm,
-                    user,
-                    "Do you want a `text` message or an `embed`?",
-                    history=wizard_history,
+                    dm, user, "Step 2: Mode", "Do you want messages to be `text` or `embed`?"
                 )
                 if mode == "back":
-                    wizard_history.pop()
+                    return await self.start_setup(user, guild, event_type)
+                if mode.lower() not in ["text", "embed"]:
+                    await dm.send(embed=discord.Embed(
+                        description="❌ Enter either 'text' or 'embed'.",
+                        color=ERROR_COLOR
+                    ))
                     continue
                 mode = mode.lower()
-                if mode not in ["text", "embed"]:
-                    await dm.send("❌ Invalid choice. Enter 'text' or 'embed'.")
-                    continue
                 break
-            wizard_history.append({"key": "mode", "value": mode})
-
-            data = {"channel_id": channel_id, "mode": mode}
+            data["mode"] = mode
 
             if mode == "text":
                 # TEXT MESSAGE
-                while True:
-                    text_msg = await self.ask_input(
-                        dm,
-                        user,
-                        "Enter your **text message**.",
-                        placeholders="{mention}, {user}, {server}, {count}",
-                        history=wizard_history,
-                    )
-                    if text_msg == "back":
-                        wizard_history.pop()
-                        continue
-                    data["text"] = text_msg
-                    wizard_history.append({"key": "text", "value": text_msg})
-                    break
+                text_msg = await self.ask_input(
+                    dm, user, "Step 3: Text Message", "Enter your **text message**.",
+                    placeholders="{mention}, {user}, {server}, {count}"
+                )
+                if text_msg == "back":
+                    return await self.start_setup(user, guild, event_type)
+                data["text"] = text_msg
 
                 # IMAGE
-                while True:
-                    img = await self.ask_input(
-                        dm,
-                        user,
-                        "Upload or paste an **image** for the message.",
-                        image=True,
-                        placeholders="{member_pfp}, {server_icon}",
-                        history=wizard_history,
-                    )
-                    if img == "back":
-                        wizard_history.pop()
-                        continue
-                    data["image_url"] = img
-                    wizard_history.append({"key": "image_url", "value": img})
-                    break
+                img = await self.ask_input(
+                    dm, user, "Step 4: Image", "Upload or paste an **image** for the message.",
+                    image=True, allow_skip=True, placeholders="{member_pfp}, {server_icon}"
+                )
+                if img == "back":
+                    return await self.start_setup(user, guild, event_type)
+                data["image_url"] = img
 
             else:  # EMBED
                 embed_fields = [
-                    ("title", "Enter the **embed TITLE**.", True),
-                    ("description", "Enter the **embed DESCRIPTION**.", True),
-                    ("color", "Enter the **embed COLOR** in HEX (example: #00ff00).", True),
-                    ("image_url", "embed IMAGE (big bottom)", True),
-                    ("thumbnail_url", "embed THUMBNAIL (top-right)", True),
-                    ("icon_url", "embed ICON (author icon, top-left)", True),
+                    ("title", "Embed TITLE", False),
+                    ("description", "Embed DESCRIPTION", True),
+                    ("color", "Embed COLOR (HEX like #00ff00)", True),
+                    ("image_url", "Embed IMAGE (large bottom)", True),
+                    ("thumbnail_url", "Embed THUMBNAIL (top-right)", True),
+                    ("icon_url", "Embed ICON (author icon)", True),
+                    ("footer_text", "Embed FOOTER text", True),
+                    ("footer_icon", "Embed FOOTER image/icon", True),
                 ]
 
-                for key, prompt, allow_skip in embed_fields:
+                for key, label, allow_skip in embed_fields:
                     while True:
-                        is_image = key in ["image_url", "thumbnail_url", "icon_url"]
+                        is_image = key.endswith("_url") or key.endswith("_icon")
                         answer = await self.ask_input(
                             dm,
                             user,
-                            prompt,
+                            f"Embed Setup – {label}",
+                            f"Enter the **{label}**.",
                             allow_skip=allow_skip,
                             placeholders="{mention}, {user}, {server}, {count}" if not is_image else "{member_pfp}, {server_icon}",
                             image=is_image,
-                            history=wizard_history,
                         )
                         if answer == "back":
-                            if wizard_history:
-                                wizard_history.pop()
-                            break
+                            return await self.start_setup(user, guild, event_type)
+
                         if key == "color":
                             if not answer:
                                 data["color"] = "0x00ff00"
@@ -300,11 +321,13 @@ class WelcomeLeave(commands.Cog):
                                     int(color_val, 16)
                                     data["color"] = color_val
                                 except ValueError:
-                                    await dm.send("❌ Invalid HEX color. Example: #00ff00")
+                                    await dm.send(embed=discord.Embed(
+                                        description="❌ Invalid HEX color. Example: #00ff00",
+                                        color=ERROR_COLOR
+                                    ))
                                     continue
                         else:
                             data[key] = answer
-                        wizard_history.append({"key": key, "value": answer})
                         break
 
             # SAVE CONFIG
@@ -313,7 +336,11 @@ class WelcomeLeave(commands.Cog):
             cfg.setdefault(gid, {})
             cfg[gid][event_type] = data
             save_config(cfg)
-            await dm.send(f"✅ Setup complete for **{event_type}** messages in <#{channel_id}>!")
+
+            await dm.send(embed=discord.Embed(
+                description=f"✅ Setup complete for **{event_type}** messages in <#{channel_id}>!",
+                color=SUCCESS_COLOR
+            ))
 
         except discord.Forbidden:
             try:
