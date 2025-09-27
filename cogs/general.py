@@ -85,7 +85,7 @@ class General(commands.Cog):
         embed.set_footer(text=f"Requested By: {ctx.author}")
         await ctx.send(embed=embed)
 
-    @commands.command(name="freakymeter", aliases=["fm"])
+    @commands.command(name="freakymeter", aliases=["frm"])
     async def freakymeter_cmd(self, ctx, member: discord.Member = None):
         member = member or ctx.author
         percent = random.randint(0, 100)
