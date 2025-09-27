@@ -105,92 +105,66 @@ class WelcomeLeave(commands.Cog):
     # ======================
     # PREFIX COMMANDS
     # ======================
+    @commands.command(name="join")
+    async def join_setup_prefix(self, ctx):
+        await self.start_setup(ctx.author, ctx.guild, "join")
+
+    @commands.command(name="leave")
+    async def leave_setup_prefix(self, ctx):
+        await self.start_setup(ctx.author, ctx.guild, "leave")
+
+    @commands.command(name="joinremove")
+    async def join_remove_prefix(self, ctx):
+        cfg = load_config()
+        gid = str(ctx.guild.id)
+        if cfg.get(gid, {}).pop("join", None) is not None:
+            save_config(cfg)
+            await ctx.send("✅ Join message configuration removed.")
+        else:
+            await ctx.send("❌ No join message configuration found.")
+
+    @commands.command(name="leaveremove")
+    async def leave_remove_prefix(self, ctx):
+        cfg = load_config()
+        gid = str(ctx.guild.id)
+        if cfg.get(gid, {}).pop("leave", None) is not None:
+            save_config(cfg)
+            await ctx.send("✅ Leave message configuration removed.")
+        else:
+            await ctx.send("❌ No leave message configuration found.")
+
     # ======================
-def has_manage_channels():
-    async def predicate(ctx):
-        if ctx.author.guild_permissions.manage_channels:
-            return True
-        await ctx.send("❌ You need the **Manage Channels** permission to use this command.", delete_after=10)
-        return False
-    return commands.check(predicate)
+    # SLASH COMMANDS
+    # ======================
+    @app_commands.command(name="join", description="Setup join messages (DM wizard)")
+    async def join_setup_slash(self, interaction: discord.Interaction):
+        await interaction.response.send_message("📩 Check your DMs to continue setup.", ephemeral=True)
+        await self.start_setup(interaction.user, interaction.guild, "join")
 
-@commands.command(name="join")
-@has_manage_channels()
-async def join_setup_prefix(self, ctx):
-    await self.start_setup(ctx.author, ctx.guild, "join")
+    @app_commands.command(name="leave", description="Setup leave messages (DM wizard)")
+    async def leave_setup_slash(self, interaction: discord.Interaction):
+        await interaction.response.send_message("📩 Check your DMs to continue setup.", ephemeral=True)
+        await self.start_setup(interaction.user, interaction.guild, "leave")
 
-@commands.command(name="leave")
-@has_manage_channels()
-async def leave_setup_prefix(self, ctx):
-    await self.start_setup(ctx.author, ctx.guild, "leave")
+    @app_commands.command(name="joinremove", description="Remove join message config")
+    async def join_remove_slash(self, interaction: discord.Interaction):
+        cfg = load_config()
+        gid = str(interaction.guild.id)
+        if cfg.get(gid, {}).pop("join", None) is not None:
+            save_config(cfg)
+            await interaction.response.send_message("✅ Join message configuration removed.", ephemeral=True)
+        else:
+            await interaction.response.send_message("❌ No join message configuration found.", ephemeral=True)
 
-@commands.command(name="joinremove")
-@has_manage_channels()
-async def join_remove_prefix(self, ctx):
-    cfg = load_config()
-    gid = str(ctx.guild.id)
-    if cfg.get(gid, {}).pop("join", None) is not None:
-        save_config(cfg)
-        await ctx.send("✅ Join message configuration removed.")
-    else:
-        await ctx.send("❌ No join message configuration found.")
-
-@commands.command(name="leaveremove")
-@has_manage_channels()
-async def leave_remove_prefix(self, ctx):
-    cfg = load_config()
-    gid = str(ctx.guild.id)
-    if cfg.get(gid, {}).pop("leave", None) is not None:
-        save_config(cfg)
-        await ctx.send("✅ Leave message configuration removed.")
-    else:
-        await ctx.send("❌ No leave message configuration found.")
-
-# ======================
-# SLASH COMMANDS WITH PERMISSION CHECK
-# ======================
-def has_manage_channels_slash():
-    async def predicate(interaction: discord.Interaction):
-        if interaction.user.guild_permissions.manage_channels:
-            return True
-        await interaction.response.send_message("❌ You need the **Manage Channels** permission to use this command.", ephemeral=True)
-        return False
-    return app_commands.check(predicate)
-
-@app_commands.command(name="join", description="Setup join messages (DM wizard)")
-@has_manage_channels_slash()
-async def join_setup_slash(self, interaction):
-    # interaction parameter has no type annotation
-    await interaction.response.send_message("📩 Check your DMs to continue setup.", ephemeral=True)
-    await self.start_setup(interaction.user, interaction.guild, "join")
-
-@app_commands.command(name="leave", description="Setup leave messages (DM wizard)")
-@has_manage_channels_slash()
-async def leave_setup_slash(self, interaction):
-    await interaction.response.send_message("📩 Check your DMs to continue setup.", ephemeral=True)
-    await self.start_setup(interaction.user, interaction.guild, "leave")
-
-@app_commands.command(name="joinremove", description="Remove join message config")
-@has_manage_channels_slash()
-async def join_remove_slash(self, interaction):
-    cfg = load_config()
-    gid = str(interaction.guild.id)
-    if cfg.get(gid, {}).pop("join", None) is not None:
-        save_config(cfg)
-        await interaction.response.send_message("✅ Join message configuration removed.", ephemeral=True)
-    else:
-        await interaction.response.send_message("❌ No join message configuration found.", ephemeral=True)
-
-@app_commands.command(name="leaveremove", description="Remove leave message config")
-@has_manage_channels_slash()
-async def leave_remove_slash(self, interaction):
-    cfg = load_config()
-    gid = str(interaction.guild.id)
-    if cfg.get(gid, {}).pop("leave", None) is not None:
-        save_config(cfg)
-        await interaction.response.send_message("✅ Leave message configuration removed.", ephemeral=True)
-    else:
-        await interaction.response.send_message("❌ No leave message configuration found.", ephemeral=True)
+    @app_commands.command(name="leaveremove", description="Remove leave message config")
+    async def leave_remove_slash(self, interaction: discord.Interaction):
+        cfg = load_config()
+        gid = str(interaction.guild.id)
+        if cfg.get(gid, {}).pop("leave", None) is not None:
+            save_config(cfg)
+            await interaction.response.send_message("✅ Leave message configuration removed.", ephemeral=True)
+        else:
+            await interaction.response.send_message("❌ No leave message configuration found.", ephemeral=True)
 
     # ======================
     # INPUT HELPER
