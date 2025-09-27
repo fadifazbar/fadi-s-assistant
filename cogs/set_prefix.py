@@ -39,7 +39,7 @@ class Prefix(commands.Cog):
     # -----------------------------
     # Prefix command
     # -----------------------------
-    @commands.command(name="setprefix")
+@commands.command(name="setprefix")
 @commands.has_permissions(administrator=True)
 async def setprefix_prefix(self, ctx, new_prefix):
     old_prefix = Config.get_prefix(ctx.guild.id)
@@ -72,7 +72,7 @@ async def setprefix_prefix(self, ctx, new_prefix):
     # -----------------------------
     # Slash command
     # -----------------------------
-    @app_commands.command(name="setprefix", description="Change the server prefix")
+@app_commands.command(name="setprefix", description="Change the server prefix")
 @app_commands.default_permissions(administrator=True)
 async def setprefix_slash(self, interaction: discord.Interaction, new_prefix: str):
     old_prefix = Config.get_prefix(interaction.guild.id)
