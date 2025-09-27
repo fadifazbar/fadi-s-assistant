@@ -55,127 +55,272 @@ class General(commands.Cog):
                 f"{message.author.mention}, you can use my commands with **/** or **`{prefix}`**"
             )
 
-    # Helper function to make embed
-    def make_meter_embed(self, ctx_or_interaction, member: discord.Member, meter_name: str):
+
+    # =======================
+    # PREFIX COMMANDS
+    # =======================
+    @commands.command(name="susmeter", aliases=["sm"])
+    async def susmeter_cmd(self, ctx, member: discord.Member = None):
+        member = member or ctx.author
         percent = random.randint(0, 100)
         embed = discord.Embed(
-            title=f"{meter_name} Meter",
-            description=f"{member.mention} is **{percent}% {meter_name}**",
+            title="Sus Meter",
+            description=f"{member.mention} is **{percent}% Sus**",
             color=discord.Color.random()
         )
         embed.set_thumbnail(url=member.display_avatar.url)
-        if isinstance(ctx_or_interaction, commands.Context):
-            embed.set_footer(text=f"Requested By: {ctx_or_interaction.author}")
-        else:
-            embed.set_footer(text=f"Requested By: {ctx_or_interaction.user}")
-        return embed
-
-
-    # ========== PREFIX COMMANDS ==========
-    @commands.command(name="susmeter", aliases=["sm"])
-    async def susmeter_cmd(self, ctx, member: discord.Member):
-        embed = self.make_meter_embed(ctx, member, "Sus")
+        embed.set_footer(text=f"Requested By: {ctx.author}")
         await ctx.send(embed=embed)
 
     @commands.command(name="gaymeter", aliases=["gm"])
-    async def gaymeter_cmd(self, ctx, member: discord.Member):
-        embed = self.make_meter_embed(ctx, member, "Gay")
+    async def gaymeter_cmd(self, ctx, member: discord.Member = None):
+        member = member or ctx.author
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Gay Meter",
+            description=f"{member.mention} is **{percent}% Gay**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {ctx.author}")
         await ctx.send(embed=embed)
 
-    @commands.command(name="freakymeter", aliases=["frm"])
-    async def freakymeter_cmd(self, ctx, member: discord.Member):
-        embed = self.make_meter_embed(ctx, member, "Freaky")
+    @commands.command(name="freakymeter", aliases=["fm"])
+    async def freakymeter_cmd(self, ctx, member: discord.Member = None):
+        member = member or ctx.author
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Freaky Meter",
+            description=f"{member.mention} is **{percent}% Freaky**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {ctx.author}")
         await ctx.send(embed=embed)
 
     @commands.command(name="lesbianmeter", aliases=["lm"])
-    async def lesbianmeter_cmd(self, ctx, member: discord.Member):
-        embed = self.make_meter_embed(ctx, member, "Lesbian")
+    async def lesbianmeter_cmd(self, ctx, member: discord.Member = None):
+        member = member or ctx.author
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Lesbian Meter",
+            description=f"{member.mention} is **{percent}% Lesbian**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {ctx.author}")
         await ctx.send(embed=embed)
 
     @commands.command(name="femboymeter", aliases=["fbm"])
-    async def femboymeter_cmd(self, ctx, member: discord.Member):
-        embed = self.make_meter_embed(ctx, member, "Femboy")
+    async def femboymeter_cmd(self, ctx, member: discord.Member = None):
+        member = member or ctx.author
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Femboy Meter",
+            description=f"{member.mention} is **{percent}% Femboy**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {ctx.author}")
         await ctx.send(embed=embed)
 
     @commands.command(name="blackmeter", aliases=["bm"])
-    async def blackmeter_cmd(self, ctx, member: discord.Member):
-        embed = self.make_meter_embed(ctx, member, "Black")
+    async def blackmeter_cmd(self, ctx, member: discord.Member = None):
+        member = member or ctx.author
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Black Meter",
+            description=f"{member.mention} is **{percent}% Black**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {ctx.author}")
         await ctx.send(embed=embed)
 
     @commands.command(name="racistmeter", aliases=["rm"])
-    async def racistmeter_cmd(self, ctx, member: discord.Member):
-        embed = self.make_meter_embed(ctx, member, "Racist")
+    async def racistmeter_cmd(self, ctx, member: discord.Member = None):
+        member = member or ctx.author
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Racist Meter",
+            description=f"{member.mention} is **{percent}% Racist**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {ctx.author}")
         await ctx.send(embed=embed)
 
     @commands.command(name="uglymeter", aliases=["um"])
-    async def uglymeter_cmd(self, ctx, member: discord.Member):
-        embed = self.make_meter_embed(ctx, member, "Ugly")
+    async def uglymeter_cmd(self, ctx, member: discord.Member = None):
+        member = member or ctx.author
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Ugly Meter",
+            description=f"{member.mention} is **{percent}% Ugly**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {ctx.author}")
         await ctx.send(embed=embed)
 
     @commands.command(name="sigmameter", aliases=["sgm"])
-    async def sigmameter_cmd(self, ctx, member: discord.Member):
-        embed = self.make_meter_embed(ctx, member, "Sigma")
+    async def sigmameter_cmd(self, ctx, member: discord.Member = None):
+        member = member or ctx.author
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Sigma Meter",
+            description=f"{member.mention} is **{percent}% Sigma**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {ctx.author}")
         await ctx.send(embed=embed)
 
     @commands.command(name="aurameter", aliases=["am"])
-    async def aurameter_cmd(self, ctx, member: discord.Member):
-        embed = self.make_meter_embed(ctx, member, "Aura")
+    async def aurameter_cmd(self, ctx, member: discord.Member = None):
+        member = member or ctx.author
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Aura Meter",
+            description=f"{member.mention} is **{percent}% Aura**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {ctx.author}")
         await ctx.send(embed=embed)
 
-    # ========== SLASH COMMANDS ==========
+    # =======================
+    # SLASH COMMANDS
+    # =======================
     @app_commands.command(name="susmeter", description="Check how sus someone is")
-    async def susmeter_slash(self, interaction: discord.Interaction, member: discord.Member):
-        embed = self.make_meter_embed(interaction, member, "Sus")
+    async def susmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Sus Meter",
+            description=f"{member.mention} is **{percent}% Sus**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {interaction.user}")
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="gaymeter", description="Check how gay someone is")
-    async def gaymeter_slash(self, interaction: discord.Interaction, member: discord.Member):
-        embed = self.make_meter_embed(interaction, member, "Gay")
+    async def gaymeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Gay Meter",
+            description=f"{member.mention} is **{percent}% Gay**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {interaction.user}")
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="freakymeter", description="Check how freaky someone is")
-    async def freakymeter_slash(self, interaction: discord.Interaction, member: discord.Member):
-        embed = self.make_meter_embed(interaction, member, "Freaky")
+    async def freakymeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Freaky Meter",
+            description=f"{member.mention} is **{percent}% Freaky**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {interaction.user}")
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="lesbianmeter", description="Check how lesbian someone is")
-    async def lesbianmeter_slash(self, interaction: discord.Interaction, member: discord.Member):
-        embed = self.make_meter_embed(interaction, member, "Lesbian")
+    async def lesbianmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Lesbian Meter",
+            description=f"{member.mention} is **{percent}% Lesbian**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {interaction.user}")
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="femboymeter", description="Check how femboy someone is")
-    async def femboymeter_slash(self, interaction: discord.Interaction, member: discord.Member):
-        embed = self.make_meter_embed(interaction, member, "Femboy")
+    async def femboymeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Femboy Meter",
+            description=f"{member.mention} is **{percent}% Femboy**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {interaction.user}")
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="blackmeter", description="Check how black someone is")
-    async def blackmeter_slash(self, interaction: discord.Interaction, member: discord.Member):
-        embed = self.make_meter_embed(interaction, member, "Black")
+    async def blackmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Black Meter",
+            description=f"{member.mention} is **{percent}% Black**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {interaction.user}")
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="racistmeter", description="Check how racist someone is")
-    async def racistmeter_slash(self, interaction: discord.Interaction, member: discord.Member):
-        embed = self.make_meter_embed(interaction, member, "Racist")
+    async def racistmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Racist Meter",
+            description=f"{member.mention} is **{percent}% Racist**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {interaction.user}")
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="uglymeter", description="Check how ugly someone is")
-    async def uglymeter_slash(self, interaction: discord.Interaction, member: discord.Member):
-        embed = self.make_meter_embed(interaction, member, "Ugly")
+    async def uglymeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Ugly Meter",
+            description=f"{member.mention} is **{percent}% Ugly**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {interaction.user}")
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="sigmameter", description="Check how sigma someone is")
-    async def sigmameter_slash(self, interaction: discord.Interaction, member: discord.Member):
-        embed = self.make_meter_embed(interaction, member, "Sigma")
+    async def sigmameter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Sigma Meter",
+            description=f"{member.mention} is **{percent}% Sigma**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {interaction.user}")
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="aurameter", description="Check how strong someone's aura is")
-    async def aurameter_slash(self, interaction: discord.Interaction, member: discord.Member):
-        embed = self.make_meter_embed(interaction, member, "Aura")
+    async def aurameter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="Aura Meter",
+            description=f"{member.mention} is **{percent}% Aura**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Requested By: {interaction.user}")
         await interaction.response.send_message(embed=embed)
-
-
-async def setup(bot: commands.Bot):
-    await bot.add_cog(General(bot))
 
 # -------- Prefix command --------
               
