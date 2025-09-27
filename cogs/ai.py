@@ -12,6 +12,8 @@ import time
 openai.api_key = os.getenv("OPENAI_API_KEY")  # Railway secret
 MEMORY_FILE = "/data/chat_memory.json"
 IMPORTANT_MEMORY_DURATION = 3 * 60 * 60  # 3 hours
+MAX_HISTORY = 20  # Last 20 messages
+MAX_REPLY_LENGTH = 1900  # Truncate replies
 
 # ==========================
 # MEMORY HANDLING
@@ -39,7 +41,6 @@ def cleanup_important_memories(guild_data):
     ]
     return guild_data
 
-
 # ==========================
 # COG
 # ==========================
@@ -47,9 +48,9 @@ class AIChat(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # ================
+    # ==========================
     # PREFIX COMMANDS
-    # ================
+    # ==========================
     @commands.command(name="enablechat")
     async def enable_chat_prefix(self, ctx):
         if isinstance(ctx.channel, discord.DMChannel):
@@ -84,9 +85,9 @@ class AIChat(commands.Cog):
             save_memory(data)
         await ctx.send("🧹 AI memory has been cleared for this server!")
 
-    # ================
+    # ==========================
     # SLASH COMMANDS
-    # ================
+    # ==========================
     @app_commands.command(name="enablechat", description="Enable AI chat in this server")
     async def enable_chat_slash(self, interaction: discord.Interaction):
         if isinstance(interaction.channel, discord.DMChannel):
@@ -121,9 +122,9 @@ class AIChat(commands.Cog):
             save_memory(data)
         await interaction.response.send_message("🧹 AI memory has been cleared for this server!")
 
-    # ================
+    # ==========================
     # GUILD JOIN
-    # ================
+    # ==========================
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
         """Automatically disable AI when bot joins a new guild."""
@@ -135,14 +136,12 @@ class AIChat(commands.Cog):
         }
         save_memory(data)
 
-    # ================
+    # ==========================
     # MESSAGE HANDLER
-    # ================
+    # ==========================
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if message.author.bot:
-            return
-        if isinstance(message.channel, discord.DMChannel):
+        if message.author.bot or isinstance(message.channel, discord.DMChannel):
             return
 
         data = load_memory()
@@ -154,14 +153,12 @@ class AIChat(commands.Cog):
         # Clean expired memories
         data[guild_id] = cleanup_important_memories(data[guild_id])
 
-        # Respond if bot is mentioned, reply, or just chatting
-        should_respond = False
-        if self.bot.user.mentioned_in(message):
-            should_respond = True
-        if message.reference and isinstance(message.reference.resolved, discord.Message):
-            should_respond = True
-        if not should_respond:
-            should_respond = True  # always respond in chat mode
+        # Respond if bot is mentioned, replied to, or just chatting
+        should_respond = (
+            self.bot.user.mentioned_in(message) or
+            (message.reference and isinstance(message.reference.resolved, discord.Message)) or
+            True  # always respond in chat mode
+        )
 
         if not should_respond:
             return
@@ -181,7 +178,7 @@ class AIChat(commands.Cog):
         # Prepare history
         history = data[guild_id]["history"]
         history.append({"role": "user", "content": f"{message.author.display_name}: {message.content}"})
-        history = history[-20:]  # keep last 20 messages
+        history = history[-MAX_HISTORY:]  # keep last 20 messages
         data[guild_id]["history"] = history
         save_memory(data)
 
@@ -194,7 +191,7 @@ class AIChat(commands.Cog):
         # AI response
         try:
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+                model=os.getenv("OPENAI_MODEL", "gpt-5-mini"),
                 messages=[
                     {"role": "system", "content": "You are a helpful and friendly AI chatbot that talks with everyone in a Discord server."}
                 ] + important_context + history
@@ -204,8 +201,8 @@ class AIChat(commands.Cog):
             reply = f"⚠️ Error generating response: {e}"
 
         # Truncate at 1900 chars
-        if len(reply) > 1900:
-            reply = reply[:1900]
+        if len(reply) > MAX_REPLY_LENGTH:
+            reply = reply[:MAX_REPLY_LENGTH]
 
         # Save bot reply
         history.append({"role": "assistant", "content": reply})
