@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from discord import app_commands, Interactions
+from discord import app_commands
 import json
 import os
 import re
@@ -106,14 +106,17 @@ class WelcomeLeave(commands.Cog):
     # PREFIX COMMANDS
     # ======================
     @commands.command(name="join")
+    @commands.has_permissions(manage_messages=True)
     async def join_setup_prefix(self, ctx):
         await self.start_setup(ctx.author, ctx.guild, "join")
 
     @commands.command(name="leave")
+    @commands.has_permissions(manage_messages=True)
     async def leave_setup_prefix(self, ctx):
         await self.start_setup(ctx.author, ctx.guild, "leave")
 
     @commands.command(name="joinremove")
+    @commands.has_permissions(manage_messages=True)
     async def join_remove_prefix(self, ctx):
         cfg = load_config()
         gid = str(ctx.guild.id)
@@ -124,6 +127,7 @@ class WelcomeLeave(commands.Cog):
             await ctx.send("❌ No join message configuration found.")
 
     @commands.command(name="leaveremove")
+    @commands.has_permissions(manage_messages=True)
     async def leave_remove_prefix(self, ctx):
         cfg = load_config()
         gid = str(ctx.guild.id)
@@ -137,16 +141,19 @@ class WelcomeLeave(commands.Cog):
     # SLASH COMMANDS
     # ======================
     @app_commands.command(name="join", description="Setup join messages (DM wizard)")
+    @discord.app_commands.default_permissions(manage_messages=True)
     async def join_setup_slash(self, interaction: discord.Interaction):
         await interaction.response.send_message("📩 Check your DMs to continue setup.", ephemeral=True)
         await self.start_setup(interaction.user, interaction.guild, "join")
 
     @app_commands.command(name="leave", description="Setup leave messages (DM wizard)")
+    @discord.app_commands.default_permissions(manage_messages=True)
     async def leave_setup_slash(self, interaction: discord.Interaction):
         await interaction.response.send_message("📩 Check your DMs to continue setup.", ephemeral=True)
         await self.start_setup(interaction.user, interaction.guild, "leave")
 
     @app_commands.command(name="joinremove", description="Remove join message config")
+    @discord.app_commands.default_permissions(manage_messages=True)
     async def join_remove_slash(self, interaction: discord.Interaction):
         cfg = load_config()
         gid = str(interaction.guild.id)
@@ -157,6 +164,7 @@ class WelcomeLeave(commands.Cog):
             await interaction.response.send_message("❌ No join message configuration found.", ephemeral=True)
 
     @app_commands.command(name="leaveremove", description="Remove leave message config")
+    @discord.app_commands.default_permissions(manage_messages=True)
     async def leave_remove_slash(self, interaction: discord.Interaction):
         cfg = load_config()
         gid = str(interaction.guild.id)
