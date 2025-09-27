@@ -18,8 +18,17 @@ class ModBot(commands.Bot):
         intents.moderation = True
         intents.presences = True
 
+        # Load prefixes into memory at startup
+        Config.load_prefixes()
+
+        # Dynamic prefix function
+        def dynamic_prefix(bot, message):
+            if not message.guild:
+                return Config.DEFAULT_PREFIX  # fallback for DMs
+            return Config.get_prefix(message.guild.id)
+
         super().__init__(
-            command_prefix=Config.PREFIX,
+            command_prefix=dynamic_prefix,
             intents=intents,
             help_command=None,
             case_insensitive=True
