@@ -169,26 +169,25 @@ class WelcomeLeave(commands.Cog):
     # ======================
     # INPUT HELPER
     # ======================
-    async def ask_input(self, dm, user, title, description, *, allow_skip=False, placeholders=None, image=False):
+    async def ask_input(self, dm, user, title, description, *, allow_skip=False, placeholders=None, image=False, show_back=True):
         embed = discord.Embed(title=title, description=description, color=QUESTION_COLOR)
         if allow_skip:
             embed.add_field(name="⏭ Skip", value="Type `skip` to skip this step.", inline=False)
-        embed.add_field(name="⏪ Back", value="Type `back` to return to previous step.", inline=False)
+        if show_back:
+            embed.add_field(name="⏪ Back", value="Type `back` to return to previous step.", inline=False)
         if placeholders:
             embed.add_field(name="🔑 Placeholders", value=placeholders, inline=False)
-        msg_obj = await dm.send(embed=embed)
+        await dm.send(embed=embed)
 
         while True:
             msg = await self.bot.wait_for(
                 "message", check=lambda m: m.author == user and m.channel == dm
             )
             content = msg.content.strip()
-
-            if content.lower() == "back":
+            if show_back and content.lower() == "back":
                 return "back"
             if allow_skip and content.lower() == "skip":
                 return None
-
             if image:
                 if content.lower() in ("{member_pfp}", "{server_icon}"):
                     return content
@@ -216,69 +215,67 @@ class WelcomeLeave(commands.Cog):
                 color=QUESTION_COLOR
             ))
 
-            data = {}
-            steps = [
-                {"name": "Channel", "key": "channel_id", "prompt": "Provide the **Channel ID** where messages should be sent.", "allow_skip": False, "can_back": False, "image": False, "placeholder_type": None},
-                {"name": "Mode", "key": "mode", "prompt": "Do you want messages to be `text` or `embed`?", "allow_skip": False, "can_back": True, "image": False, "placeholder_type": None},
-                {"name": "Text Message", "key": "text", "prompt": "Enter the text message.", "allow_skip": True, "can_back": True, "image": False, "placeholder_type": "text"},
-                {"name": "Text Image", "key": "image_url", "prompt": "Upload or paste an image URL.", "allow_skip": True, "can_back": True, "image": True, "placeholder_type": "image"},
-                {"name": "Embed Title", "key": "title", "prompt": "Embed title", "allow_skip": False, "can_back": True, "image": False, "placeholder_type": "text"},
-                {"name": "Embed Description", "key": "description", "prompt": "Embed description", "allow_skip": True, "can_back": True, "image": False, "placeholder_type": "text"},
-                {"name": "Embed Color", "key": "color", "prompt": "Embed color HEX (e.g., #00ff00)", "allow_skip": True, "can_back": True, "image": False, "placeholder_type": None},
-                {"name": "Embed Image", "key": "image_url", "prompt": "Embed image URL", "allow_skip": True, "can_back": True, "image": True, "placeholder_type": "image"},
-                {"name": "Embed Thumbnail", "key": "thumbnail_url", "prompt": "Embed thumbnail URL", "allow_skip": True, "can_back": True, "image": True, "placeholder_type": "image"},
-                {"name": "Embed Author Icon", "key": "icon_url", "prompt": "Embed author icon URL", "allow_skip": True, "can_back": True, "image": True, "placeholder_type": "image"},
-                {"name": "Embed Footer Text", "key": "footer_text", "prompt": "Embed footer text", "allow_skip": True, "can_back": True, "image": False, "placeholder_type": "text"},
-                {"name": "Embed Footer Icon", "key": "footer_icon", "prompt": "Embed footer icon URL", "allow_skip": True, "can_back": True, "image": True, "placeholder_type": "image"},
-            ]
+            # Step 1: Channel ID
+            while True:
+                channel_input = await self.ask_input(dm, user, "Channel ID", "Provide the **Channel ID** where messages should be sent.", show_back=False)
+                try:
+                    channel_id = int(channel_input)
+                    if not guild.get_channel(channel_id):
+                        await dm.send(embed=discord.Embed(description="❌ Invalid channel ID.", color=ERROR_COLOR))
+                        continue
+                    break
+                except ValueError:
+                    await dm.send(embed=discord.Embed(description="❌ Invalid channel ID.", color=ERROR_COLOR))
+
+            # Step 2: Mode
+            while True:
+                mode_input = await self.ask_input(dm, user, "Mode", "Do you want messages to be `text` or `embed`?", show_back=True)
+                mode = mode_input.lower()
+                if mode not in ("text", "embed"):
+                    await dm.send(embed=discord.Embed(description="❌ Invalid mode. Choose `text` or `embed`.", color=ERROR_COLOR))
+                    continue
+                break
+
+            data = {"channel_id": channel_id, "mode": mode}
+
+            # Steps based on mode
+            steps = []
+            if mode == "text":
+                steps = [
+                    {"name": "Text Message", "key": "text", "prompt": "Enter the text message.", "allow_skip": True, "placeholders": "{mention}, {user}, {server}, {count}", "image": False},
+                    {"name": "Text Image", "key": "image_url", "prompt": "Upload or paste an image URL.", "allow_skip": True, "placeholders": "{member_pfp}, {server_icon}", "image": True},
+                ]
+            else:  # embed
+                steps = [
+                    {"name": "Embed Title", "key": "title", "prompt": "Embed title", "allow_skip": True, "placeholders": "{mention}, {user}, {server}, {count}", "image": False},
+                    {"name": "Embed Description", "key": "description", "prompt": "Embed description", "allow_skip": True, "placeholders": "{mention}, {user}, {server}, {count}", "image": False},
+                    {"name": "Embed Color", "key": "color", "prompt": "Embed color HEX (e.g., #00ff00)", "allow_skip": True, "placeholders": None, "image": False},
+                    {"name": "Embed Image", "key": "image_url", "prompt": "Embed image URL", "allow_skip": True, "placeholders": "{member_pfp}, {server_icon}", "image": True},
+                    {"name": "Embed Thumbnail", "key": "thumbnail_url", "prompt": "Embed thumbnail URL", "allow_skip": True, "placeholders": "{member_pfp}, {server_icon}", "image": True},
+                    {"name": "Embed Author Icon", "key": "icon_url", "prompt": "Embed author icon URL", "allow_skip": True, "placeholders": "{member_pfp}, {server_icon}", "image": True},
+                    {"name": "Embed Footer Text", "key": "footer_text", "prompt": "Embed footer text", "allow_skip": True, "placeholders": "{mention}, {user}, {server}, {count}", "image": False},
+                    {"name": "Embed Footer Icon", "key": "footer_icon", "prompt": "Embed footer icon URL", "allow_skip": True, "placeholders": "{member_pfp}, {server_icon}", "image": True},
+                ]
 
             index = 0
             while index < len(steps):
                 step = steps[index]
+                allow_skip = step.get("allow_skip", False)
+                placeholders = step.get("placeholders")
+                image = step.get("image", False)
+                show_back = index > 0  # Back works from second step onward
 
-                # Skip irrelevant steps
-                if step["key"] in ("text", "image_url") and data.get("mode") == "embed" and step["key"] in ("text", "image_url"):
-                    index += 1
-                    continue
-                if step["key"] in ("title","description","color","thumbnail_url","icon_url","footer_text","footer_icon") and data.get("mode") == "text" and step["key"] not in ("title","description","color","thumbnail_url","icon_url","footer_text","footer_icon"):
-                    index += 1
-                    continue
-
-                placeholders = None
-                if step["placeholder_type"] == "text":
-                    placeholders = "{mention}, {user}, {server}, {count}"
-                elif step["placeholder_type"] == "image":
-                    placeholders = "{member_pfp}, {server_icon}"
-
-                answer = await self.ask_input(dm, user, step["name"], step["prompt"], allow_skip=step["allow_skip"], image=step["image"], placeholders=placeholders)
+                answer = await self.ask_input(dm, user, step["name"], step["prompt"], allow_skip=allow_skip, placeholders=placeholders, image=image, show_back=show_back)
 
                 if answer == "back":
-                    if step.get("can_back") and index > 0:
+                    if index > 0:
                         index -= 1
                         continue
                     else:
                         await dm.send(embed=discord.Embed(description="❌ Cannot go back from this step.", color=ERROR_COLOR))
                         continue
 
-                if step["key"] == "channel_id":
-                    try:
-                        ch_id = int(answer)
-                        if not guild.get_channel(ch_id):
-                            await dm.send(embed=discord.Embed(description="❌ Invalid channel ID.", color=ERROR_COLOR))
-                            continue
-                        answer= ch_id
-                    except ValueError:
-                        await dm.send(embed=discord.Embed(description="❌ Invalid channel ID.", color=ERROR_COLOR))
-                        continue
-
-                elif step["key"] == "mode":
-                    mode = answer.lower()
-                    if mode not in ["text", "embed"]:
-                        await dm.send(embed=discord.Embed(description="❌ Invalid mode. Choose `text` or `embed`.", color=ERROR_COLOR))
-                        continue
-                    answer = mode
-
-                elif step["key"] == "color" and answer:
+                if step["key"] == "color" and answer:
                     color_val = answer.replace("#", "0x") if answer.startswith("#") else answer
                     try:
                         int(color_val, 16)
