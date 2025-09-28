@@ -59,6 +59,215 @@ class General(commands.Cog):
     # =======================
     # PREFIX COMMANDS
     # =======================
+
+@commands.command(name="monkemeter", aliases=["mm", "monke"])
+async def monkemeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="🦍 Monke Meter",
+        description=f"🦍 {member.mention} is **{percent}% Monke**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
+
+
+@commands.command(name="uwumeter", aliases=["um", "uwu"])
+async def uwumeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="🌸 Uwu Meter",
+        description=f"🌸 {member.mention} is **{percent}% Uwu**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
+
+
+@commands.command(name="cringemeter", aliases=["crm", "cringe"])
+async def cringemeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="🤡 Cringe Meter",
+        description=f"🤡 {member.mention} is **{percent}% Cringe**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
+
+
+@commands.command(name="coolmeter", aliases=["com", "cool"])
+async def coolmeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="😎 Cool Meter",
+        description=f"😎 {member.mention} is **{percent}% Cool**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
+
+
+@commands.command(name="vibemeter", aliases=["vm", "vibe"])
+async def vibemeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="✨ Vibe Meter",
+        description=f"✨ {member.mention} is **{percent}% Vibey**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
+
+
+@commands.command(name="simpmeter", aliases=["sim", "simp"])
+async def simpmeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="❤️ Simp Meter",
+        description=f"❤️ {member.mention} is **{percent}% Simp**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
+
+
+@commands.command(name="npcmeter", aliases=["npm", "npc"])
+async def npcmeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="🤖 NPC Meter",
+        description=f"🤖 {member.mention} is **{percent}% NPC**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
+
+
+@commands.command(name="hornymeter", aliases=["hm", "horny"])
+async def hornymeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="🔥 Horny Meter",
+        description=f"🔥 {member.mention} is **{percent}% Horny**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
+
+
+@commands.command(name="nerdmeter", aliases=["nem", "nerd"])
+async def nerdmeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="🤓 Nerd Meter",
+        description=f"🤓 {member.mention} is **{percent}% Nerd**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
+
+
+@commands.command(name="crybabymeter", aliases=["cbm", "crybaby"])
+async def crybabymeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="😭 Crybaby Meter",
+        description=f"😭 {member.mention} is **{percent}% Crybaby**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
+
+
+@commands.command(name="toxicmeter", aliases=["tm", "toxic"])
+async def toxicmeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="☣️ Toxic Meter",
+        description=f"☣️ {member.mention} is **{percent}% Toxic**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
+
+
+@commands.command(name="botmeter", aliases=["bm", "bot"])
+async def botmeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="🤖 Bot Meter",
+        description=f"🤖 {member.mention} is **{percent}% Bot**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
+
+
+@commands.command(name="uselessmeter", aliases=["ulm", "useless"])
+async def uselessmeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="🗑️ Useless Meter",
+        description=f"🗑️ {member.mention} is **{percent}% Useless**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
+
+
+@commands.command(name="hotmeter", aliases=["hom", "hot"])
+async def hotmeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="🔥 Hot Meter",
+        description=f"🔥 {member.mention} is **{percent}% Hot**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
+
+
+@commands.command(name="usefulmeter", aliases=["usm", "useful"])
+async def usefulmeter_cmd(self, ctx, member: discord.Member = None):
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+    embed = discord.Embed(
+        title="⚡ Useful Meter",
+        description=f"⚡ {member.mention} is **{percent}% Useful**",
+        color=discord.Color.random()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Requested By: {ctx.author}")
+    await ctx.send(embed=embed)
     @commands.command(name="susmeter", aliases=["sm", "sus"])
     async def susmeter_cmd(self, ctx, member: discord.Member = None):
         member = member or ctx.author
