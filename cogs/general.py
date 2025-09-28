@@ -1,4 +1,4 @@
-import discord
+jimport discord
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from discord import app_commands
@@ -202,57 +202,6 @@ class General(commands.Cog):
             color=discord.Color.random()
         )
         embed.set_thumbnail(url=member.display_avatar.url)
-
-    @app_commands.command(name="monkemeter", description="Check how much of a monke someone is")
-    async def monkemeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
-        member = member or interaction.user
-        percent = random.randint(0, 100)
-        embed = discord.Embed(
-            title="🦍 Monke Meter",
-            description=f"🦍 {member.mention} is **{percent}% Monke**",
-            color=discord.Color.random()
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"Requested By: {interaction.user}")
-        await interaction.response.send_message(embed=embed)
-    @app_commands.command(name="uselessmeter", description="Check how useless someone is")
-    async def uselessmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
-        member = member or interaction.user
-        percent = random.randint(0, 100)
-        embed = discord.Embed(
-            title="🗑️ Useless Meter",
-            description=f"🗑️ {member.mention} is **{percent}% Useless**",
-            color=discord.Color.random()
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"Requested By: {interaction.user}")
-        await interaction.response.send_message(embed=embed)
-
-    @app_commands.command(name="hotmeter", description="Check how hot someone is")
-    async def hotmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
-        member = member or interaction.user
-        percent = random.randint(0, 100)
-        embed = discord.Embed(
-            title="🔥 Hot Meter",
-            description=f"🔥 {member.mention} is **{percent}% Hot**",
-            color=discord.Color.random()
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"Requested By: {interaction.user}")
-        await interaction.response.send_message(embed=embed)
-
-    @app_commands.command(name="usefulmeter", description="Check how useful someone is")
-    async def usefulmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
-        member = member or interaction.user
-        percent = random.randint(0, 100)
-        embed = discord.Embed(
-            title="⚡ Useful Meter",
-            description=f"⚡ {member.mention} is **{percent}% Useful**",
-            color=discord.Color.random()
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"Requested By: {interaction.user}")
-        await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="gaymeter", description="Check how gay someone is")
     async def gaymeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
