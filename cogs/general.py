@@ -394,8 +394,7 @@ class General(commands.Cog):
             description=f"⚡ {member.mention} is **{percent}% Useful**",
             color=discord.Color.random()
         )
-        embed.set_thumbnail(url=member
-
+        embed.set_thumbnail(url=member.display_avatar.url)
         embed.set_footer(text=f"Requested By: {interaction.user}")
         await interaction.response.send_message(embed=embed)
 
