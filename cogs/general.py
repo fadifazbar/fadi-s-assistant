@@ -193,7 +193,7 @@ class General(commands.Cog):
     # SLASH COMMANDS
     # =======================
     @app_commands.command(name="monkemeter", description="Check how much of a monke someone is")
-async def monkemeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def monkemeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
@@ -207,7 +207,7 @@ async def monkemeter_slash(self, interaction: discord.Interaction, member: disco
 
 
 @app_commands.command(name="uwumeter", description="Check how uwu someone is")
-async def uwumeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def uwumeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
@@ -221,7 +221,7 @@ async def uwumeter_slash(self, interaction: discord.Interaction, member: discord
 
 
 @app_commands.command(name="cringemeter", description="Check how cringe someone is")
-async def cringemeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def cringemeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
@@ -235,7 +235,7 @@ async def cringemeter_slash(self, interaction: discord.Interaction, member: disc
 
 
 @app_commands.command(name="coolmeter", description="Check how cool someone is")
-async def coolmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def coolmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
@@ -249,7 +249,7 @@ async def coolmeter_slash(self, interaction: discord.Interaction, member: discor
 
 
 @app_commands.command(name="vibemeter", description="Check how vibey someone is")
-async def vibemeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def vibemeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
@@ -263,7 +263,7 @@ async def vibemeter_slash(self, interaction: discord.Interaction, member: discor
 
 
 @app_commands.command(name="simpmeter", description="Check how much of a simp someone is")
-async def simpmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def simpmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
@@ -277,7 +277,7 @@ async def simpmeter_slash(self, interaction: discord.Interaction, member: discor
 
 
 @app_commands.command(name="npcmeter", description="Check how much of an NPC someone is")
-async def npcmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def npcmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
@@ -291,7 +291,7 @@ async def npcmeter_slash(self, interaction: discord.Interaction, member: discord
 
 
 @app_commands.command(name="hornymeter", description="Check how horny someone is")
-async def hornymeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def hornymeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
@@ -305,7 +305,7 @@ async def hornymeter_slash(self, interaction: discord.Interaction, member: disco
 
 
 @app_commands.command(name="nerdmeter", description="Check how nerdy someone is")
-async def nerdmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def nerdmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
@@ -319,7 +319,7 @@ async def nerdmeter_slash(self, interaction: discord.Interaction, member: discor
 
 
 @app_commands.command(name="crybabymeter", description="Check how much of a crybaby someone is")
-async def crybabymeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def crybabymeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
@@ -333,7 +333,7 @@ async def crybabymeter_slash(self, interaction: discord.Interaction, member: dis
 
 
 @app_commands.command(name="toxicmeter", description="Check how toxic someone is")
-async def toxicmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def toxicmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
@@ -347,7 +347,7 @@ async def toxicmeter_slash(self, interaction: discord.Interaction, member: disco
 
 
 @app_commands.command(name="botmeter", description="Check how much of a bot someone is")
-async def botmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def botmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
@@ -361,7 +361,7 @@ async def botmeter_slash(self, interaction: discord.Interaction, member: discord
 
 
 @app_commands.command(name="uselessmeter", description="Check how useless someone is")
-async def uselessmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def uselessmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
@@ -375,7 +375,7 @@ async def uselessmeter_slash(self, interaction: discord.Interaction, member: dis
 
 
 @app_commands.command(name="hotmeter", description="Check how hot someone is")
-async def hotmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def hotmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
@@ -389,7 +389,7 @@ async def hotmeter_slash(self, interaction: discord.Interaction, member: discord
 
 
 @app_commands.command(name="usefulmeter", description="Check how useful someone is")
-async def usefulmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def usefulmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
     embed = discord.Embed(
