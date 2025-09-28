@@ -50,9 +50,6 @@ class ModBot(commands.Bot):
 
         logger.info("✅ Loaded cogs (slash commands will now auto-sync)")
 
-        # --- Global slash command sync ---
-        synced = await self.tree.sync()  # Global sync
-        logger.info(f"🎯 Synced {len(synced)} Commands! ✅")
 
     async def on_ready(self):
         logger.info(f"✅ Bot is ready! Logged in as {self.user}")
