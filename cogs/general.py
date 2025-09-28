@@ -192,7 +192,7 @@ class General(commands.Cog):
     # =======================
     # SLASH COMMANDS
     # =======================
-    @app_commands.command(name="monkemeter", description="Check how much of a monke someone is")
+@app_commands.command(name="monkemeter", description="Check how much of a monke someone is")
     async def monkemeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
     member = member or interaction.user
     percent = random.randint(0, 100)
