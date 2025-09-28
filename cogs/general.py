@@ -192,6 +192,17 @@ class General(commands.Cog):
     # =======================
     # SLASH COMMANDS
     # =======================
+    @app_commands.command(name="susmeter", description="Check how sus someone is")
+    async def susmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
+        percent = random.randint(0, 100)
+        embed = discord.Embed(
+            title="🤨 Sus Meter",
+            description=f"🤨 {member.mention} is **{percent}% Sus**",
+            color=discord.Color.random()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+
 @app_commands.command(name="monkemeter", description="Check how much of a monke someone is")
     async def monkemeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
         member = member or interaction.user
@@ -385,16 +396,6 @@ class General(commands.Cog):
         )
         embed.set_thumbnail(url=member
 
-    @app_commands.command(name="susmeter", description="Check how sus someone is")
-    async def susmeter_slash(self, interaction: discord.Interaction, member: discord.Member = None):
-        member = member or interaction.user
-        percent = random.randint(0, 100)
-        embed = discord.Embed(
-            title="🤨 Sus Meter",
-            description=f"🤨 {member.mention} is **{percent}% Sus**",
-            color=discord.Color.random()
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
         embed.set_footer(text=f"Requested By: {interaction.user}")
         await interaction.response.send_message(embed=embed)
 
