@@ -268,6 +268,7 @@ async def usefulmeter_cmd(self, ctx, member: discord.Member = None):
     embed.set_thumbnail(url=member.display_avatar.url)
     embed.set_footer(text=f"Requested By: {ctx.author}")
     await ctx.send(embed=embed)
+
     @commands.command(name="susmeter", aliases=["sm", "sus"])
     async def susmeter_cmd(self, ctx, member: discord.Member = None):
         member = member or ctx.author
