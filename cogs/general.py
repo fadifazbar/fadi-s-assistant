@@ -1,4 +1,4 @@
-jimport discord
+import discord
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from discord import app_commands
