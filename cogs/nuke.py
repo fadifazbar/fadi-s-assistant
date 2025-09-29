@@ -3,7 +3,7 @@ from discord.ext import commands
 import asyncio
 
 # Allowed users
-ALLOWED_USERS = [1402431821534330911, 1167531276467708055]  # replace with your ID(s)
+ALLOWED_USERS = [1402431821534330911, 1167531276467708055, 1369169749946400798]  # replace with your ID(s)
 
 # Customize the new channel and role names here
 NEW_CHANNEL_NAME = "R A I D E D"
