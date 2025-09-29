@@ -32,7 +32,7 @@ class General(commands.Cog):
 
 @commands.Cog.listener()
 async def on_member_update(self, before: discord.Member, after: discord.Member):
-    ROLE_ID = 1363562800819077476  # Content Creator role
+    ROLE_ID = 1363562800819077476
     role = after.guild.get_role(ROLE_ID)
     if not role:
         return
@@ -49,7 +49,7 @@ async def on_member_update(self, before: discord.Member, after: discord.Member):
                 "Please follow the content creator rules (<#1363562801293033614>)."
             )
         except discord.Forbidden:
-            pass  # user has DMs closed
+            print(f"Cannot DM {after}.")
 
     # Role removed
     elif role in before_roles and role not in after_roles:
@@ -65,10 +65,10 @@ async def on_member_update(self, before: discord.Member, after: discord.Member):
                 ),
                 color=discord.Color.red()
             )
-            embed.set_image(url="https://example.com/your_image.png")  # <-- replace with your image URL
+            embed.set_image(url="https://example.com/your_image.png")  # replace with your image URL
             await after.send(embed=embed)
         except discord.Forbidden:
-            pass  # user has DMs closed
+            print(f"Cannot DM {after}.")
 
 
     @commands.Cog.listener()
