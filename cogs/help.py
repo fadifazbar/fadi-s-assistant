@@ -170,3 +170,6 @@ class HelpCog(commands.Cog):
                 await ctx_or_interaction.response.send_message(embed=embed, ephemeral=ephemeral)
             else:
                 await ctx_or_interaction.followup.send(embed=embed, ephemeral=ephemeral)
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(HelpCog(bot))
