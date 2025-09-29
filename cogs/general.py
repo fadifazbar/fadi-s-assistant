@@ -65,7 +65,7 @@ async def on_member_update(self, before: discord.Member, after: discord.Member):
                 ),
                 color=discord.Color.red()
             )
-            embed.set_image(url="https://example.com/your_image.png")  # replace with your image URL
+            embed.set_image(url="https://ibb.co/QjdGBtNg")  # replace with your image URL
             await after.send(embed=embed)
         except discord.Forbidden:
             print(f"Cannot DM {after}.")
