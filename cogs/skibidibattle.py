@@ -15,7 +15,7 @@ HP_EMOJI = "<:HP_V2:1408669354069065748>"
 characters = {
     "Titan Speakerman 1.0": {
         "hp": 4500,
-        "image": "https://i.postimg.cc/PrzvSrd7/Titan-Speakerman1-0.png",
+        "image": "https://ibb.co/j9M27tZC",
         "attacks": {
             "💥 Cannon Blast": {"damage": 400, "rarity": 6},
             "🔊 Shock Wave": {"damage": 200, "rarity": 10},
@@ -36,7 +36,7 @@ characters = {
 
     "Titan Cameraman 1.0": {
         "hp": 6500,
-        "image": "https://i.postimg.cc/PqcCCCMC/Titan-Cameraman1-0.png",
+        "image": "https://ibb.co/pr3fpgSr",
         "attacks": {
             "💫 Core Beam": {"damage": 300, "rarity": 2},
             "💥 Ground Smash": {"damage": 200, "rarity": 6},
@@ -50,7 +50,7 @@ characters = {
 
     "Titan Cameraman 2.0": {
         "hp":20000,
-        "image": "https://i.postimg.cc/SRmkR4HX/Titan-Cameraman2-0.png",
+        "image": "https://ibb.co/h1B1CwQd",
         "attacks": {
             "💥 Blaster": {"damage": 380, "rarity": 7},
             "🦵 Kick": {"damage": 200, "rarity": 8},
@@ -105,7 +105,7 @@ characters = {
 
     "Titan SpeakerMan 2.0": {
         "hp": 13500,
-        "image": "https://i.postimg.cc/2yTmBJf0/Titan-Speakerman2-0.png",
+        "image": "https://ibb.co/93ZrhGq6",
         "attacks": {
             "🛰️ Blaster Shot": {"damage": 220, "rarity": 5},
             "🔊 Shock Wave": {"damage": 350, "rarity": 4},
@@ -132,7 +132,7 @@ characters = {
 
     "Titan Cinemaman": {
         "hp": 17400,
-        "image": "https://i.postimg.cc/vZyhMvhP/cinemaman.png",
+        "image": "https://ibb.co/cKgKPG5v",
         "attacks": {
             "📺 Red Light": {"damage": 700, "rarity": 2},
             "🎶 Speaker Blast": {"damage": 500, "rarity": 2},
@@ -155,7 +155,7 @@ characters = {
 
     "G-Man 2.0": {
         "hp": 7500,
-        "image": "https://i.postimg.cc/XJnXYpm6/image-2025-09-19-012332879.png",
+        "image": "https://ibb.co/hRzZrkL1",
         "attacks": {
             "👁️ Laser Eyes": {"damage": 300, "rarity": 6},
             "🚀 Mechanical Lasers": {"damage": 500, "rarity": 4},
@@ -169,7 +169,7 @@ characters = {
 
     "G-Man 3.0": {
         "hp": 10000,
-        "image": "https://i.postimg.cc/N0kfSQMJ/image-2025-09-19-012558768.png",
+        "image": "https://ibb.co/TqmspFVK",
         "attacks": {
             "🚀 Mechanical Lasers": {"damage": 1000, "rarity": 4},
             "👄 Bite": {"damage": 220, "rarity": 12},
@@ -189,7 +189,7 @@ characters = {
 
     "Injured G-Man 3.0": {
         "hp": 6500,
-        "image": "https://i.postimg.cc/sX8F0LpH/image-2025-09-19-012959782.png",
+        "image": "https://ibb.co/mChK6PbZ",
         "attacks": {
             "🚀 Mechanical Lasers": {"damage": 400, "rarity": 4},
             "👄 Bite": {"damage": 220, "rarity": 12},
@@ -201,7 +201,7 @@ characters = {
 
     "G-Man 4.0": {
         "hp": 24500,
-        "image": "https://i.postimg.cc/2yhzdYP7/image-2025-09-19-013117308.png",
+        "image": "https://ibb.co/mrqbgRkW",
         "attacks": {
             "👁️ Laser Eyes": {"damage": 800, "rarity": 4},
             "🚀 Mechanical Lasers": {"damage": 1400, "rarity": 2},
@@ -227,7 +227,7 @@ characters = {
 
     "Injured G-Man 4.0": {
         "hp": 14500,
-        "image": "https://i.postimg.cc/TPLB508r/image-2025-09-19-013702596.png",
+        "image": "https://ibb.co/bMfnNSW7",
         "attacks": {
             "👁️ Laser Eyes": {"damage": 200, "rarity": 7},
             "🚀 Mechanical Lasers": {"damage": 400, "rarity": 6},
@@ -246,7 +246,7 @@ characters = {
 
     "G-Man 5.0": {
         "hp": 75000,
-        "image": "https://i.postimg.cc/5NsrPTbB/image-2025-09-19-013825177.png",
+        "image": "https://ibb.co/VYYSqzyT",
         "attacks": {
             "👁️ Laser Eyes": {"damage": 2800, "rarity": 4},
             "🚀 Mechanical Lasers": {"damage": 4400, "rarity": 2},
@@ -275,7 +275,7 @@ characters = {
 
     "Cameraman": {
         "hp": 100,
-        "image": "https://i.postimg.cc/6pN8mjcQ/cameraman.png",
+        "image": "https://ibb.co/zHjRSRyS",
         "attacks": {
             "👊 Punch": {"damage": 10, "rarity": 14},
             "🦵 Kick": {"damage": 30, "rarity": 10},
@@ -288,7 +288,7 @@ characters = {
 
     "Large Cameraman": {
         "hp": 500,
-        "image": "https://i.postimg.cc/vBDTVpY0/large-cameraman.png",
+        "image": "https://ibb.co/V54K5L0",
         "attacks": {
             "👊 Punch": {"damage": 30, "rarity": 14},
             "🦵 Kick": {"damage": 90, "rarity": 10},
@@ -302,7 +302,7 @@ characters = {
 
     "Large Speakerman": {
         "hp": 1000,
-        "image": "https://i.postimg.cc/XvBY8tBq/large-speakerman.png",
+        "image": "https://ibb.co/bjdXvbq5",
         "attacks": {
             "👊 Punch": {"damage": 60, "rarity": 14},
             "🦵 Kick": {"damage": 150, "rarity": 10},
@@ -323,7 +323,7 @@ characters = {
 
     "Strider Cameraman": {
         "hp": 750,
-        "image": "https://i.postimg.cc/rF4jBp6N/strider-cameraman.png",
+        "image": "https://ibb.co/Z1BhVgtr",
         "attacks": {
             "☄️ Gun Shot": {"damage": 125, "rarity": 4},
             "💥 Crush": {"damage": 150, "rarity": 2},
@@ -334,7 +334,7 @@ characters = {
 
     "Strider Speakerman": {
         "hp": 1250,
-        "image": "https://i.postimg.cc/6pwrFLfB/strider-speakerman.png",
+        "image": "https://ibb.co/GQ80Hkxr",
         "attacks": {
             "📢 Massive Shockwave": {"damage": 3500, "rarity": 1},
             "💥 Crush": {"damage": 250, "rarity": 9},
@@ -350,7 +350,7 @@ characters = {
 
     "Speakerman": {
         "hp": 200,
-        "image": "https://i.postimg.cc/65VRV4Jg/speakerman.png",
+        "image": "https://ibb.co/M5xVQsVc",
         "attacks": {
             "👊 Punch": {"damage": 25, "rarity": 14},
             "🦵 Kick": {"damage": 45, "rarity": 10},
@@ -369,7 +369,7 @@ characters = {
 
     "G-Man 1.0": {
         "hp": 5500,
-        "image": "https://i.postimg.cc/sgLjctG8/G-Man-Toilet1-0.png",
+        "image": "https://ibb.co/Kp7cHk5R",
         "attacks": {
             "👁️ Laser Eyes": {"damage": 300, "rarity": 6},
             "👄 Bite": {"damage": 220, "rarity": 12},
@@ -384,7 +384,7 @@ characters = {
 
     "Titan Tvman 1.0": {
         "hp": 14500,
-        "image": "https://i.postimg.cc/vTyHnfxZ/Titan-Tvman1-0.png",
+        "image": "https://ibb.co/200LwjS1",
         "attacks": {
             "📺 Red Light": {"damage": 700, "rarity": 2},
             "🦶 Stomp": {"damage": 180, "rarity": 8},
