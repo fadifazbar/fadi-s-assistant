@@ -8,9 +8,9 @@ from discord.ext import commands
 from discord import app_commands
 import yt_dlp
 
-DUA_EMOJI = "<:duration:1408936058112184601>"
-CHAN_EMOJI = "<:channel:1408936126357700732>"
-POSE_EMOJI = "<:position:1408936089221201930>"
+DUA_EMOJI = "<:duration:1422345203821445251>"
+CHAN_EMOJI = "<:channel:1422345332481589268>"
+POSE_EMOJI = "<:position:1422345278098243757>"
 NP_EMOJI = "<a:music_note:1408941536044908684>"
 
 # ======================
