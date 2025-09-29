@@ -30,6 +30,47 @@ class General(commands.Cog):
         self.edited_messages = {}   # channel_id -> [{"before": before, "after": after}]
 
 
+   @commands.Cog.listener()
+async def on_member_update(self, before: discord.Member, after: discord.Member):
+    ROLE_ID = 1363562800819077476  # Content Creator role
+    role = after.guild.get_role(ROLE_ID)
+    if not role:
+        return
+
+    before_roles = set(before.roles)
+    after_roles = set(after.roles)
+
+    # Role added
+    if role not in before_roles and role in after_roles:
+        try:
+            await after.send(
+                f"👋 Hi {after.mention}!\n\n"
+                "You have officially been added to **Noobs Vs Bacons's Content Creator** program. "
+                "Please follow the content creator rules (<#1363562801293033614>)."
+            )
+        except discord.Forbidden:
+            pass  # user has DMs closed
+
+    # Role removed
+    elif role in before_roles and role not in after_roles:
+        try:
+            embed = discord.Embed(
+                description=(
+                    f"👋 Hi {after.mention}!\n"
+                    "You've been removed from the **Content Creator Program** in **Noobs Vs Bacons** "
+                    "because you do not meet the **Official Requirements**. Try applying again later by "
+                    "DMing the **Owner (<@1167531276467708055>)**, the **Game Manager (<@1281960117633286144>)**, "
+                    "or the **Co-Owner (<@1123292111404531783>)** on Discord, but remember to read the "
+                    "**Requirements (<#1364715466316189776>)**.\n\nGood Luck!"
+                ),
+                color=discord.Color.red()
+            )
+            embed.set_image(url="https://example.com/your_image.png")  # <-- replace with your image URL
+            await after.send(embed=embed)
+        except discord.Forbidden:
+            pass  # user has DMs closed
+
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         # Ignore messages from bots
