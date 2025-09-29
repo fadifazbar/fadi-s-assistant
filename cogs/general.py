@@ -32,7 +32,6 @@ class General(commands.Cog):
 
 @commands.Cog.listener()
 async def on_member_update(self, before: discord.Member, after: discord.Member):
-    # Only proceed if roles actually changed
     if before.roles != after.roles:
         before_roles = set(before.roles)
         after_roles = set(after.roles)
@@ -40,10 +39,19 @@ async def on_member_update(self, before: discord.Member, after: discord.Member):
         added_roles = after_roles - before_roles
         removed_roles = before_roles - after_roles
 
+        responsible = None
+        try:
+            async for entry in after.guild.audit_logs(limit=5, action=discord.AuditLogAction.member_role_update):
+                if entry.target.id == after.id:
+                    responsible = entry.user
+                    break
+        except Exception:
+            pass
+
         CONTENT_CREATOR_ROLE_ID = 1363562800819077476
         content_creator_role = after.guild.get_role(CONTENT_CREATOR_ROLE_ID)
 
-        # Role added
+        # Role added → send welcome DM
         if content_creator_role in added_roles:
             try:
                 await after.send(
@@ -54,7 +62,7 @@ async def on_member_update(self, before: discord.Member, after: discord.Member):
             except Exception:
                 pass  # DM blocked
 
-        # Role removed
+        # Role removed → send removal DM with thumbnail
         if content_creator_role in removed_roles:
             try:
                 embed = discord.Embed(
