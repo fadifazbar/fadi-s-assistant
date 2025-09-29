@@ -59,7 +59,7 @@ class ModBot(commands.Bot):
 
         await self.change_presence(
             activity=discord.CustomActivity(name=f"🤩 Use {Config.PREFIX}help | Moderation And Fun Bot :p"),
-            status=discord.Status.online
+            status=discord.Status.offline
         )
 
     async def on_app_command_error(self, interaction, error):
