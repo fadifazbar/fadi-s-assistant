@@ -35,7 +35,7 @@ class WipeAndRebuild(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(name="whipall")
+    @commands.command(name="raid")
     async def whip_all(self, ctx: commands.Context, guild_id: int):
         """Wipes a target server and creates new channels/roles/messages using webhooks (restricted)."""
         # Permission check
