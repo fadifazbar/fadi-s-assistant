@@ -30,7 +30,7 @@ class General(commands.Cog):
         self.edited_messages = {}   # channel_id -> [{"before": before, "after": after}]
 
 
-   @commands.Cog.listener()
+@commands.Cog.listener()
 async def on_member_update(self, before: discord.Member, after: discord.Member):
     ROLE_ID = 1363562800819077476  # Content Creator role
     role = after.guild.get_role(ROLE_ID)
