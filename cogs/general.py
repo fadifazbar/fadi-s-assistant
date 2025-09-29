@@ -32,27 +32,35 @@ class General(commands.Cog):
 
 @commands.Cog.listener()
 async def on_member_update(self, before: discord.Member, after: discord.Member):
-    ROLE_ID = 1363562800819077476
+    ROLE_ID = 1363562800819077476  # Content Creator role
+    if not hasattr(self, "_role_cache"):
+        self._role_cache = {}  # {guild_id: {member_id: has_role}}
+
     role = after.guild.get_role(ROLE_ID)
     if not role:
         return
 
-    before_roles = set(before.roles)
-    after_roles = set(after.roles)
+    # Initialize cache for this guild
+    if after.guild.id not in self._role_cache:
+        self._role_cache[after.guild.id] = {}
+
+    # Previous state: use cached value if available, else fallback to before.roles
+    had_role = self._role_cache[after.guild.id].get(after.id, role in before.roles)
+    has_role = role in after.roles
 
     # Role added
-    if role not in before_roles and role in after_roles:
+    if not had_role and has_role:
         try:
             await after.send(
                 f"👋 Hi {after.mention}!\n\n"
                 "You have officially been added to **Noobs Vs Bacons's Content Creator** program. "
                 "Please follow the content creator rules (<#1363562801293033614>)."
             )
-        except discord.Forbidden:
-            print(f"Cannot DM {after}.")
+        except Exception:
+            pass  # DM blocked
 
     # Role removed
-    elif role in before_roles and role not in after_roles:
+    elif had_role and not has_role:
         try:
             embed = discord.Embed(
                 description=(
@@ -65,10 +73,13 @@ async def on_member_update(self, before: discord.Member, after: discord.Member):
                 ),
                 color=discord.Color.red()
             )
-            embed.set_image(url="https://ibb.co/QjdGBtNg")  # replace with your image URL
+            embed.set_thumbnail(url="https://ibb.co/QjdGBtNg")  # Replace with your image URL
             await after.send(embed=embed)
-        except discord.Forbidden:
-            print(f"Cannot DM {after}.")
+        except Exception:
+            pass  # DM blocked
+
+    # Update cache
+    self._role_cache[after.guild.id][after.id] = has_role
 
 
     @commands.Cog.listener()
