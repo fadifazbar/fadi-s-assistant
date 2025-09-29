@@ -421,7 +421,7 @@ class General(commands.Cog):
             await ctx.reply(f"❌ Error: {e}", mention_author=True)
 
     # --- Help command (Prefix) ---
-    @commands.command(name="help" aliases=["cmds", "cmnds", "command", "commands"])
+    @commands.command(name="help", aliases=["cmds", "cmnds", "command", "commands"])
     async def help_prefix(self, ctx, command_name: str = None):
         await self._show_help(ctx, command_name)
 
