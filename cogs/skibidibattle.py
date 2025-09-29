@@ -77,7 +77,7 @@ characters = {
 
     "Titan Tvman 2.0": {
         "hp": 50000,
-        "image": "https://i.postimg.cc/X7H4jTLJ/Titan-Tvman2-0.png",
+        "image": "https://ibb.co/mrtypvPH",
         "attacks": {
             "📺 Purple Light": {"damage": 1200, "rarity": 1},
             "📺 Red Light": {"damage": 1500, "rarity": 1},
