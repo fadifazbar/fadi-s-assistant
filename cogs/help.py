@@ -3,6 +3,16 @@ from discord.ext import commands
 from discord import app_commands
 from datetime import datetime
 
+# Try importing Config, fallback if missing
+try:
+    from config import Config
+    PREFIX = Config.PREFIX
+    COLORS = Config.COLORS
+except ImportError:
+    PREFIX = "$"
+    COLORS = {"info": discord.Color.blue()}
+
+
 class HelpCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
