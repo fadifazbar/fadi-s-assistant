@@ -29,57 +29,6 @@ class General(commands.Cog):
         self.deleted_messages = {}  # channel_id -> [discord.Message]
         self.edited_messages = {}   # channel_id -> [{"before": before, "after": after}]
 
-
-@commands.Cog.listener()
-async def on_member_update(self, before: discord.Member, after: discord.Member):
-    # Check if roles changed at all
-    if before.roles == after.roles:
-        return
-
-    before_ids = {r.id for r in before.roles}
-    after_ids = {r.id for r in after.roles}
-
-    added_ids = after_ids - before_ids
-    removed_ids = before_ids - after_ids
-
-    print(f"[DEBUG] Role change detected for {after} ({after.id})")
-    print(f"[DEBUG] Added: {added_ids}, Removed: {removed_ids}")
-
-    CONTENT_CREATOR_ROLE_ID = 1363562800819077476
-
-    # Role added → send welcome DM
-    if CONTENT_CREATOR_ROLE_ID in added_ids:
-        try:
-            await after.send(
-                f"👋 Hi {after.mention}!\n\n"
-                "You have officially been added to **Noobs Vs Bacons's Content Creator** program. "
-                "Please follow the content creator rules (<#1363562801293033614>)."
-            )
-            print("[DEBUG] Sent DM for role ADD")
-        except Exception as e:
-            print(f"[DEBUG] Failed to DM on role add: {e}")
-
-    # Role removed → send removal DM with embed
-    if CONTENT_CREATOR_ROLE_ID in removed_ids:
-        try:
-            embed = discord.Embed(
-                description=(
-                    f"👋 Hi {after.mention}!\n"
-                    "You've been removed from the **Content Creator Program** in **Noobs Vs Bacons** "
-                    "because you do not meet the **Official Requirements**. Try applying again later by "
-                    "DMing the **Owner (<@1167531276467708055>)**, the **Game Manager (<@1281960117633286144>)**, "
-                    "or the **Co-Owner (<@1123292111404531783>)** on Discord, but remember to read the "
-                    "**Requirements (<#1364715466316189776>)**.\n\nGood Luck!"
-                ),
-                color=discord.Color.red()
-            )
-            embed.set_thumbnail(url="https://i.ibb.co/QjdGBtNg")
-            await after.send(embed=embed)
-            print("[DEBUG] Sent DM for role REMOVE")
-        except Exception as e:
-            print(f"[DEBUG] Failed to DM on role remove: {e}")
-
-
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         # Ignore messages from bots
