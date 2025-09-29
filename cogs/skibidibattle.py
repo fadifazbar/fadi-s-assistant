@@ -15,7 +15,7 @@ HP_EMOJI = "<:HP_V2:1408669354069065748>"
 characters = {
     "Titan Speakerman 1.0": {
         "hp": 4500,
-        "image": "https://ibb.co/j9M27tZC",
+        "image": "https://imgur.com/a/iugKgQU",
         "attacks": {
             "💥 Cannon Blast": {"damage": 400, "rarity": 6},
             "🔊 Shock Wave": {"damage": 200, "rarity": 10},
