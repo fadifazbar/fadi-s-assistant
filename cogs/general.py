@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from discord import app_commands
 from discord import ui
@@ -33,6 +33,8 @@ class General(commands.Cog):
 @commands.Cog.listener()
 async def on_member_update(self, before: discord.Member, after: discord.Member):
     ROLE_ID = 1363562800819077476  # Content Creator role
+
+    # Internal cache for role tracking
     if not hasattr(self, "_role_cache"):
         self._role_cache = {}  # {guild_id: {member_id: has_role}}
 
@@ -44,7 +46,7 @@ async def on_member_update(self, before: discord.Member, after: discord.Member):
     if after.guild.id not in self._role_cache:
         self._role_cache[after.guild.id] = {}
 
-    # Previous state: use cached value if available, else fallback to before.roles
+    # Previous state: use cached value if available, otherwise fallback to before.roles
     had_role = self._role_cache[after.guild.id].get(after.id, role in before.roles)
     has_role = role in after.roles
 
@@ -73,7 +75,7 @@ async def on_member_update(self, before: discord.Member, after: discord.Member):
                 ),
                 color=discord.Color.red()
             )
-            embed.set_thumbnail(url="https://ibb.co/QjdGBtNg")  # Replace with your image URL
+            embed.set_thumbnail(url="https://i.ibb.co/QjdGBtNg")
             await after.send(embed=embed)
         except Exception:
             pass  # DM blocked
