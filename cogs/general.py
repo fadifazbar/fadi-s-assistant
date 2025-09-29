@@ -421,7 +421,7 @@ class General(commands.Cog):
             await ctx.reply(f"❌ Error: {e}", mention_author=True)
 
     # --- Help command (Prefix) ---
-    @commands.command(name="help")
+    @commands.command(name="help" aliases=["cmds", "cmnds", "command", "commands"])
     async def help_prefix(self, ctx, command_name: str = None):
         await self._show_help(ctx, command_name)
 
@@ -495,8 +495,7 @@ class General(commands.Cog):
             "adopt": ("👼 Adopt", f"`{Config.PREFIX}adopt <member>` or `/adopt`\nAsk someone to be your child! (max is 7)\n"),
             "disown": ("😭 Disown", f"`{Config.PREFIX}disown` or `/disown`\nShows a list of your children and disown one.\n"),
             "runaway": ("💨 RunAway", f"`{Config.PREFIX}runaway` or `/runaway`\nrunaway from your parent\n"),
-            "makeout": ("😘 makeOut", f"`{Config.PREFIXmakeout}makeout <member>` or `/makeout`\nMakeout with someone\n") # ,
-            # "": ("", f"`{Config.PREFIX}` or `/`\n\n"),
+            "makeout": ("😘 MakeOut", f"`{Config.PREFIXmakeout}makeout <member>` or `/makeout`\nMakeout with someone\n")
         }
 
         # --- Show specific command help ---
@@ -536,15 +535,6 @@ class General(commands.Cog):
                     f"`{Config.PREFIX}slowmode` - Set a slowmode for a channel\n"
                     f"`{Config.PREFIX}lock` - Locks a channel\n"
                     f"`{Config.PREFIX}unlock` - Unlocks a channel\n"
-                    f"`{Config.PREFIX}translate` - Translate a message\n"
-                    f"`{Config.PREFIX}skibidi` - Battle someone\n"
-                    f"`{Config.PREFIX}skibidilist` - List of characters\n"
-                    f"`{Config.PREFIX}marry` - Marry someone\n"
-                    f"`{Config.PREFIX}adopt` - Adopt Someone\n"
-                    f"`{Config.PREFIX}divorce` - Divorce Your Partner\n"
-                    f"`{Config.PREFIX}disown` - Disown your child\n"
-                    f"`{Config.PREFIX}runaway` - Runaway from your parent\n"
-                    f"`{Config.PREFIX}makeout` - Makeout with someone\n"
                 ),
                 inline=True
             )
@@ -576,6 +566,15 @@ class General(commands.Cog):
                     f"`{Config.PREFIX}pat` - Pats someone"
                     f"`{Config.PREFIX}hug` - Hugs someone"
                     f"`{Config.PREFIX}forcekiss` - Make 2 users forcekiss eachother"
+                    f"`{Config.PREFIX}translate` - Translate a message\n"
+                    f"`{Config.PREFIX}skibidi` - Battle someone\n"
+                    f"`{Config.PREFIX}skibidilist` - List of characters\n"
+                    f"`{Config.PREFIX}marry` - Marry someone\n"
+                    f"`{Config.PREFIX}adopt` - Adopt Someone\n"
+                    f"`{Config.PREFIX}divorce` - Divorce Your Partner\n"
+                    f"`{Config.PREFIX}disown` - Disown your child\n"
+                    f"`{Config.PREFIX}runaway` - Runaway from your parent\n"
+                    f"`{Config.PREFIX}makeout` - Makeout with someone\n"
                 ),
                 inline=True
             )
