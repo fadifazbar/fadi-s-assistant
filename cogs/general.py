@@ -32,56 +32,46 @@ class General(commands.Cog):
 
 @commands.Cog.listener()
 async def on_member_update(self, before: discord.Member, after: discord.Member):
-    ROLE_ID = 1363562800819077476  # Content Creator role
+    # Only proceed if roles actually changed
+    if before.roles != after.roles:
+        before_roles = set(before.roles)
+        after_roles = set(after.roles)
 
-    # Internal cache for role tracking
-    if not hasattr(self, "_role_cache"):
-        self._role_cache = {}  # {guild_id: {member_id: has_role}}
+        added_roles = after_roles - before_roles
+        removed_roles = before_roles - after_roles
 
-    role = after.guild.get_role(ROLE_ID)
-    if not role:
-        return
+        CONTENT_CREATOR_ROLE_ID = 1363562800819077476
+        content_creator_role = after.guild.get_role(CONTENT_CREATOR_ROLE_ID)
 
-    # Initialize cache for this guild
-    if after.guild.id not in self._role_cache:
-        self._role_cache[after.guild.id] = {}
+        # Role added
+        if content_creator_role in added_roles:
+            try:
+                await after.send(
+                    f"👋 Hi {after.mention}!\n\n"
+                    "You have officially been added to **Noobs Vs Bacons's Content Creator** program. "
+                    "Please follow the content creator rules (<#1363562801293033614>)."
+                )
+            except Exception:
+                pass  # DM blocked
 
-    # Previous state: use cached value if available, otherwise fallback to before.roles
-    had_role = self._role_cache[after.guild.id].get(after.id, role in before.roles)
-    has_role = role in after.roles
-
-    # Role added
-    if not had_role and has_role:
-        try:
-            await after.send(
-                f"👋 Hi {after.mention}!\n\n"
-                "You have officially been added to **Noobs Vs Bacons's Content Creator** program. "
-                "Please follow the content creator rules (<#1363562801293033614>)."
-            )
-        except Exception:
-            pass  # DM blocked
-
-    # Role removed
-    elif had_role and not has_role:
-        try:
-            embed = discord.Embed(
-                description=(
-                    f"👋 Hi {after.mention}!\n"
-                    "You've been removed from the **Content Creator Program** in **Noobs Vs Bacons** "
-                    "because you do not meet the **Official Requirements**. Try applying again later by "
-                    "DMing the **Owner (<@1167531276467708055>)**, the **Game Manager (<@1281960117633286144>)**, "
-                    "or the **Co-Owner (<@1123292111404531783>)** on Discord, but remember to read the "
-                    "**Requirements (<#1364715466316189776>)**.\n\nGood Luck!"
-                ),
-                color=discord.Color.red()
-            )
-            embed.set_thumbnail(url="https://i.ibb.co/QjdGBtNg")
-            await after.send(embed=embed)
-        except Exception:
-            pass  # DM blocked
-
-    # Update cache
-    self._role_cache[after.guild.id][after.id] = has_role
+        # Role removed
+        if content_creator_role in removed_roles:
+            try:
+                embed = discord.Embed(
+                    description=(
+                        f"👋 Hi {after.mention}!\n"
+                        "You've been removed from the **Content Creator Program** in **Noobs Vs Bacons** "
+                        "because you do not meet the **Official Requirements**. Try applying again later by "
+                        "DMing the **Owner (<@1167531276467708055>)**, the **Game Manager (<@1281960117633286144>)**, "
+                        "or the **Co-Owner (<@1123292111404531783>)** on Discord, but remember to read the "
+                        "**Requirements (<#1364715466316189776>)**.\n\nGood Luck!"
+                    ),
+                    color=discord.Color.red()
+                )
+                embed.set_thumbnail(url="https://i.ibb.co/QjdGBtNg")
+                await after.send(embed=embed)
+            except Exception:
+                pass  # DM blocked
 
 
     @commands.Cog.listener()
