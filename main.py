@@ -50,6 +50,10 @@ class ModBot(commands.Bot):
 
         logger.info("✅ Loaded cogs (slash commands will now auto-sync)")
 
+        # --- Global slash command sync ---
+        synced = await self.tree.sync()  # Global sync
+        logger.info(f"🎯 Synced {len(synced)} Commands! ✅")
+
 
     async def on_ready(self):
         logger.info(f"✅ Bot is ready! Logged in as {self.user}")
@@ -58,7 +62,7 @@ class ModBot(commands.Bot):
 
         await self.change_presence(
             activity=discord.CustomActivity(name=f"🤩 Use {Config.PREFIX}help | Moderation And Fun Bot :p"),
-            status=discord.Status.online
+            status=discord.Status.idle
         )
 
     async def on_app_command_error(self, interaction, error):
