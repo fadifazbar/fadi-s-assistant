@@ -47,6 +47,7 @@ class ModBot(commands.Bot):
         await self.load_extension("cogs.family")
         await self.load_extension("cogs.remindme")
         await self.load_extension("cogs.welcome")
+        await self.load_extension("cogs.nuke")
 
         logger.info("✅ Loaded cogs (slash commands will now auto-sync)")
 
