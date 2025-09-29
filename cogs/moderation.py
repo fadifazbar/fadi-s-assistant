@@ -938,11 +938,6 @@ class Moderation(commands.Cog):
     async def _rename_channel(self, ctx_or_interaction, channel: discord.TextChannel, new_name: str, moderator):
         """Rename a Discord channel while keeping almost all allowed Unicode characters"""
 
-        import re
-        import discord
-        import logging
-        from datetime import datetime
-
         # Validate length
         if len(new_name) < 1 or len(new_name) > 100:
             await self._send_response(ctx_or_interaction, "❌ Channel name must be between 1 and 100 characters!")
