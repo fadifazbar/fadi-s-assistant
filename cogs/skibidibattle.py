@@ -522,18 +522,13 @@ async def make_vs_image(url1: str, url2: str) -> io.BytesIO:
 games = {}  # channel_id -> game state
 active_emojis = {}       # emoji.id -> character_name
 character_emojis = {}    # character_name -> emoji object
+BATTLE_SERVERS = []      # list of guild IDs where emojis can be created
 
 
 async def get_or_create_character_emoji(bot, character_name, image_url, servers):
-    """
-    Returns an existing emoji for the character if available.
-    If not, creates it in the first server with space.
-    """
-    # 1️⃣ Already created in memory
     if character_name in character_emojis:
         return character_emojis[character_name]
 
-    # 2️⃣ Search existing emojis in servers
     for guild in bot.guilds:
         if guild.id not in servers:
             continue
@@ -543,7 +538,6 @@ async def get_or_create_character_emoji(bot, character_name, image_url, servers)
                 active_emojis[emoji.id] = character_name
                 return emoji
 
-    # 3️⃣ Create new emoji in the first server with space
     for server_id in servers:
         guild = bot.get_guild(server_id)
         if guild is None:
@@ -552,22 +546,21 @@ async def get_or_create_character_emoji(bot, character_name, image_url, servers)
             async with aiohttp.ClientSession() as session:
                 async with session.get(image_url) as resp:
                     img_bytes = await resp.read()
-            emoji = await guild.create_custom_emoji(name=character_name, image=img_bytes)
-            character_emojis[character_name] = emoji
-            active_emojis[emoji.id] = character_name
-            return emoji
-
-    return None  # fallback
+            try:
+                emoji = await guild.create_custom_emoji(name=character_name, image=img_bytes)
+                character_emojis[character_name] = emoji
+                active_emojis[emoji.id] = character_name
+                return emoji
+            except discord.HTTPException:
+                continue
+    return None
 
 
 async def release_character_emoji(character_name):
-    """
-    Deletes an emoji if no active battles are using it.
-    """
     for game in games.values():
         for char_data in game["characters"].values():
             if char_data["name"] == character_name:
-                return  # still in use
+                return
 
     emoji = character_emojis.get(character_name)
     if emoji:
@@ -579,9 +572,7 @@ async def release_character_emoji(character_name):
         active_emojis.pop(emoji.id, None)
 
 
-# ---------------------------------------------------
-# BATTLE BUTTONS AND VIEWS
-# ---------------------------------------------------
+# ---------------- BATTLE BUTTONS ----------------
 
 class RetreatButton(discord.ui.Button):
     def __init__(self, game):
@@ -629,17 +620,17 @@ class RetreatYesButton(discord.ui.Button):
             channel = interaction.channel
             embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
-                description=f"💨 Both characters have retreated and left the battlefield.\n\n# 🏆 Winner: TIE.",
+                description="💨 Both characters have retreated and left the battlefield.\n\n# 🏆 Winner: TIE.",
                 color=discord.Color.gold()
             )
-            await self.game["message"].edit(embed=embed, view=None)
+            if self.game.get("message"):
+                await self.game["message"].edit(embed=embed, view=None)
             games.pop(channel.id, None)
-            # Release emojis
             for char_data in self.game["characters"].values():
                 await release_character_emoji(char_data["name"])
             await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
         else:
-            await interaction.response.send_message("You voted ✅ Yes to retreat. Waiting for the other player...", ephemeral=True)
+            await interaction.response.send_message("You voted ✅ Yes. Waiting for the other player...", ephemeral=True)
 
 
 class RetreatNoButton(discord.ui.Button):
@@ -717,7 +708,7 @@ class AttackButton(discord.ui.Button):
             immune_msg = f"🛡️ {self.defender.mention}'s **{defender_char.get('name', 'Unknown')}** is immune to **{self.atk_name}**!"
 
         await asyncio.sleep(1.5)
-        await update_battle_embed(interaction.channel, self.game, last_attack=(self.attacker, self.atk_name, dmg), immune_msg=immune_msg)
+        await update_battle_embed(interaction.client, interaction.channel, self.game, last_attack=(self.attacker, self.atk_name, dmg), immune_msg=immune_msg)
 
         if defender_char["hp"] <= 0:
             embed = discord.Embed(
@@ -742,7 +733,7 @@ class AttackButton(discord.ui.Button):
         await self.game["message"].edit(view=view)
 
 
-async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
+async def update_battle_embed(bot, channel, game, last_attack=None, immune_msg=None):
     p1, p2 = game["players"]
     c1, c2 = game["characters"][p1.id], game["characters"][p2.id]
 
@@ -750,9 +741,8 @@ async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
     turn_player = p2 if attacker == p1 else p1 if attacker else p1
     opponent = p2 if turn_player == p1 else p1
 
-    # Fetch or create emojis for display
-    emoji1 = await get_or_create_character_emoji(channel.guild.client, c1["name"], c1["image"], BATTLE_SERVERS)
-    emoji2 = await get_or_create_character_emoji(channel.guild.client, c2["name"], c2["image"], BATTLE_SERVERS)
+    emoji1 = await get_or_create_character_emoji(bot, c1["name"], c1["image"], BATTLE_SERVERS)
+    emoji2 = await get_or_create_character_emoji(bot, c2["name"], c2["image"], BATTLE_SERVERS)
 
     desc = f"{p1.mention} VS {p2.mention}\n\n"
     if immune_msg:
@@ -771,7 +761,8 @@ async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
 
     view = AttackView(turn_player, opponent, game)
 
-    if "message" not in game:
+    if "message" in game:
+        await game["message"].edit(embed=embed, view=view)
 
 # ================= Commands =================
 class Skibidi(commands.Cog):
