@@ -1,109 +1,74 @@
 import discord
 from discord.ext import commands
-import asyncio
 
-class ServerFix(commands.Cog):
+class FixServer(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="fix")
-    async def fix_server(self, ctx, mode: str):
-        """
-        Fix the server layout.
-        Usage: $fix simple OR $fix advanced
-        """
-        # Only allow the server owner
+    @commands.guild_only()
+    async def fix(self, ctx, mode: str):
+        """Fix the server structure: $fix simple or $fix advanced"""
         if ctx.author.id != ctx.guild.owner_id:
-            await ctx.send("❌ Only the **server owner** can use this command.")
-            return
+            return await ctx.send("❌ Only the server owner can use this command.")
 
-        if mode.lower() not in ["simple", "advanced"]:
-            await ctx.send("❌ Invalid mode. Use `simple` or `advanced`.")
-            return
+        mode = mode.lower()
+        if mode not in ["simple", "advanced"]:
+            return await ctx.send("❌ Invalid mode. Use `$fix simple` or `$fix advanced`.")
 
         guild = ctx.guild
 
-        await ctx.send(f"⚠️ This will **reset channels and roles**. Type `CONFIRM` within 20s to continue.")
-
-        def check(m):
-            return m.author == ctx.author and m.content == "CONFIRM"
-
-        try:
-            await self.bot.wait_for("message", check=check, timeout=20)
-        except asyncio.TimeoutError:
-            await ctx.send("⏳ Cancelled.")
-            return
-
-        # ===========================
-        # 1. Delete channels & roles
-        # ===========================
+        # === DELETE CHANNELS ===
         for channel in guild.channels:
+            if channel.id == ctx.channel.id:
+                continue  # don't delete the channel where the command was used
             try:
                 await channel.delete()
-            except Exception:
+            except discord.Forbidden:
+                continue
+            except discord.HTTPException:
                 continue
 
+        # === DELETE ROLES ===
         for role in guild.roles:
+            if role.is_default() or role >= guild.me.top_role:
+                continue  # skip @everyone and roles higher/equal than the bot
             try:
-                if role.is_default():
-                    continue
                 await role.delete()
-            except Exception:
+            except discord.Forbidden:
+                continue
+            except discord.HTTPException:
                 continue
 
-        await ctx.send("🧹 Cleared channels and roles. Rebuilding...")
-
-        # ===========================
-        # 2. Build structures
-        # ===========================
-        if mode.lower() == "simple":
+        # === SIMPLE MODE ===
+        if mode == "simple":
             categories = {
-                "Important": ["rules", "announcments", "welcome", "goodbye"],
-                "Main": ["chat", "bot-cmds", "memes", "media"]
+                "Important": ["rules", "announcements", "welcome", "goodbye"],
+                "Main": ["chat", "bot-cmds", "memes", "media"],
             }
-
             roles = [
-                ("Owner", None),
-                ("Co-Owner", None),
-                ("Admin", None),
-                ("Moderator", None),
-                ("Trial Moderator", None),
-                ("Bots", None),
-                ("Member", None),
-                ("Colorless", None),
+                "Owner", "Co-Owner", "Admin", "Moderator",
+                "Trial Moderator", "Bots", "Member"
             ]
 
-        else:  # advanced
+        # === ADVANCED MODE ===
+        else:
             categories = {
                 "☆࿐ཽ༵༆༒〘🚨〙Important༒༆࿐ཽ༵☆": [
-                    "「📜」rules",
-                    "「📢」announcements",
-                    "「ℹ️」server info",
-                    "「👋」welcome",
-                    "「👋」goodbye",
-                    "「🥳」giveaways",
-                    "「🎭」reaction roles",
-                    "「✅」verification",
-                    "「🚀」boosts",
-                    "「📊」polls",
+                    "「📜」rules", "「📢」announcements", "「ℹ️」server info",
+                    "「👋」welcome", "「👋」goodbye", "「🥳」giveaways",
+                    "「🎭」reaction roles", "「✅」verification", "「🚀」boosts",
+                    "「📊」polls"
                 ],
                 "☆࿐ཽ༵༆༒〘💬〙Main Area༒༆࿐ཽ༵☆": [
-                    "「💬」chat",
-                    "「🤖」bot cmds",
-                    "「🤣」memes",
-                    "「🎥」media",
-                    "「🎨」art",
-                    "「💡」suggestions",
+                    "「💬」chat", "「🤖」bot cmds", "「🤣」memes",
+                    "「🎥」media", "「🎨」art", "「💡」suggestions"
                 ],
                 "☆࿐ཽ༵༆༒〘🔊〙Voice Chats༒༆࿐ཽ༵☆": [
-                    "「🔊」General Chat",
-                    "「😴」Afk",
-                    "「🎵」Music",
-                    "「🎮」Gaming",
-                    "「🔴」Streams",
+                    "「🔊」General Chat", "「😴」Afk", "「🎵」Music",
+                    "「🎮」Gaming", "「🔴」Streams"
                 ],
             }
-
             roles = [
                 ("Owner", 0xFFF700),
                 ("Co-Owner", 0x09FF00),
@@ -120,78 +85,48 @@ class ServerFix(commands.Cog):
                 ("Chat Revive Ping", 0x74FC7D),
             ]
 
-        # ===========================
-        # 3. Create roles with perms
-        # ===========================
-        role_objs = {}
-        for name, color in roles:
-            perms = discord.Permissions.none()
-
-            if name.lower() in ["owner", "co-owner"]:
-                perms = discord.Permissions.all()
-            elif "admin" in name.lower() or "manager" in name.lower():
-                perms.update(
-                    manage_guild=True,
-                    ban_members=True,
-                    kick_members=True,
-                    manage_channels=True,
-                    manage_roles=True,
-                )
-            elif "moderator" in name.lower():
-                perms.update(
-                    manage_messages=True,
-                    kick_members=True,
-                    mute_members=True,
-                )
-            elif name.lower() == "bots":
-                perms.update(
-                    manage_webhooks=True,
-                    send_messages=True,
-                )
-            elif name.lower() == "member" or name.lower() == "colorless":
-                perms = discord.Permissions(send_messages=True, read_messages=True)
-
-            try:
-                role = await guild.create_role(
-                    name=name,
-                    colour=discord.Colour(color) if color else discord.Colour.default(),
-                    permissions=perms,
-                )
-                role_objs[name] = role
-            except Exception:
-                continue
-
-        # ===========================
-        # 4. Create categories & channels
-        # ===========================
+        # === CREATE CATEGORIES + CHANNELS ===
+        new_channels = []
         for cat_name, chans in categories.items():
             try:
                 category = await guild.create_category(cat_name)
-                for ch in chans:
-                    if "🔊" in ch.lower() or "voice" in ch.lower():
-                        await guild.create_voice_channel(ch, category=category)
-                    else:
-                        await guild.create_text_channel(ch, category=category)
             except Exception:
                 continue
+            for chan in chans:
+                try:
+                    if "voice" in cat_name.lower() or "🔊" in cat_name:
+                        ch = await guild.create_voice_channel(chan, category=category)
+                    else:
+                        ch = await guild.create_text_channel(chan, category=category)
+                    new_channels.append(ch)
+                except Exception:
+                    continue
 
-        # ===========================
-        # 5. Reorder roles properly
-        # ===========================
-        positions = {}
-        all_roles = list(guild.roles)  # default @everyone + new ones
-        start_position = len(all_roles)
+        # === CREATE ROLES (AND ORDER THEM) ===
+        new_roles = []
+        if mode == "simple":
+            for r in roles:
+                try:
+                    role = await guild.create_role(name=r)
+                    new_roles.append(role)
+                except Exception:
+                    continue
+        else:
+            for r, color in roles:
+                try:
+                    role = await guild.create_role(name=r, color=discord.Color(color))
+                    new_roles.append(role)
+                except Exception:
+                    continue
 
-        for i, (name, _) in enumerate(roles):
-            if name in role_objs:
-                positions[role_objs[name]] = start_position - i
+            # Reorder roles in the same order they were created
+            try:
+                positions = {role: (len(new_roles) - i) for i, role in enumerate(new_roles)}
+                await guild.edit_role_positions(positions=positions)
+            except Exception:
+                pass
 
-        try:
-            await guild.edit_role_positions(positions=positions)
-        except Exception:
-            pass
-
-        await ctx.send(f"✅ Finished rebuilding server with **{mode.title()}** mode!")
+        await ctx.send(f"✅ Successfully reset the server with **{mode.capitalize()}** mode!")
 
 async def setup(bot):
-    await bot.add_cog(ServerFix(bot))
+    await bot.add_cog(FixServer(bot))
