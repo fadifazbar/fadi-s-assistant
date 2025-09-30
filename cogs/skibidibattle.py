@@ -9,8 +9,8 @@ import random
 import io
 import difflib
 
-BATTLE_EMOJI = "<:battle_emoji:1408620699349946572>"
-HP_EMOJI = "<:HP_V2:1408669354069065748>"
+BATTLE_EMOJI = "<:battle:1422344657790177300>"
+HP_EMOJI = "<:health:1422345046233059442>"
 
 characters = {
     "Titan Speakerman 1.0": {
