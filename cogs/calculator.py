@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import asyncio
 
 class CalculatorCog(commands.Cog):
     def __init__(self, bot):
@@ -39,14 +38,12 @@ class CalculatorView(discord.ui.View):
         self.expression = ""
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        # Only allow the user who ran the command
         if interaction.user != self.user:
             await interaction.response.send_message("❌ You cannot use this calculator.", ephemeral=True)
             return False
         return True
 
     def update_embed(self):
-        # Update embed with current expression
         display = self.expression if self.expression else "0"
         embed = discord.Embed(
             title="🖩 Calculator",
@@ -143,10 +140,15 @@ class CalculatorView(discord.ui.View):
         self.expression += "+"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    # Clear button
+    # Row 5: Clear and Backspace
     @discord.ui.button(label="C", style=discord.ButtonStyle.danger)
     async def clear(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.expression = ""
+        await interaction.response.edit_message(embed=self.update_embed(), view=self)
+
+    @discord.ui.button(label="⌫", style=discord.ButtonStyle.secondary)
+    async def backspace(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.expression = self.expression[:-1]
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
 
