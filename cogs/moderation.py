@@ -1427,7 +1427,7 @@ class Moderation(commands.Cog):
                 timestamp=datetime.utcnow()
             )
             desc = []
-            for idx, role in enumerate(chunk, start=i * 25 + 1):
+for idx, role in enumerate(chunk, start=i * 25 + 1):
     desc.append(
         f"{idx}. {role.mention} (ID: `{role.id}`) - {len(role.members)} member{'s' if len(role.members) != 1 else ''}"
     )
