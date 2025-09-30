@@ -51,7 +51,7 @@ class CalculatorView(discord.ui.View):
             display = self.expression if self.expression else "0"
 
         embed = discord.Embed(
-            title="🖩 Calculator",
+            title="🧮 Calculator",
             description=f"```\n{display}\n```",
             color=discord.Color.blue()
         )
