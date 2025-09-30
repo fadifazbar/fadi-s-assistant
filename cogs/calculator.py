@@ -7,7 +7,7 @@ class CalculatorCog(commands.Cog):
         self.bot = bot
 
     # Prefix command
-    @commands.command(name="calculator")
+    @commands.command(name="calculator", aliases=["calc"])
     async def calculator_prefix(self, ctx):
         """Launch an interactive calculator (prefix)."""
         view = CalculatorView(ctx.author)
