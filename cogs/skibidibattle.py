@@ -531,6 +531,7 @@ async def get_or_create_character_emoji(bot, character_name, image_url, servers)
     if character_name in character_emojis:
         return character_emojis[character_name]
 
+    # Check existing emojis in guilds
     for guild in bot.guilds:
         if guild.id not in servers:
             continue
@@ -540,6 +541,7 @@ async def get_or_create_character_emoji(bot, character_name, image_url, servers)
                 active_emojis[emoji.id] = character_name
                 return emoji
 
+    # Create emoji in available servers
     for server_id in servers:
         guild = bot.get_guild(server_id)
         if guild is None:
@@ -559,6 +561,7 @@ async def get_or_create_character_emoji(bot, character_name, image_url, servers)
 
 
 async def release_character_emoji(character_name):
+    # Only release if character is not in any active game
     for game in games.values():
         for char_data in game["characters"].values():
             if char_data["name"] == character_name:
@@ -588,25 +591,37 @@ class AcceptBattleButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         if interaction.user != self.player:
-            return await interaction.response.send_message("❌ You can't respond for this player.", ephemeral=True)
+            return await interaction.response.send_message(
+                "❌ You can't respond for this player.", ephemeral=True
+            )
 
         self.votes[self.player.id] = self.accept
-        await interaction.response.send_message(f"You {'accepted' if self.accept else 'declined'} the battle.", ephemeral=True)
+        await interaction.response.send_message(
+            f"You {'accepted' if self.accept else 'declined'} the battle.", ephemeral=True
+        )
 
         # Check if both players responded
-        if all(p.id in self.votes for p in self.game["players"]):
+        all_voted = all(p.id in self.votes for p in self.game["players"])
+        if all_voted:
             if all(self.votes.values()):
                 await start_battle(interaction.client, interaction.channel, self.game)
             else:
-                await interaction.followup.send("❌ Battle cancelled. One of the players declined.", ephemeral=True)
+                await interaction.followup.send(
+                    "❌ Battle cancelled. One of the players declined.", ephemeral=True
+                )
                 games.pop(interaction.channel.id, None)
+                if self.game.get("message"):
+                    try:
+                        await self.game["message"].edit(view=None)
+                    except:
+                        pass
 
 
 class AcceptBattleView(discord.ui.View):
     def __init__(self, game):
         super().__init__(timeout=60)
         self.game = game
-        self.votes = {}
+        self.votes = {p.id: None for p in game["players"]}
         p1, p2 = game["players"]
         self.add_item(AcceptBattleButton(p1, game, self.votes, accept=True))
         self.add_item(AcceptBattleButton(p1, game, self.votes, accept=False))
@@ -617,105 +632,33 @@ class AcceptBattleView(discord.ui.View):
         for child in self.children:
             child.disabled = True
         if self.game.get("message"):
-            await self.game["message"].edit(view=self)
+            try:
+                await self.game["message"].edit(view=self)
+            except:
+                pass
 
+
+# ---------------- START BATTLE ----------------
 
 async def start_battle(bot, channel, game):
-    # Initialize turn
     game["turn"] = game["players"][0].id
+    p1, p2 = game["players"]
 
-    # Send battle message
     embed = discord.Embed(
         title="Skibidi Battle! 🚽⚔️",
-        description=f"{game['players'][0].mention} VS {game['players'][1].mention}\n\n➡️ It's {game['players'][0].mention}'s turn!",
+        description=f"{p1.mention} VS {p2.mention}\n\n➡️ It's {p1.mention}'s turn!",
         color=discord.Color.red()
     )
     message = await channel.send(embed=embed)
     game["message"] = message
 
-    # Initialize embed and view
-    p1, p2 = game["players"]
-    view = AttackView(p1, p2, game)
+    turn_player = p1
+    opponent = p2
+    view = AttackView(turn_player, opponent, game)
     await message.edit(view=view)
 
 
-# ---------------- BATTLE BUTTONS ----------------
-
-class RetreatButton(discord.ui.Button):
-    def __init__(self, game):
-        super().__init__(label="🏳️ Retreat", style=discord.ButtonStyle.secondary)
-        self.game = game
-        self.retreat_votes = {}
-
-    async def callback(self, interaction: discord.Interaction):
-        if interaction.user not in self.game["players"]:
-            return await interaction.response.send_message("❌ Only battle players can use this!", ephemeral=True)
-
-        confirm_embed = discord.Embed(
-            title="🏳️ Retreat Confirmation",
-            description="Do you want to stop the game?",
-            color=discord.Color.gold()
-        )
-        view = RetreatConfirmView(interaction.user, self.game, self.retreat_votes)
-        await interaction.response.send_message(embed=confirm_embed, view=view, ephemeral=True)
-
-
-class RetreatConfirmView(discord.ui.View):
-    def __init__(self, player, game, votes):
-        super().__init__(timeout=7)
-        self.game = game
-        self.player = player
-        self.votes = votes
-        self.add_item(RetreatYesButton(player, game, votes))
-        self.add_item(RetreatNoButton(player, game, votes))
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-
-
-class RetreatYesButton(discord.ui.Button):
-    def __init__(self, player, game, votes):
-        super().__init__(label="✅ Yes", style=discord.ButtonStyle.success)
-        self.player = player
-        self.game = game
-        self.votes = votes
-
-    async def callback(self, interaction: discord.Interaction):
-        self.votes[self.player.id] = True
-        if all(self.votes.get(p.id) for p in self.game["players"]):
-            channel = interaction.channel
-            embed = discord.Embed(
-                title="Skibidi Battle! 🚽⚔️",
-                description="💨 Both characters have retreated and left the battlefield.\n\n# 🏆 Winner: TIE.",
-                color=discord.Color.gold()
-            )
-            if self.game.get("message"):
-                await self.game["message"].edit(embed=embed, view=None)
-            games.pop(channel.id, None)
-            for char_data in self.game["characters"].values():
-                await release_character_emoji(char_data["name"])
-            await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
-        else:
-            await interaction.response.send_message("You voted ✅ Yes. Waiting for the other player...", ephemeral=True)
-
-
-class RetreatNoButton(discord.ui.Button):
-    def __init__(self, player, game, votes):
-        super().__init__(label="⛔ No", style=discord.ButtonStyle.danger)
-        self.player = player
-        self.game = game
-        self.votes = votes
-
-    async def callback(self, interaction: discord.Interaction):
-        self.votes[self.player.id] = False
-        await interaction.response.send_message("You voted ❌ No. The battle will continue!", ephemeral=True)
-        await asyncio.sleep(7)
-        try:
-            await interaction.message.delete()
-        except:
-            pass
-
+# ---------------- ATTACK BUTTONS ----------------
 
 class AttackView(discord.ui.View):
     def __init__(self, attacker, defender, game):
@@ -725,14 +668,12 @@ class AttackView(discord.ui.View):
         self.game = game
 
         char = game["characters"][attacker.id]
-
         pool = []
         for atk_name, atk_data in char["attacks"].items():
             pool.extend([(atk_name, atk_data)] * atk_data["rarity"])
         chosen_attacks = random.sample(pool, min(3, len(pool)))
 
         button_style = discord.ButtonStyle.primary if attacker.id == game["players"][0].id else discord.ButtonStyle.danger
-
         for atk_name, atk_data in chosen_attacks:
             self.add_item(AttackButton(atk_name, atk_data, attacker, defender, game, button_style))
 
@@ -750,7 +691,6 @@ class AttackButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.defer()
-
         if interaction.user != self.attacker:
             return await interaction.followup.send("❌ Not your turn!", ephemeral=True)
 
@@ -775,9 +715,12 @@ class AttackButton(discord.ui.Button):
             immune_msg = f"🛡️ {self.defender.mention}'s **{defender_char.get('name', 'Unknown')}** is immune to **{self.atk_name}**!"
 
         await asyncio.sleep(1.5)
-        await update_battle_embed(interaction.client, interaction.channel, self.game,
-                                  last_attack=(self.attacker, self.atk_name, dmg), immune_msg=immune_msg)
+        await update_battle_embed(
+            interaction.client, interaction.channel, self.game,
+            last_attack=(self.attacker, self.atk_name, dmg), immune_msg=immune_msg
+        )
 
+        # Check faint
         if defender_char["hp"] <= 0:
             embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
@@ -803,14 +746,82 @@ class AttackButton(discord.ui.Button):
             await self.game["message"].edit(view=view)
 
 
+# ---------------- RETREAT BUTTONS ----------------
+
+class RetreatButton(discord.ui.Button):
+    def __init__(self, game):
+        super().__init__(label="🏳️ Retreat", style=discord.ButtonStyle.secondary)
+        self.game = game
+        self.retreat_votes = {}
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user not in self.game["players"]:
+            return await interaction.response.send_message("❌ Only battle players can use this!", ephemeral=True)
+        embed = discord.Embed(title="🏳️ Retreat Confirmation",
+                              description="Do you want to stop the game?",
+                              color=discord.Color.gold())
+        view = RetreatConfirmView(interaction.user, self.game, self.retreat_votes)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+
+class RetreatConfirmView(discord.ui.View):
+    def __init__(self, player, game, votes):
+        super().__init__(timeout=7)
+        self.player = player
+        self.game = game
+        self.votes = votes
+        self.add_item(RetreatYesButton(player, game, votes))
+        self.add_item(RetreatNoButton(player, game, votes))
+
+
+class RetreatYesButton(discord.ui.Button):
+    def __init__(self, player, game, votes):
+        super().__init__(label="✅ Yes", style=discord.ButtonStyle.success)
+        self.player = player
+        self.game = game
+        self.votes = votes
+
+    async def callback(self, interaction: discord.Interaction):
+        self.votes[self.player.id] = True
+        if all(self.votes.get(p.id) for p in self.game["players"]):
+            embed = discord.Embed(title="Skibidi Battle! 🚽⚔️",
+                                  description="💨 Both characters have retreated.\n\n# 🏆 Winner: TIE.",
+                                  color=discord.Color.gold())
+            if self.game.get("message"):
+                await self.game["message"].edit(embed=embed, view=None)
+            games.pop(interaction.channel.id, None)
+            for char_data in self.game["characters"].values():
+                await release_character_emoji(char_data["name"])
+            await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
+        else:
+            await interaction.response.send_message("You voted ✅ Yes. Waiting for the other player...", ephemeral=True)
+
+
+class RetreatNoButton(discord.ui.Button):
+    def __init__(self, player, game, votes):
+        super().__init__(label="⛔ No", style=discord.ButtonStyle.danger)
+        self.player = player
+        self.game = game
+        self.votes = votes
+
+    async def callback(self, interaction: discord.Interaction):
+        self.votes[self.player.id] = False
+        await interaction.response.send_message("You voted ❌ No. The battle will continue!", ephemeral=True)
+        await asyncio.sleep(7)
+        try:
+            await interaction.message.delete()
+        except:
+            pass
+
+
 # ---------------- EMBED UPDATES ----------------
 
 async def update_battle_embed(bot, channel, game, last_attack=None, immune_msg=None):
     p1, p2 = game["players"]
     c1, c2 = game["characters"][p1.id], game["characters"][p2.id]
 
-    attacker, atk_name, dmg = (last_attack if last_attack else (None, None, None))
-    turn_player = p2 if attacker == p1 else p1 if attacker else p1
+    attacker, atk_name, dmg = last_attack if last_attack else (None, None, None)
+    turn_player = p1 if game["turn"] == p1.id else p2
     opponent = p2 if turn_player == p1 else p1
 
     emoji1 = await get_or_create_character_emoji(bot, c1["name"], c1["image"], BATTLE_SERVERS)
@@ -821,6 +832,7 @@ async def update_battle_embed(bot, channel, game, last_attack=None, immune_msg=N
         desc += f"{immune_msg}\n\n"
     elif last_attack:
         desc += f"{emoji1 if attacker == p1 else emoji2} **{attacker.mention}** used **{atk_name}** and dealt **{dmg} dmg**!\n\n"
+
     desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
 
     embed = discord.Embed(
@@ -834,7 +846,11 @@ async def update_battle_embed(bot, channel, game, last_attack=None, immune_msg=N
     view = AttackView(turn_player, opponent, game)
 
     if game.get("message"):
-        await game["message"].edit(embed=embed, view=view)
+        try:
+            await game["message"].edit(embed=embed, view=view)
+        except:
+            pass
+
 
 # ================= Commands =================
 class Skibidi(commands.Cog):
