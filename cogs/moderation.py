@@ -1425,12 +1425,12 @@ class Moderation(commands.Cog):
                 title=f"📋 Roles in {guild.name}",
                 color=Config.COLORS["info"],
                 timestamp=datetime.utcnow()
+        )
+        desc = []
+        for idx, role in enumerate(chunk, start=i * 25 + 1):
+            desc.append(
+                f"{idx}. {role.mention} (ID: `{role.id}`) - {len(role.members)} member{'s' if len(role.members) != 1 else ''}"
             )
-            desc = []
-for idx, role in enumerate(chunk, start=i * 25 + 1):
-    desc.append(
-        f"{idx}. {role.mention} (ID: `{role.id}`) - {len(role.members)} member{'s' if len(role.members) != 1 else ''}"
-    )
             embed.description = "\n".join(desc)
             embed.set_footer(
                 text=f"Page {len(pages)+1}/{(len(roles)-1)//25+1} • Total roles: {len(roles)}"
