@@ -12,18 +12,18 @@ class CalculatorCog(commands.Cog):
     async def calculator_prefix(self, ctx):
         view = CalculatorView(ctx.author)
         embed = discord.Embed(
-    title="🧮 Calculator",  # 🧮 emoji as Unicode
-    description="```\n0\n```",
-    color=discord.Color.green()
-)
-await ctx.send(embed=embed, view=view)
+            title="\U0001F9EE Calculator",  # 🧮 emoji as Unicode
+            description="```\n0\n```",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=embed, view=view)
 
     # Slash command
     @app_commands.command(name="calculator", description="Launch an interactive calculator")
     async def calculator_slash(self, interaction: discord.Interaction):
         view = CalculatorView(interaction.user)
         embed = discord.Embed(
-            title="🧮 Calculator",
+            title="\U0001F9EE Calculator",  # 🧮 emoji as Unicode
             description="```\n0\n```",
             color=discord.Color.orange()
         )
@@ -52,8 +52,9 @@ class CalculatorView(discord.ui.View):
             display = f"{expr_display[:self.MAX_LENGTH]}\nAnswer: {self.last_result}"
         else:
             display = expr_display[:self.MAX_LENGTH] if expr_display else "0"
+
         embed = discord.Embed(
-            title="🧮 Calculator",
+            title="\U0001F9EE Calculator",
             description=f"```\n{display}\n```",
             color=discord.Color.gold()
         )
@@ -62,7 +63,6 @@ class CalculatorView(discord.ui.View):
     def add_char(self, char):
         if len(self.expression) >= self.MAX_LENGTH:
             return
-        # Replace last operator if user presses another operator consecutively
         if char in self.OPERATORS:
             if not self.expression:
                 return
@@ -144,8 +144,10 @@ class CalculatorView(discord.ui.View):
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
     @discord.ui.button(label="⌫", style=discord.ButtonStyle.danger, row=4)
-    async def backspace(self, interaction, button): self.expression = self.expression[:-1]; await interaction.response.edit_message(embed=self.update_embed(), view=self)
+    async def backspace(self, interaction, button):
+        self.expression = self.expression[:-1]
+        await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(CalculatorCog(bot)) Dr
+    await bot.add_cog(CalculatorCog(bot))
