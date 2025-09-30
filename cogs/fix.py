@@ -16,28 +16,48 @@ class FixServer(commands.Cog):
         if mode not in ["simple", "advanced"]:
             return await ctx.send("❌ Invalid mode. Use `$fix simple` or `$fix advanced`.")
 
+        # === Confirmation Step ===
+        confirm_msg = await ctx.send(
+            f"⚠️ Are you sure you want to reset the server with **{mode.capitalize()}** mode?\n"
+            "This will delete channels and roles (except this channel, stickers, emojis, and protected roles)."
+            "\n\nReply with `yes` to confirm, or anything else to cancel."
+        )
+
+        def check(m):
+            return m.author == ctx.author and m.channel == ctx.channel
+
+        try:
+            reply = await self.bot.wait_for("message", check=check, timeout=30.0)
+        except Exception:
+            return await ctx.send("❌ Confirmation timed out. Cancelled.")
+
+        if reply.content.lower() != "yes":
+            return await ctx.send("❌ Cancelled.")
+
+        # Try DMing the owner
+        try:
+            await ctx.author.send(f"🔧 Fixing the server **{ctx.guild.name}** in `{mode}` mode...")
+        except discord.Forbidden:
+            pass
+
         guild = ctx.guild
 
         # === DELETE CHANNELS ===
         for channel in guild.channels:
             if channel.id == ctx.channel.id:
-                continue  # don't delete the channel where the command was used
+                continue
             try:
                 await channel.delete()
-            except discord.Forbidden:
-                continue
-            except discord.HTTPException:
+            except (discord.Forbidden, discord.HTTPException):
                 continue
 
         # === DELETE ROLES ===
         for role in guild.roles:
             if role.is_default() or role >= guild.me.top_role:
-                continue  # skip @everyone and roles higher/equal than the bot
+                continue
             try:
                 await role.delete()
-            except discord.Forbidden:
-                continue
-            except discord.HTTPException:
+            except (discord.Forbidden, discord.HTTPException):
                 continue
 
         # === SIMPLE MODE ===
@@ -47,8 +67,13 @@ class FixServer(commands.Cog):
                 "Main": ["chat", "bot-cmds", "memes", "media"],
             }
             roles = [
-                "Owner", "Co-Owner", "Admin", "Moderator",
-                "Trial Moderator", "Bots", "Member"
+                ("Owner", discord.Permissions.all()),
+                ("Co-Owner", discord.Permissions.all()),
+                ("Admin", discord.Permissions(administrator=True)),
+                ("Moderator", discord.Permissions(manage_messages=True, kick_members=True, ban_members=True)),
+                ("Trial Moderator", discord.Permissions(manage_messages=True)),
+                ("Bots", discord.Permissions(send_messages=True, embed_links=True)),
+                ("Member", discord.Permissions(send_messages=True, read_messages=True)),
             ]
 
         # === ADVANCED MODE ===
@@ -70,23 +95,23 @@ class FixServer(commands.Cog):
                 ],
             }
             roles = [
-                ("Owner", 0xFFF700),
-                ("Co-Owner", 0x09FF00),
-                ("Community Manager", 0x00AAFF),
-                ("Manager", 0xFF8000),
-                ("Administrator", 0xFF1100),
-                ("Moderator", 0xA600FF),
-                ("Trial Moderator", 0xFFDD00),
-                ("Bots", 0xFF00F7),
-                ("Vip", 0xF3FC74),
-                ("Members", 0x81DEBF),
-                ("Announcement Ping", 0xFC8674),
-                ("Important Ping", 0x7496FC),
-                ("Chat Revive Ping", 0x74FC7D),
+                ("Owner", discord.Permissions.all(), 0xFFF700),
+                ("Co-Owner", discord.Permissions.all(), 0x09FF00),
+                ("Community Manager", discord.Permissions(manage_guild=True, manage_messages=True), 0x00AAFF),
+                ("Manager", discord.Permissions(manage_channels=True, manage_messages=True), 0xFF8000),
+                ("Administrator", discord.Permissions(administrator=True), 0xFF1100),
+                ("Moderator", discord.Permissions(kick_members=True, ban_members=True, manage_messages=True), 0xA600FF),
+                ("Trial Moderator", discord.Permissions(manage_messages=True), 0xFFDD00),
+                ("Bots", discord.Permissions(send_messages=True, embed_links=True), 0xFF00F7),
+                ("Vip", discord.Permissions(read_messages=True, send_messages=True), 0xF3FC74),
+                ("Members", discord.Permissions(read_messages=True, send_messages=True), 0x81DEBF),
+                ("Announcement Ping", discord.Permissions.none(), 0xFC8674),
+                ("Important Ping", discord.Permissions.none(), 0x7496FC),
+                ("Chat Revive Ping", discord.Permissions.none(), 0x74FC7D),
             ]
 
         # === CREATE CATEGORIES + CHANNELS ===
-        new_channels = []
+        created_channels = {}
         for cat_name, chans in categories.items():
             try:
                 category = await guild.create_category(cat_name)
@@ -98,31 +123,47 @@ class FixServer(commands.Cog):
                         ch = await guild.create_voice_channel(chan, category=category)
                     else:
                         ch = await guild.create_text_channel(chan, category=category)
-                    new_channels.append(ch)
+                    created_channels[chan] = ch
                 except Exception:
                     continue
 
-        # === CREATE ROLES (AND ORDER THEM) ===
+        # === CREATE ROLES (with permissions + hoist) ===
         new_roles = []
         if mode == "simple":
-            for r in roles:
+            for rname, perms in roles:
                 try:
-                    role = await guild.create_role(name=r)
+                    role = await guild.create_role(name=rname, permissions=perms, hoist=True)
                     new_roles.append(role)
                 except Exception:
                     continue
         else:
-            for r, color in roles:
+            for rname, perms, color in roles:
                 try:
-                    role = await guild.create_role(name=r, color=discord.Color(color))
+                    role = await guild.create_role(name=rname, permissions=perms, hoist=True, color=discord.Color(color))
                     new_roles.append(role)
                 except Exception:
                     continue
-
-            # Reorder roles in the same order they were created
+            # Reorder roles
             try:
                 positions = {role: (len(new_roles) - i) for i, role in enumerate(new_roles)}
                 await guild.edit_role_positions(positions=positions)
+            except Exception:
+                pass
+
+            # === Set AFK & Boost Channel ===
+            afk_channel = created_channels.get("「😴」Afk")
+            boost_channel = created_channels.get("「🚀」boosts")
+            try:
+                await guild.edit(
+                    afk_channel=afk_channel,
+                    system_channel=boost_channel,
+                    system_channel_flags=discord.SystemChannelFlags(
+                        join_notifications=False,
+                        premium_subscriptions=True,  # only boosts
+                        guild_reminder_notifications=False,
+                        join_notification_replies=False
+                    )
+                )
             except Exception:
                 pass
 
