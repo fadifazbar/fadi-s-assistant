@@ -77,40 +77,26 @@ class FixServer(commands.Cog):
             ]
 
         # === ADVANCED MODE ===
-categories = {
-    "☆࿐ཽ༵༆༒〘🚨〙Important༒༆࿐ཽ༵☆": [
-        "「📜」rules", "「📢」announcements", "「ℹ️」server info",
-        "「👋」welcome", "「👋」goodbye", "「🥳」giveaways",
-        "「🎭」reaction roles", "「✅」verification", "「🚀」boosts",
-        "「📊」polls"
-    ],
-    "☆࿐ཽ༵༆༒〘💬〙Main Area༒༆࿐ཽ༵☆": [
-        "「💬」chat", "「🤖」bot-cmds", "「🤣」memes",
-        "「🎥」media", "「🎨」art", "「💡」suggestions"
-    ],
-    "☆࿐ཽ༵༆༒〘🔊〙Voice Chats༒༆࿐ཽ༵☆": [
-        "「🔊」General Chat", "「😴」Afk", "「🎵」Music",
-        "「🎮」Gaming", "「🔴」Streams"
-    ],
-    "☆࿐ཽ༵༆༒〘🔒〙Staff Zone༒༆࿐ཽ༵☆": [
-        "「🔒」staff-chat", "「📝」logs", "「⚠️」reports", "「📊」mod-dashboard"
-    ],
-    "☆࿐ཽ༵༆༒〘🎉〙Events༒༆࿐ཽ༵☆": [
-        "「🏆」leaderboards", "「📅」event-schedule", "「🎉」event-chat", "「🎨」fan-art-contests"
-    ],
-    "☆࿐ཽ༵༆༒〘❓〙Help & Support༒༆࿐ཽ༵☆": [
-        "「❓」help", "「📬」support-tickets", "「💡」faq"
-    ],
-    "☆࿐ཽ༵༆༒〘🎭〙Community Fun༒༆࿐ཽ༵☆": [
-        "「🎮」minigames", "「📸」selfies", "「🐶」pets", "「🌐」other-languages"
-    ],
-}
-
-roles = [
-    # (name, permissions, color)
-    ("🔱 ｜Owner", discord.Permissions(administrator=True), 0xFFF700),
+        else:
+            categories = {
+                "☆࿐ཽ༵༆༒〘🚨〙Important༒༆࿐ཽ༵☆": [
+                    "「📜」rules", "「📢」announcements", "「ℹ️」server info",
+                    "「👋」welcome", "「👋」goodbye", "「🥳」giveaways",
+                    "「🎭」reaction roles", "「✅」verification", "「🚀」boosts",
+                    "「📊」polls"
+                ],
+                "☆࿐ཽ༵༆༒〘💬〙Main Area༒༆࿐ཽ༵☆": [
+                    "「💬」chat", "「🤖」bot cmds", "「🤣」memes",
+                    "「🎥」media", "「🎨」art", "「💡」suggestions"
+                ],
+                "☆࿐ཽ༵༆༒〘🔊〙Voice Chats༒༆࿐ཽ༵☆": [
+                    "「🔊」General Chat", "「😴」Afk", "「🎵」Music",
+                    "「🎮」Gaming", "「🔴」Streams"
+                ],
+            }
+            roles = [
+    ("🔱 ｜Owner", discord.Permissions.administrator=True), 0xFFF700),
     ("👑 ｜Co-Owner", discord.Permissions(administrator=True), 0x09FF00),
-
     ("🛡️ ｜Community Manager", discord.Permissions(
         manage_guild=True,
         manage_roles=True,
@@ -120,7 +106,6 @@ roles = [
         ban_members=True,
         mention_everyone=True
     ), 0x00AAFF),
-
     ("⚔️ ｜Manager", discord.Permissions(
         manage_roles=True,
         manage_channels=True,
@@ -129,7 +114,6 @@ roles = [
         mute_members=True,
         move_members=True
     ), 0xFF8000),
-
     ("🛠️ ｜Administrator", discord.Permissions(
         manage_roles=True,
         manage_channels=True,
@@ -142,7 +126,6 @@ roles = [
         deafen_members=True,
         move_members=True
     ), 0xFF1100),
-
     ("🧰 ｜Moderator", discord.Permissions(
         manage_messages=True,
         kick_members=True,
@@ -152,69 +135,58 @@ roles = [
         move_members=True,
         manage_nicknames=True
     ), 0xA600FF),
-
     ("📝 ｜Trial Moderator", discord.Permissions(
         manage_messages=True,
         mute_members=True
     ), 0xFFDD00),
-
     ("💬 ｜Support Team", discord.Permissions(
         manage_messages=True,
         manage_threads=True,
         mute_members=True,
         deafen_members=True
     ), 0x3AA3FF),
-
     ("🎉 ｜Event Host", discord.Permissions(
         manage_events=True,
         mention_everyone=True,
         send_messages=True
     ), 0xF47FFF),
-
     ("🎨 ｜Artist", discord.Permissions(
         attach_files=True,
         embed_links=True,
         send_messages=True
     ), 0xFFAAE1),
-
     ("💻 ｜Developer", discord.Permissions(
         manage_messages=True,
         attach_files=True,
         embed_links=True
     ), 0x00FFB2),
-
     ("🤖 ｜Bots", discord.Permissions(
         send_messages=True,
         embed_links=True,
         attach_files=True,
         add_reactions=True
     ), 0xFF00F7),
-
     ("💎 ｜Vip", discord.Permissions(
         read_messages=True,
         send_messages=True,
         embed_links=True
     ), 0xF3FC74),
-
     ("👤 ｜Members", discord.Permissions(
         read_messages=True,
         send_messages=True,
         connect=True,
         speak=True
     ), 0x81DEBF),
-
     ("✅ ｜Verified", discord.Permissions(
         read_messages=True,
         send_messages=True,
         connect=True,
         speak=True
     ), 0x00FF00),
-
     ("🔇 ｜Muted", discord.Permissions(
         read_messages=True
         # no send_messages, no connect
     ), 0x6E6E6E),
-
     ("📢 ｜Announcement Ping", discord.Permissions.none(), 0xFC8674),
     ("❗ ｜Important Ping", discord.Permissions.none(), 0x7496FC),
     ("💬 ｜Chat Revive Ping", discord.Permissions.none(), 0x74FC7D),
