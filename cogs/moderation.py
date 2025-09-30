@@ -137,7 +137,7 @@ class Moderation(commands.Cog):
 
 
     # Say command (Prefix)
-    @commands.command(name="say")
+    @commands.command(name="say", aliases=["talk", "copy"])
     @commands.has_permissions(manage_messages=True)
     @commands.guild_only()
     async def say_prefix(self, ctx, *, message: str):
@@ -371,7 +371,7 @@ class Moderation(commands.Cog):
 
 
 
-    @commands.command(name="vcmute")
+    @commands.command(name="vcmute", aliases=["vmute"])
     @commands.has_permissions(mute_members=True)
     @commands.guild_only()
     async def vcmute_prefix(self, ctx, member: discord.Member):
@@ -397,7 +397,7 @@ class Moderation(commands.Cog):
         except:
             await interaction.response.send_message("❌ Failed to mute. Are they in a VC?", ephemeral=True)
 
-    @commands.command(name="vcunmute")
+    @commands.command(name="vcunmute", aliases=["vunmute"])
     @commands.has_permissions(mute_members=True)
     @commands.guild_only()
     async def vcunmute_prefix(self, ctx, member: discord.Member):
@@ -475,7 +475,7 @@ class Moderation(commands.Cog):
         except:
             await interaction.response.send_message("❌ Failed to undeafen. Are they in a VC?", ephemeral=True)
 
-    @commands.command(name="disconnect")
+    @commands.command(name="disconnect", aliases=["disc"])
     @commands.has_permissions(move_members=True)
     @commands.guild_only()
     async def disconnect_prefix(self, ctx, member: discord.Member):
@@ -532,7 +532,7 @@ class Moderation(commands.Cog):
     
 
     # Prefix command
-    @commands.command(name="rolecolor")
+    @commands.command(name="rolecolor", aliases=["rcolor", "rco"])
     @commands.has_permissions(manage_roles=True)
     async def rolecolor_prefix(self, ctx, role: discord.Role, *, color: str):
         # Check role hierarchy
@@ -569,7 +569,7 @@ class Moderation(commands.Cog):
         # ===============================
     # PREFIX COMMANDS
     # ===============================
-    @commands.command(name="lock")
+    @commands.command(name="lock", aliases=["close"])
     @commands.has_permissions(manage_channels=True)
     async def lock_prefix(self, ctx: commands.Context, channel: discord.TextChannel = None):
         """Lock a text channel"""
@@ -590,7 +590,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=embed)
 
 
-    @commands.command(name="unlock")
+    @commands.command(name="unlock", aliases=["open"])
     @commands.has_permissions(manage_channels=True)
     async def unlock_prefix(self, ctx: commands.Context, channel: discord.TextChannel = None):
         """Unlock a text channel"""
@@ -637,7 +637,7 @@ class Moderation(commands.Cog):
             await ctx.send("❌ I don’t have permission to change that user’s nickname.")
 
     # PREFIX COMMAND - Reset Nickname
-    @commands.command(name="resetnick")
+    @commands.command(name="resetnick", aliases=["removenick", "unnick"])
     @commands.has_permissions(manage_nicknames=True)
     async def resetnick_prefix(self, ctx: commands.Context, member: discord.Member):
         """Reset a member's nickname to default (mod only)."""
@@ -748,7 +748,7 @@ class Moderation(commands.Cog):
     # -----------------------
     # Prefix command: list all colors
     # -----------------------
-    @commands.command(name="rolecolors")
+    @commands.command(name="rolecolors", aliases=["colors"])
     async def list_colors_prefix(self, ctx):
         embed = discord.Embed(
             title="🎨 Available Role Colors",
@@ -802,7 +802,7 @@ class Moderation(commands.Cog):
         # ===============================
     # PREFIX COMMAND
     # ===============================
-    @commands.command(name="slowmode")
+    @commands.command(name="slowmode", aliases=["slow"])
     @commands.has_permissions(manage_channels=True)
     async def slowmode_prefix(self, ctx: commands.Context, seconds: int = 0):
         """Set slowmode in the current channel"""
@@ -837,7 +837,7 @@ class Moderation(commands.Cog):
         await interaction.response.send_message(embed=embed)
     
     # Clear messages command (Prefix)
-    @commands.command(name="purge", aliases=["clear"])
+    @commands.command(name="purge", aliases=["clear", "clean"])
     @has_mod_permissions()
     @commands.guild_only()
     async def clear_prefix(self, ctx, amount: int = 10):
@@ -903,7 +903,7 @@ class Moderation(commands.Cog):
             await self._send_response(ctx_or_interaction, "❌ An error occurred while clearing messages!")
 
     # $deletechannel command
-    @commands.command(name="deletechannel")
+    @commands.command(name="deletechannel", aliases=["removechannel", "channeldelete"])
     @commands.has_permissions(manage_channels=True)
     async def deletechannel(self, ctx, channel: discord.TextChannel):
         await channel.delete()
@@ -917,7 +917,7 @@ class Moderation(commands.Cog):
         await interaction.response.send_message(f"✅ Channel {channel.name} has been deleted.")
 
     # $renamechannel command
-    @commands.command(name="renamechannel")
+    @commands.command(name="renamechannel", aliases=["channelrename"])
     @commands.has_permissions(manage_channels=True)
     async def renamechannel(self, ctx, channel: discord.TextChannel, *, new_name: str):
         """Rename a channel"""
@@ -985,7 +985,7 @@ class Moderation(commands.Cog):
             await self._send_response(ctx_or_interaction, "❌ An error occurred while renaming the channel!")
 
     # Mute command (Prefix)
-    @commands.command(name="mute")
+    @commands.command(name="mute", aliases=["timeout"])
     @has_mod_permissions()
     @commands.guild_only()
     async def mute_prefix(self, ctx, member: discord.Member, duration: Optional[str] = None, *, reason: str = "No reason provided"):
@@ -1066,7 +1066,7 @@ class Moderation(commands.Cog):
             await self._send_response(ctx_or_interaction, "❌ An error occurred while muting the member!")
     
     # Unmute command (Prefix)
-    @commands.command(name="unmute")
+    @commands.command(name="unmute", aliases=["untimeout"])
     @has_mod_permissions()
     @commands.guild_only()
     async def unmute_prefix(self, ctx, member: discord.Member):
@@ -1179,7 +1179,7 @@ class Moderation(commands.Cog):
 
     
     # Add Role command (Prefix)
-    @commands.command(name="giverole", aliases=["addrole"])
+    @commands.command(name="giverole", aliases=["addrole", "rolegive"])
     @has_mod_permissions()
     @commands.guild_only()
     async def addrole_prefix(self, ctx, member: discord.Member, *, role_input: str):
@@ -1261,7 +1261,7 @@ class Moderation(commands.Cog):
     # -----------------
     # PREFIX COMMAND
     # -----------------
-    @commands.command(name="rolerename")
+    @commands.command(name="rolerename", aliases=["renamerole"])
     @commands.has_permissions(manage_roles=True)
     async def role_rename_prefix(self, ctx, role: discord.Role, *, new_name: str):
         """Rename a role (prefix command)."""
@@ -1311,7 +1311,7 @@ class Moderation(commands.Cog):
 
     
     # Remove Role command (Prefix)
-    @commands.command(name="takerole", aliases=["removerole"])
+    @commands.command(name="takerole", aliases=["removerole", "unrole"])
     @has_mod_permissions()
     @commands.guild_only()
     async def removerole_prefix(self, ctx, member: discord.Member, *, role_input: str):
@@ -1406,74 +1406,89 @@ class Moderation(commands.Cog):
     async def _list_roles(self, ctx_or_interaction):
         """Internal method to handle listing roles"""
         guild = ctx_or_interaction.guild
-        
+
         # Get all roles except @everyone
         roles = [role for role in guild.roles if role.name != "@everyone"]
-        
+
         if not roles:
             await self._send_response(ctx_or_interaction, "❌ No roles found in this server!")
             return
-        
+
         # Sort roles by position (highest first)
         roles.sort(key=lambda r: r.position, reverse=True)
-        
-        # Create embed
-        embed = discord.Embed(
-            title=f"📋 Roles in {guild.name}",
-            color=Config.COLORS["info"],
-            timestamp=datetime.utcnow()
-        )
-        
-        # Split roles into chunks to avoid Discord's field value limit
-        role_chunks = []
-        current_chunk = []
-        current_length = 0
-        
-        for role in roles:
-            # Format: @RoleName (ID: 123456789) - X members
-            role_info = f"{role.mention} (ID: `{role.id}`) - {len(role.members)} member{'s' if len(role.members) != 1 else ''}"
-            
-            # Check if adding this role would exceed Discord's 1024 character limit
-            if current_length + len(role_info) + 1 > 1024:
-                role_chunks.append("\n".join(current_chunk))
-                current_chunk = [role_info]
-                current_length = len(role_info)
-            else:
-                current_chunk.append(role_info)
-                current_length += len(role_info) + 1
-        
-        # Add remaining roles
-        if current_chunk:
-            role_chunks.append("\n".join(current_chunk))
-        
-        # Add fields to embed
-        for i, chunk in enumerate(role_chunks):
-            field_name = "Roles" if i == 0 else f"Roles (continued {i+1})"
-            embed.add_field(name=field_name, value=chunk, inline=False)
-        
-        # Add footer with total count
-        embed.set_footer(text=f"Total roles: {len(roles)} | Highest role: {roles[0].name if roles else 'None'}")
-        
-        await self._send_response(ctx_or_interaction, embed=embed)
-    
-    async def _send_response(self, ctx_or_interaction, content=None, *, embed=None):
+
+        # Split into pages of 25 roles each
+        pages = []
+        for i in range(0, len(roles), 25):
+            chunk = roles[i:i+25]
+            embed = discord.Embed(
+                title=f"📋 Roles in {guild.name}",
+                color=Config.COLORS["info"],
+                timestamp=datetime.utcnow()
+            )
+            desc = []
+            for role in chunk:
+                desc.append(
+                    f"{role.mention} (ID: `{role.id}`) - {len(role.members)} member{'s' if len(role.members) != 1 else ''}"
+                )
+            embed.description = "\n".join(desc)
+            embed.set_footer(
+                text=f"Page {len(pages)+1}/{(len(roles)-1)//25+1} • Total roles: {len(roles)}"
+            )
+            pages.append(embed)
+
+        # Create buttons
+        class Paginator(discord.ui.View):
+            def __init__(self, pages, author):
+                super().__init__(timeout=60)
+                self.pages = pages
+                self.current = 0
+                self.author = author
+
+            async def update(self, interaction):
+                await interaction.response.edit_message(embed=self.pages[self.current], view=self)
+
+            @discord.ui.button(label="⬅️ Prev", style=discord.ButtonStyle.primary)
+            async def prev(self, interaction: discord.Interaction, button: discord.ui.Button):
+                if interaction.user != getattr(self.author, "author", getattr(self.author, "user", None)):
+                    return await interaction.response.send_message("❌ You can’t control this.", ephemeral=True)
+                if self.current > 0:
+                    self.current -= 1
+                    await self.update(interaction)
+                else:
+                    await interaction.response.defer()
+
+            @discord.ui.button(label="➡️ Next", style=discord.ButtonStyle.primary)
+            async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+                if interaction.user != getattr(self.author, "author", getattr(self.author, "user", None)):
+                    return await interaction.response.send_message("❌ You can’t control this.", ephemeral=True)
+                if self.current < len(self.pages) - 1:
+                    self.current += 1
+                    await self.update(interaction)
+                else:
+                    await interaction.response.defer()
+
+        view = Paginator(pages, ctx_or_interaction)
+        await self._send_response(ctx_or_interaction, embed=pages[0], view=view)
+
+    async def _send_response(self, ctx_or_interaction, content=None, *, embed=None, view=None):
         """Send response to either prefix command or slash command"""
         if isinstance(ctx_or_interaction, commands.Context):
             if embed:
-                await ctx_or_interaction.send(embed=embed)
+                await ctx_or_interaction.send(embed=embed, view=view)
             else:
-                await ctx_or_interaction.send(content)
+                await ctx_or_interaction.send(content, view=view)
         else:
             if ctx_or_interaction.response.is_done():
                 if embed:
-                    await ctx_or_interaction.followup.send(embed=embed)
+                    await ctx_or_interaction.followup.send(embed=embed, view=view)
                 else:
-                    await ctx_or_interaction.followup.send(content)
+                    await ctx_or_interaction.followup.send(content, view=view)
             else:
                 if embed:
-                    await ctx_or_interaction.response.send_message(embed=embed)
+                    await ctx_or_interaction.response.send_message(embed=embed, view=view)
                 else:
-                    await ctx_or_interaction.response.send_message(content)
+                    await ctx_or_interaction.response.send_message(content, view=view)
 
 async def setup(bot):
     await bot.add_cog(Moderation(bot))
