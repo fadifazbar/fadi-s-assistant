@@ -525,6 +525,8 @@ character_emojis = {}    # character_name -> emoji object
 BATTLE_SERVERS = []      # list of guild IDs where emojis can be created
 
 
+# ---------------- EMOJI HANDLING ----------------
+
 async def get_or_create_character_emoji(bot, character_name, image_url, servers):
     if character_name in character_emojis:
         return character_emojis[character_name]
@@ -570,6 +572,71 @@ async def release_character_emoji(character_name):
             pass
         character_emojis.pop(character_name, None)
         active_emojis.pop(emoji.id, None)
+
+
+# ---------------- ACCEPT/DENY BATTLE ----------------
+
+class AcceptBattleButton(discord.ui.Button):
+    def __init__(self, player, game, votes, accept=True):
+        label = "✅ Accept" if accept else "❌ Decline"
+        style = discord.ButtonStyle.success if accept else discord.ButtonStyle.danger
+        super().__init__(label=label, style=style)
+        self.player = player
+        self.game = game
+        self.votes = votes
+        self.accept = accept
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user != self.player:
+            return await interaction.response.send_message("❌ You can't respond for this player.", ephemeral=True)
+
+        self.votes[self.player.id] = self.accept
+        await interaction.response.send_message(f"You {'accepted' if self.accept else 'declined'} the battle.", ephemeral=True)
+
+        # Check if both players responded
+        if all(p.id in self.votes for p in self.game["players"]):
+            if all(self.votes.values()):
+                await start_battle(interaction.client, interaction.channel, self.game)
+            else:
+                await interaction.followup.send("❌ Battle cancelled. One of the players declined.", ephemeral=True)
+                games.pop(interaction.channel.id, None)
+
+
+class AcceptBattleView(discord.ui.View):
+    def __init__(self, game):
+        super().__init__(timeout=60)
+        self.game = game
+        self.votes = {}
+        p1, p2 = game["players"]
+        self.add_item(AcceptBattleButton(p1, game, self.votes, accept=True))
+        self.add_item(AcceptBattleButton(p1, game, self.votes, accept=False))
+        self.add_item(AcceptBattleButton(p2, game, self.votes, accept=True))
+        self.add_item(AcceptBattleButton(p2, game, self.votes, accept=False))
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.game.get("message"):
+            await self.game["message"].edit(view=self)
+
+
+async def start_battle(bot, channel, game):
+    # Initialize turn
+    game["turn"] = game["players"][0].id
+
+    # Send battle message
+    embed = discord.Embed(
+        title="Skibidi Battle! 🚽⚔️",
+        description=f"{game['players'][0].mention} VS {game['players'][1].mention}\n\n➡️ It's {game['players'][0].mention}'s turn!",
+        color=discord.Color.red()
+    )
+    message = await channel.send(embed=embed)
+    game["message"] = message
+
+    # Initialize embed and view
+    p1, p2 = game["players"]
+    view = AttackView(p1, p2, game)
+    await message.edit(view=view)
 
 
 # ---------------- BATTLE BUTTONS ----------------
@@ -708,7 +775,8 @@ class AttackButton(discord.ui.Button):
             immune_msg = f"🛡️ {self.defender.mention}'s **{defender_char.get('name', 'Unknown')}** is immune to **{self.atk_name}**!"
 
         await asyncio.sleep(1.5)
-        await update_battle_embed(interaction.client, interaction.channel, self.game, last_attack=(self.attacker, self.atk_name, dmg), immune_msg=immune_msg)
+        await update_battle_embed(interaction.client, interaction.channel, self.game,
+                                  last_attack=(self.attacker, self.atk_name, dmg), immune_msg=immune_msg)
 
         if defender_char["hp"] <= 0:
             embed = discord.Embed(
@@ -718,7 +786,8 @@ class AttackButton(discord.ui.Button):
                             f"# 🏆 Winner: {self.attacker.mention}",
                 color=discord.Color.gold()
             )
-            await self.game["message"].edit(embed=embed, view=None)
+            if self.game.get("message"):
+                await self.game["message"].edit(embed=embed, view=None)
             games.pop(interaction.channel.id, None)
             for char_data in self.game["characters"].values():
                 await release_character_emoji(char_data["name"])
@@ -730,8 +799,11 @@ class AttackButton(discord.ui.Button):
         turn_player = p1 if self.game["turn"] == p1.id else p2
         opponent = p2 if turn_player == p1 else p1
         view = AttackView(turn_player, opponent, self.game)
-        await self.game["message"].edit(view=view)
+        if self.game.get("message"):
+            await self.game["message"].edit(view=view)
 
+
+# ---------------- EMBED UPDATES ----------------
 
 async def update_battle_embed(bot, channel, game, last_attack=None, immune_msg=None):
     p1, p2 = game["players"]
@@ -761,7 +833,7 @@ async def update_battle_embed(bot, channel, game, last_attack=None, immune_msg=N
 
     view = AttackView(turn_player, opponent, game)
 
-    if "message" in game:
+    if game.get("message"):
         await game["message"].edit(embed=embed, view=view)
 
 # ================= Commands =================
