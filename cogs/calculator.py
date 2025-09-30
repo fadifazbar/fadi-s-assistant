@@ -12,11 +12,11 @@ class CalculatorCog(commands.Cog):
     async def calculator_prefix(self, ctx):
         view = CalculatorView(ctx.author)
         embed = discord.Embed(
-            title="🧮 Calculator",
-            description="```\n0\n```",
-            color=discord.Color.green()
-        )
-        await ctx.send(embed=embed, view=view)
+    title="🧮 Calculator",  # 🧮 emoji as Unicode
+    description="```\n0\n```",
+    color=discord.Color.green()
+)
+await ctx.send(embed=embed, view=view)
 
     # Slash command
     @app_commands.command(name="calculator", description="Launch an interactive calculator")
