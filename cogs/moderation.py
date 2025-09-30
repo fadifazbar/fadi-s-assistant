@@ -1419,21 +1419,21 @@ class Moderation(commands.Cog):
 
         # Split into pages of 25 roles each
         pages = []
-        for i in range(0, len(roles), 25):
-            chunk = roles[i:i+25]
+        for page_index, start in enumerate(range(0, len(roles), 25)):
+            chunk = roles[start:start + 25]
             embed = discord.Embed(
                 title=f"📋 Roles in {guild.name}",
                 color=Config.COLORS["info"],
                 timestamp=datetime.utcnow()
-        )
-        desc = []
-        for idx, role in enumerate(chunk, start=i * 25 + 1):
-            desc.append(
-                f"{idx}. {role.mention} (ID: `{role.id}`) - {len(role.members)} member{'s' if len(role.members) != 1 else ''}"
             )
+            desc = []
+            for idx, role in enumerate(chunk, start=start + 1):
+                desc.append(
+                    f"{idx}. {role.mention} (ID: `{role.id}`) - {len(role.members)} member{'s' if len(role.members) != 1 else ''}"
+                )
             embed.description = "\n".join(desc)
             embed.set_footer(
-                text=f"Page {len(pages)+1}/{(len(roles)-1)//25+1} • Total roles: {len(roles)}"
+                text=f"Page {page_index + 1}/{(len(roles) - 1) // 25 + 1} • Total roles: {len(roles)}"
             )
             pages.append(embed)
 
@@ -1450,8 +1450,16 @@ class Moderation(commands.Cog):
 
             @discord.ui.button(label="⬅️ Prev", style=discord.ButtonStyle.primary)
             async def prev(self, interaction: discord.Interaction, button: discord.ui.Button):
-                if interaction.user != getattr(self.author, "author", getattr(self.author, "user", None)):
+                if hasattr(self.author, "author"):
+                    command_user = self.author.author
+                elif hasattr(self.author, "user"):
+                    command_user = self.author.user
+                else:
+                    command_user = self.author
+
+                if interaction.user != command_user:
                     return await interaction.response.send_message("❌ You can’t control this.", ephemeral=True)
+
                 if self.current > 0:
                     self.current -= 1
                     await self.update(interaction)
@@ -1460,8 +1468,16 @@ class Moderation(commands.Cog):
 
             @discord.ui.button(label="➡️ Next", style=discord.ButtonStyle.primary)
             async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
-                if interaction.user != getattr(self.author, "author", getattr(self.author, "user", None)):
+                if hasattr(self.author, "author"):
+                    command_user = self.author.author
+                elif hasattr(self.author, "user"):
+                    command_user = self.author.user
+                else:
+                    command_user = self.author
+
+                if interaction.user != command_user:
                     return await interaction.response.send_message("❌ You can’t control this.", ephemeral=True)
+
                 if self.current < len(self.pages) - 1:
                     self.current += 1
                     await self.update(interaction)
