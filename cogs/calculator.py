@@ -26,7 +26,7 @@ class CalculatorCog(commands.Cog):
         embed = discord.Embed(
             title="🖩 Calculator",
             description="```\n0\n```",
-            color=discord.Color.blue()
+            color=discord.Color.green()
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=False)
 
@@ -36,6 +36,7 @@ class CalculatorView(discord.ui.View):
         super().__init__(timeout=300)  # 5 min timeout
         self.user = user
         self.expression = ""
+        self.last_result = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user != self.user:
@@ -44,7 +45,11 @@ class CalculatorView(discord.ui.View):
         return True
 
     def update_embed(self):
-        display = self.expression if self.expression else "0"
+        if self.last_result is not None:
+            display = f"{self.expression}\nResult: {self.last_result}"
+        else:
+            display = self.expression if self.expression else "0"
+
         embed = discord.Embed(
             title="🖩 Calculator",
             description=f"```\n{display}\n```",
@@ -52,89 +57,90 @@ class CalculatorView(discord.ui.View):
         )
         return embed
 
-    # Row 1
-    @discord.ui.button(label="1", style=discord.ButtonStyle.blurple)
+    # ------------------- Row 1 -------------------
+    @discord.ui.button(label="1️⃣", style=discord.ButtonStyle.blurple)
     async def one(self, interaction, button):
         self.expression += "1"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="2", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="2️⃣", style=discord.ButtonStyle.blurple)
     async def two(self, interaction, button):
         self.expression += "2"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="3", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="3️⃣", style=discord.ButtonStyle.blurple)
     async def three(self, interaction, button):
         self.expression += "3"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="+", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="➕", style=discord.ButtonStyle.success)
     async def plus(self, interaction, button):
         self.expression += "+"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    # Row 2
-    @discord.ui.button(label="4", style=discord.ButtonStyle.blurple)
+    # ------------------- Row 2 -------------------
+    @discord.ui.button(label="4️⃣", style=discord.ButtonStyle.blurple)
     async def four(self, interaction, button):
         self.expression += "4"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="5", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="5️⃣", style=discord.ButtonStyle.blurple)
     async def five(self, interaction, button):
         self.expression += "5"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="6", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="6️⃣", style=discord.ButtonStyle.blurple)
     async def six(self, interaction, button):
         self.expression += "6"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="-", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="➖", style=discord.ButtonStyle.success)
     async def minus(self, interaction, button):
         self.expression += "-"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    # Row 3
-    @discord.ui.button(label="7", style=discord.ButtonStyle.blurple)
+    # ------------------- Row 3 -------------------
+    @discord.ui.button(label="7️⃣", style=discord.ButtonStyle.blurple)
     async def seven(self, interaction, button):
         self.expression += "7"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="8", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="8️⃣", style=discord.ButtonStyle.blurple)
     async def eight(self, interaction, button):
         self.expression += "8"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="9", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="9️⃣", style=discord.ButtonStyle.blurple)
     async def nine(self, interaction, button):
         self.expression += "9"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="×", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="✖️", style=discord.ButtonStyle.success)
     async def multiply(self, interaction, button):
         self.expression += "*"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    # Row 4
-    @discord.ui.button(label=".", style=discord.ButtonStyle.success)
+    # ------------------- Row 4 -------------------
+    @discord.ui.button(label="🔘", style=discord.ButtonStyle.success)
     async def dot(self, interaction, button):
         self.expression += "."
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="0", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="0️⃣", style=discord.ButtonStyle.blurple)
     async def zero(self, interaction, button):
         self.expression += "0"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="÷", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="➗", style=discord.ButtonStyle.success)
     async def divide(self, interaction, button):
         self.expression += "/"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    # Row 5
-    @discord.ui.button(label="C", style=discord.ButtonStyle.danger)
+    # ------------------- Row 5 -------------------
+    @discord.ui.button(label="©️", style=discord.ButtonStyle.danger)
     async def clear(self, interaction, button):
         self.expression = ""
+        self.last_result = None
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
     @discord.ui.button(label="⌫", style=discord.ButtonStyle.danger)
@@ -142,12 +148,12 @@ class CalculatorView(discord.ui.View):
         self.expression = self.expression[:-1]
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="=", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="🟰", style=discord.ButtonStyle.success)
     async def equals(self, interaction, button):
         try:
-            self.expression = str(eval(self.expression))
+            self.last_result = eval(self.expression)
         except:
-            self.expression = "Error"
+            self.last_result = "Error"
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
 
