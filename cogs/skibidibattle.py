@@ -9,6 +9,14 @@ import random
 import io
 import difflib
 
+BATTLE_SERVERS = [
+    1422546075197374486,  # Server 1 ID
+    1422546327731961973,  # Server 2 ID
+    1422546580619137155,  # Server 3 ID
+    1422546833388994711,  # Server 4 ID
+    1422547085890420788,  # Server 5 ID
+]
+
 BATTLE_EMOJI = "<:battle:1422344657790177300>"
 HP_EMOJI = "<:health:1422345046233059442>"
 
@@ -512,20 +520,79 @@ async def make_vs_image(url1: str, url2: str) -> io.BytesIO:
 
 # ================= Game Logic =================
 games = {}  # channel_id -> game state
+active_emojis = {}       # emoji.id -> character_name
+character_emojis = {}    # character_name -> emoji object
 
+
+async def get_or_create_character_emoji(bot, character_name, image_url, servers):
+    """
+    Returns an existing emoji for the character if available.
+    If not, creates it in the first server with space.
+    """
+    # 1️⃣ Already created in memory
+    if character_name in character_emojis:
+        return character_emojis[character_name]
+
+    # 2️⃣ Search existing emojis in servers
+    for guild in bot.guilds:
+        if guild.id not in servers:
+            continue
+        for emoji in guild.emojis:
+            if emoji.name.lower() == character_name.lower():
+                character_emojis[character_name] = emoji
+                active_emojis[emoji.id] = character_name
+                return emoji
+
+    # 3️⃣ Create new emoji in the first server with space
+    for server_id in servers:
+        guild = bot.get_guild(server_id)
+        if guild is None:
+            continue
+        if len(guild.emojis) < guild.emoji_limit:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(image_url) as resp:
+                    img_bytes = await resp.read()
+            emoji = await guild.create_custom_emoji(name=character_name, image=img_bytes)
+            character_emojis[character_name] = emoji
+            active_emojis[emoji.id] = character_name
+            return emoji
+
+    return None  # fallback
+
+
+async def release_character_emoji(character_name):
+    """
+    Deletes an emoji if no active battles are using it.
+    """
+    for game in games.values():
+        for char_data in game["characters"].values():
+            if char_data["name"] == character_name:
+                return  # still in use
+
+    emoji = character_emojis.get(character_name)
+    if emoji:
+        try:
+            await emoji.delete()
+        except:
+            pass
+        character_emojis.pop(character_name, None)
+        active_emojis.pop(emoji.id, None)
+
+
+# ---------------------------------------------------
+# BATTLE BUTTONS AND VIEWS
+# ---------------------------------------------------
 
 class RetreatButton(discord.ui.Button):
     def __init__(self, game):
         super().__init__(label="🏳️ Retreat", style=discord.ButtonStyle.secondary)
         self.game = game
-        self.retreat_votes = {}  # Track votes: {player_id: True/False}
+        self.retreat_votes = {}
 
     async def callback(self, interaction: discord.Interaction):
-        # Only battle players can press
         if interaction.user not in self.game["players"]:
             return await interaction.response.send_message("❌ Only battle players can use this!", ephemeral=True)
 
-        # Send ephemeral confirmation embed
         confirm_embed = discord.Embed(
             title="🏳️ Retreat Confirmation",
             description="Do you want to stop the game?",
@@ -545,7 +612,6 @@ class RetreatConfirmView(discord.ui.View):
         self.add_item(RetreatNoButton(player, game, votes))
 
     async def on_timeout(self):
-        # Disable buttons on timeout
         for child in self.children:
             child.disabled = True
 
@@ -559,25 +625,18 @@ class RetreatYesButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         self.votes[self.player.id] = True
-
-        # If both players voted yes
         if all(self.votes.get(p.id) for p in self.game["players"]):
             channel = interaction.channel
-            other_player = [p for p in self.game["players"] if p != self.player][0]
-            retreated_char = self.game["characters"][self.player.id]["name"]
-            winner_char = self.game["characters"][other_player.id]["name"]
-
-            # Update main battle embed
             embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
-                description=f"💨 Both characters has retreated and left the battlefield.\n\n"
-                            f"# 🏆 Winner: TIE.",
+                description=f"💨 Both characters have retreated and left the battlefield.\n\n# 🏆 Winner: TIE.",
                 color=discord.Color.gold()
             )
             await self.game["message"].edit(embed=embed, view=None)
-            # Remove game from active games
             games.pop(channel.id, None)
-
+            # Release emojis
+            for char_data in self.game["characters"].values():
+                await release_character_emoji(char_data["name"])
             await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
         else:
             await interaction.response.send_message("You voted ✅ Yes to retreat. Waiting for the other player...", ephemeral=True)
@@ -593,7 +652,6 @@ class RetreatNoButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         self.votes[self.player.id] = False
         await interaction.response.send_message("You voted ❌ No. The battle will continue!", ephemeral=True)
-        # Clear confirmation message after 7 seconds
         await asyncio.sleep(7)
         try:
             await interaction.message.delete()
@@ -610,28 +668,18 @@ class AttackView(discord.ui.View):
 
         char = game["characters"][attacker.id]
 
-        # Build weighted pool based on rarity
         pool = []
         for atk_name, atk_data in char["attacks"].items():
             pool.extend([(atk_name, atk_data)] * atk_data["rarity"])
-
-        # Pick up to 3 random weighted attacks
         chosen_attacks = random.sample(pool, min(3, len(pool)))
 
-        # Pick button style depending on which player is attacking
-        if attacker.id == game["players"][0].id:
-            button_style = discord.ButtonStyle.primary  # Blue for Player 1
-        else:
-            button_style = discord.ButtonStyle.danger   # Red for Player 2
+        button_style = discord.ButtonStyle.primary if attacker.id == game["players"][0].id else discord.ButtonStyle.danger
 
-        # Add attack buttons
         for atk_name, atk_data in chosen_attacks:
-            self.add_item(
-                AttackButton(atk_name, atk_data, attacker, defender, game, button_style)
-            )
+            self.add_item(AttackButton(atk_name, atk_data, attacker, defender, game, button_style))
 
-        # Add retreat button at the end
         self.add_item(RetreatButton(game))
+
 
 class AttackButton(discord.ui.Button):
     def __init__(self, atk_name, atk_data, attacker, defender, game, button_style):
@@ -643,7 +691,6 @@ class AttackButton(discord.ui.Button):
         self.game = game
 
     async def callback(self, interaction: discord.Interaction):
-        # Immediate defer to prevent "interaction failed"
         await interaction.response.defer()
 
         if interaction.user != self.attacker:
@@ -652,7 +699,6 @@ class AttackButton(discord.ui.Button):
         attacker_char = self.game["characters"][self.attacker.id]
         defender_char = self.game["characters"][self.defender.id]
 
-        # ================= Immunity check =================
         immune = False
         immune_msg = None
         for imm in defender_char.get("immunities", []):
@@ -660,26 +706,19 @@ class AttackButton(discord.ui.Button):
                 if imm.get("character") == attacker_char["name"] and imm.get("attack") == self.atk_name:
                     immune = True
                     break
-            elif isinstance(imm, str):
-                if imm == self.atk_name:
-                    immune = True
-                    break
+            elif isinstance(imm, str) and imm == self.atk_name:
+                immune = True
+                break
 
-        if immune:
-            dmg = 0
-            immune_msg = f"🛡️ {self.defender.mention}'s **{defender_char.get('name', 'Unknown')}** is immune to **{self.atk_name}**!"
-        else:
-            dmg = self.atk_data["damage"]
+        dmg = 0 if immune else self.atk_data["damage"]
+        if not immune:
             defender_char["hp"] = max(0, defender_char["hp"] - dmg)
-            immune_msg = None
+        else:
+            immune_msg = f"🛡️ {self.defender.mention}'s **{defender_char.get('name', 'Unknown')}** is immune to **{self.atk_name}**!"
 
-        await asyncio.sleep(1.5)  # Optional delay
-
-        # Update the battle embed with attack/immune info
-
+        await asyncio.sleep(1.5)
         await update_battle_embed(interaction.channel, self.game, last_attack=(self.attacker, self.atk_name, dmg), immune_msg=immune_msg)
 
-        # ================= Handle faint =================
         if defender_char["hp"] <= 0:
             embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
@@ -690,12 +729,12 @@ class AttackButton(discord.ui.Button):
             )
             await self.game["message"].edit(embed=embed, view=None)
             games.pop(interaction.channel.id, None)
+            for char_data in self.game["characters"].values():
+                await release_character_emoji(char_data["name"])
             return
 
-        # Swap turns
+        # Swap turn
         self.game["turn"] = self.defender.id
-
-        # Build buttons for next turn
         p1, p2 = self.game["players"]
         turn_player = p1 if self.game["turn"] == p1.id else p2
         opponent = p2 if turn_player == p1 else p1
@@ -707,53 +746,32 @@ async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
     p1, p2 = game["players"]
     c1, c2 = game["characters"][p1.id], game["characters"][p2.id]
 
-    # Determine attacker and opponent
-    if last_attack:
-        attacker, atk_name, dmg = last_attack
-        opponent = p2 if attacker == p1 else p1
-        turn_player = opponent  # next turn is opponent
-    else:
-        turn_player = p1 if game["turn"] == p1.id else p2
-        opponent = p2 if turn_player == p1 else p1
+    attacker, atk_name, dmg = (last_attack if last_attack else (None, None, None))
+    turn_player = p2 if attacker == p1 else p1 if attacker else p1
+    opponent = p2 if turn_player == p1 else p1
 
-    # Build description
+    # Fetch or create emojis for display
+    emoji1 = await get_or_create_character_emoji(channel.guild.client, c1["name"], c1["image"], BATTLE_SERVERS)
+    emoji2 = await get_or_create_character_emoji(channel.guild.client, c2["name"], c2["image"], BATTLE_SERVERS)
+
     desc = f"{p1.mention} VS {p2.mention}\n\n"
     if immune_msg:
         desc += f"{immune_msg}\n\n"
     elif last_attack:
-        desc += f"{BATTLE_EMOJI} **{attacker.mention}** used **{atk_name}** and dealt **{dmg} dmg**!\n\n"
+        desc += f"{emoji1 if attacker == p1 else emoji2} **{attacker.mention}** used **{atk_name}** and dealt **{dmg} dmg**!\n\n"
     desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
 
-    # Create embed
     embed = discord.Embed(
         title="Skibidi Battle! 🚽⚔️",
         description=desc,
         color=discord.Color.red()
     )
+    embed.add_field(name=f"{emoji1} {c1['name']} ({p1.name})", value=f"{c1['hp']} HP", inline=True)
+    embed.add_field(name=f"{emoji2} {c2['name']} ({p2.name})", value=f"{c2['hp']} HP", inline=True)
 
-    # Add HP fields
-    embed.add_field(
-        name=f"{c1['name']} ({p1.name})",
-        value=f"{HP_EMOJI} {c1['hp']} HP",
-        inline=True
-    )
-    embed.add_field(
-        name=f"{c2['name']} ({p2.name})",
-        value=f"{HP_EMOJI} {c2['hp']} HP",
-        inline=True
-    )
-
-    # Build attack buttons for the current turn
     view = AttackView(turn_player, opponent, game)
 
-    # Send new message if first time, else edit existing
     if "message" not in game:
-        vs_image = await make_vs_image(c1["image"], c2["image"])
-        file = discord.File(vs_image, filename="vs.png")
-        msg = await channel.send(file=file, embed=embed, view=view)
-        game["message"] = msg
-    else:
-        await game["message"].edit(embed=embed, view=view)
 
 # ================= Commands =================
 class Skibidi(commands.Cog):
