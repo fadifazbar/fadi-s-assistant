@@ -43,7 +43,6 @@ class ModBot(commands.Bot):
         await self.load_extension("cogs.url_download")
         await self.load_extension("cogs.deathbattle")
         await self.load_extension("cogs.roleall")
-        await self.load_extension("cogs.skibidibattle")
         await self.load_extension("cogs.family")
         await self.load_extension("cogs.remindme")
         await self.load_extension("cogs.welcome")
