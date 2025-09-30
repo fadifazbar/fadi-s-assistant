@@ -965,7 +965,7 @@ class ConfirmView(discord.ui.View):
         }
 
         await interaction.response.edit_message(content="✅ Battle accepted!", embed=None, view=None)
-        await update_battle_embed(self.channel, games[self.channel.id])
+        await update_battle_embed(interaction.client, self.channel, games[self.channel.id])
 
     @discord.ui.button(label="❌ Decline", style=discord.ButtonStyle.red)
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
