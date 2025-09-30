@@ -32,6 +32,7 @@ class ModBot(commands.Bot):
         logger.info("Setting up bot...")
 
         # Load all cogs
+        await self.load_extension("cogs.fix")
         await self.load_extension("cogs.warning")
         await self.load_extension("cogs.moderation")
         await self.load_extension("cogs.general")
