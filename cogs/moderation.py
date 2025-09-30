@@ -1427,10 +1427,10 @@ class Moderation(commands.Cog):
                 timestamp=datetime.utcnow()
             )
             desc = []
-            for role in chunk:
-                desc.append(
-                    f"{role.mention} (ID: `{role.id}`) - {len(role.members)} member{'s' if len(role.members) != 1 else ''}"
-                )
+            for idx, role in enumerate(chunk, start=i * 25 + 1):
+    desc.append(
+        f"{idx}. {role.mention} (ID: `{role.id}`) - {len(role.members)} member{'s' if len(role.members) != 1 else ''}"
+    )
             embed.description = "\n".join(desc)
             embed.set_footer(
                 text=f"Page {len(pages)+1}/{(len(roles)-1)//25+1} • Total roles: {len(roles)}"
