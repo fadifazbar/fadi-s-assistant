@@ -14,7 +14,7 @@ class CalculatorCog(commands.Cog):
         embed = discord.Embed(
             title="🧮 Calculator",
             description="```\n0\n```",
-            color=discord.Color.blue()
+            color=discord.Color.green()
         )
         await ctx.send(embed=embed, view=view)
 
@@ -26,13 +26,14 @@ class CalculatorCog(commands.Cog):
         embed = discord.Embed(
             title="🧮 Calculator",
             description="```\n0\n```",
-            color=discord.Color.green()
+            color=discord.Color.orange()
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=False)
 
 
 class CalculatorView(discord.ui.View):
     MAX_LENGTH = 35
+    OPERATORS = "+-*/"
 
     def __init__(self, user):
         super().__init__(timeout=300)
@@ -64,23 +65,23 @@ class CalculatorView(discord.ui.View):
     def add_char(self, char):
         if len(self.expression) >= self.MAX_LENGTH:
             return
-        # Prevent multiple operators in a row
-        if char in "+-*/":
-            if not self.expression or self.expression[-1] in "+-*/":
+        if char in self.OPERATORS:
+            if not self.expression:
+                return
+            if self.expression[-1] in self.OPERATORS:
+                # Replace last operator
+                self.expression = self.expression[:-1] + char
                 return
         self.expression += char
 
     def toggle_negate(self):
-        # Negates the last number in the expression
         import re
         if not self.expression:
             return
-        # Match last number
         match = re.search(r"(-?\d+\.?\d*)$", self.expression)
         if match:
             num = match.group(1)
             start = match.start(1)
-            # Toggle sign
             if num.startswith("-"):
                 num = num[1:]
             else:
@@ -129,10 +130,7 @@ class CalculatorView(discord.ui.View):
 
     # ------------------- Row 4 -------------------
     @discord.ui.button(label="⛔", style=discord.ButtonStyle.success, row=4)
-    async def negate(self, interaction, button):
-        self.toggle_negate()
-        await interaction.response.edit_message(embed=self.update_embed(), view=self)
-
+    async def negate(self, interaction, button): self.toggle_negate(); await interaction.response.edit_message(embed=self.update_embed(), view=self)
     @discord.ui.button(label="(", style=discord.ButtonStyle.success, row=4)
     async def left_paren(self, interaction, button): self.add_char("("); await interaction.response.edit_message(embed=self.update_embed(), view=self)
     @discord.ui.button(label=")", style=discord.ButtonStyle.success, row=4)
@@ -150,6 +148,9 @@ class CalculatorView(discord.ui.View):
             self.last_result = "Error"
             self.expression = ""
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
+
+    @discord.ui.button(label="⌫", style=discord.ButtonStyle.danger, row=4)
+    async def backspace(self, interaction, button): self.expression=self.expression[:-1]; await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
 
 async def setup(bot: commands.Bot):
