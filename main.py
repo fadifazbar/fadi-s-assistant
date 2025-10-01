@@ -33,6 +33,7 @@ class ModBot(commands.Bot):
 
         # Load all cogs
         await self.load_extension("cogs.autorole")
+        await self.load_extension("cogs.verification")
         await self.load_extension("cogs.fix")
         await self.load_extension("cogs.skibidibattle")
         await self.load_extension("cogs.warning")
