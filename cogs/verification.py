@@ -114,7 +114,7 @@ class Verification(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(aliases=["verif", "ver", "verify"])
+    @commands.command(name="verification", aliases=["verif", "ver", "verify"])
     @commands.has_permissions(administrator=True)
     async def verification(self, ctx, channel: discord.TextChannel = None, role: discord.Role = None):
         if not role:
