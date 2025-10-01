@@ -4,7 +4,7 @@ import random, json, os
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 
-DATA_FILE = "data/verifications.json"
+DATA_FILE = "/data/verifications.json"
 os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
 
 def load_data():
