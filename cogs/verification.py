@@ -27,35 +27,58 @@ def generate_captcha():
     digits = [str(random.randint(0, 9)) for _ in range(5)]
     answer = ''.join(digits)
 
-    img = Image.new("RGB", (200, 80), color=(30, 30, 30))
+    # Create image
+    width, height = 220, 90
+    img = Image.new("RGB", (width, height), color=(30, 30, 30))
     draw = ImageDraw.Draw(img)
 
-    # Better font (fallback to default if not found)
-    try:
-        font = ImageFont.truetype("arial.ttf", 36)
-    except:
-        font = ImageFont.load_default()
+    # Try multiple fonts
+    fonts = []
+    for f in ["arial.ttf", "times.ttf", "comic.ttf", "verdana.ttf"]:
+        try:
+            fonts.append(ImageFont.truetype(f, 40))
+        except:
+            pass
+    if not fonts:
+        fonts = [ImageFont.load_default()]
 
-    # Background noise digits
-    for _ in range(10):
-        fake_digit = str(random.randint(0, 9))
-        x = random.randint(0, 180)
-        y = random.randint(0, 60)
-        draw.text((x, y), fake_digit, font=font, fill=(100, 100, 100))
+    # Background noise: random digits/letters
+    for _ in range(15):
+        fake_char = str(random.choice("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"))
+        fx = random.randint(0, width - 20)
+        fy = random.randint(0, height - 20)
+        fnt = random.choice(fonts)
+        draw.text((fx, fy), fake_char, font=fnt, fill=(random.randint(50, 100),) * 3)
 
     # Noise dots
-    for _ in range(50):
-        x, y = random.randint(0, 200), random.randint(0, 80)
-        draw.point((x, y), fill=(random.randint(50, 200),) * 3)
+    for _ in range(200):
+        x, y = random.randint(0, width), random.randint(0, height)
+        draw.point((x, y), fill=(random.randint(80, 200), random.randint(80, 200), random.randint(80, 200)))
 
-    # Real digits
+    # Noise lines and arcs
+    for _ in range(5):
+        x1, y1, x2, y2 = [random.randint(0, width) for _ in range(4)]
+        draw.line((x1, y1, x2, y2), fill=(random.randint(150, 255), 0, random.randint(0, 255)), width=2)
+    for _ in range(3):
+        box = [random.randint(0, width-30), random.randint(0, height-30),
+               random.randint(30, width), random.randint(30, height)]
+        draw.arc(box, start=random.randint(0, 180), end=random.randint(180, 360),
+                 fill=(0, random.randint(150, 255), random.randint(150, 255)))
+
+    # Real digits with rotation + jitter
     for i, digit in enumerate(digits):
-        x = 20 + i * 30 + random.randint(-5, 5)
-        y = random.randint(10, 30)
-        draw.text((x, y), digit, font=font, fill=(255, 255, 0))
+        fnt = random.choice(fonts)
+        color = (random.randint(200, 255), random.randint(150, 255), random.randint(0, 255))
 
-    # Obfuscation line
-    draw.line((10, 40, 190, 40), fill=(255, 0, 0), width=2)
+        # Draw each digit on its own image so we can rotate
+        temp_img = Image.new("RGBA", (50, 70), (0, 0, 0, 0))
+        temp_draw = ImageDraw.Draw(temp_img)
+        temp_draw.text((5, 5), digit, font=fnt, fill=color)
+
+        rotated = temp_img.rotate(random.randint(-25, 25), expand=1)
+        px = 20 + i * 35 + random.randint(-5, 5)
+        py = random.randint(5, 20)
+        img.paste(rotated, (px, py), rotated)
 
     buffer = BytesIO()
     img.save(buffer, format="PNG")
