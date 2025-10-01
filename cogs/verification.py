@@ -76,11 +76,12 @@ class CaptchaInputView(discord.ui.View):
     async def eight(self, i, b): self.input += "8"; await self.handle_input(i)
     @discord.ui.button(label="9️⃣", style=discord.ButtonStyle.secondary, row=2)
     async def nine(self, i, b): self.input += "9"; await self.handle_input(i)
-    @discord.ui.button(label="0️⃣", style=discord.ButtonStyle.secondary, row=3)
-    async def zero(self, i, b): self.input += "0"; await self.handle_input(i)
 
     @discord.ui.button(label="➖", style=discord.ButtonStyle.danger, row=3)
     async def backspace(self, i, b): self.input = self.input[:-1]; await self.handle_input(i)
+
+    @discord.ui.button(label="0️⃣", style=discord.ButtonStyle.secondary, row=3)
+    async def zero(self, i, b): self.input += "0"; await self.handle_input(i)
 
     @discord.ui.button(label="🟰", style=discord.ButtonStyle.success, row=3)
     async def submit(self, interaction, button):
@@ -100,7 +101,7 @@ class VerificationButton(discord.ui.View):
         super().__init__(timeout=None)
         self.role_id = role_id
 
-    @discord.ui.button(label="✅ Verify", style=discord.ButtonStyle.green)
+    @discord.ui.button(label="✅ Verify", style=discord.ButtonStyle.green, custom_id="persistent_verify_button")
     async def verify(self, interaction: discord.Interaction, button: discord.ui.Button):
         role = discord.utils.get(interaction.guild.roles, id=self.role_id)
         if not role:
