@@ -19,8 +19,8 @@ class FixServer(commands.Cog):
         # === Confirmation Step ===
         confirm_msg = await ctx.send(
             f"⚠️ Are you sure you want to reset the server with **{mode.capitalize()}** mode?\n"
-            "This will delete channels and roles (except this channel, stickers, emojis, and protected roles)."
-            "\n\nReply with `yes` to confirm, or anything else to cancel."
+            "This will delete channels and roles (except this channel, stickers, emojis, and protected roles).\n\n"
+            "Reply with `yes` to confirm, or anything else to cancel."
         )
 
         def check(m):
@@ -60,7 +60,7 @@ class FixServer(commands.Cog):
             except (discord.Forbidden, discord.HTTPException):
                 continue
 
-        # === SIMPLE MODE ===
+        # === SET CATEGORIES AND ROLES ===
         if mode == "simple":
             categories = {
                 "Important": ["rules", "announcements", "welcome", "goodbye"],
@@ -75,8 +75,6 @@ class FixServer(commands.Cog):
                 ("Bots", discord.Permissions(send_messages=True, embed_links=True)),
                 ("Member", discord.Permissions(send_messages=True, read_messages=True)),
             ]
-
-        # === ADVANCED MODE ===
         else:
             categories = {
                 "☆࿐ཽ༵༆༒〘🚨〙Important༒༆࿐ཽ༵☆": [
@@ -94,90 +92,48 @@ class FixServer(commands.Cog):
                     "「🎮」Gaming", "「🔴」Streams"
                 ],
                 "☆࿐ཽ༵༆༒〘👑〙Staff Only༒༆࿐ཽ༵☆": [
-                   "「📜」staff rules" , "「💬」staff chat", "「🔨」staff discussion", "「👾」staff cmds"
-
+                    "「📜」staff rules", "「💬」staff chat", "「🔨」staff discussion", "「👾」staff cmds"
                 ],
             }
             roles = [
-                # === Ownership / High Staff ===
+                # Ownership / High Staff
                 ("👑〉Owner", discord.Permissions.all(), 0xFFF700),
                 ("🤴〉Co-Owner", discord.Permissions.all(), 0x09FF00),
                 ("💼〉Community Manager", discord.Permissions(manage_guild=True, manage_messages=True, manage_roles=True, view_audit_log=True), 0x00AAFF),
                 ("⚒️〉Manager", discord.Permissions(manage_channels=True, manage_messages=True, manage_roles=True, mute_members=True, move_members=True), 0xFF8000),
                 ("🛠️〉Administrator", discord.Permissions(administrator=True), 0xFF1100),
 
-                # === Moderation ===
+                # Moderation
                 ("🔨〉Moderator", discord.Permissions(kick_members=True, ban_members=True, manage_messages=True, mute_members=True, move_members=True), 0xA600FF),
                 ("🔓〉Trial Moderator", discord.Permissions(manage_messages=True, mute_members=True), 0xFFDD00),
                 ("🕵️〉Security", discord.Permissions(ban_members=True, kick_members=True, view_audit_log=True), 0x2c3e50),
                 ("📞〉Support Team", discord.Permissions(manage_messages=True, read_message_history=True), 0x66FF99),
                 ("🛎️〉Helper", discord.Permissions(manage_messages=True, read_message_history=True), 0x16a085),
 
-                # === Utility / Team Roles ===
+                # Utility / Team Roles
                 ("🎨〉Designer", discord.Permissions(manage_emojis_and_stickers=True, attach_files=True, embed_links=True), 0xFF66CC),
                 ("🎉〉Event Manager", discord.Permissions(manage_events=True, mention_everyone=True, move_members=True), 0x00E5FF),
                 ("📦〉Giveaway Manager", discord.Permissions(manage_messages=True, mention_everyone=True), 0xf39c12),
                 ("👨‍💻〉Developer", discord.Permissions(manage_guild=True, manage_roles=True, manage_channels=True, manage_messages=True), 0x4287f5),
 
-                # === Bots ===
+                # Bots
                 ("👾〉Bots", discord.Permissions.all(), 0xFF00F7),
-                
 
-                # === Community Roles ===
+                # Community Roles
                 ("🌟〉Vip", discord.Permissions(read_messages=True, send_messages=True, use_external_emojis=True, connect=True, speak=True), 0xF3FC74),
                 ("🎮〉Gamer", discord.Permissions(send_messages=True, connect=True, speak=True, use_application_commands=True), 0x00FF9C),
                 ("🤗〉Members", discord.Permissions(read_messages=True, send_messages=True, connect=True, speak=True), 0x81DEBF),
-                
-                # === Ping Roles ===
+
+                # Ping Roles
                 ("📢〉Announcement Ping", discord.Permissions.none(), 0xFC8674),
                 ("‼️〉Important Ping", discord.Permissions.none(), 0x7496FC),
                 ("🔋〉Chat Revive Ping", discord.Permissions.none(), 0x74FC7D),
             ]
 
-        # === CREATE CATEGORIES + CHANNELS ===
-async def create_channels(guild, categories):
-    created_channels = {}
-    for cat_name, chans in categories.items():
-        try:
-            # Decide if category should be hidden (staff-only)
-            staff_only = any(word in cat_name.lower() for word in ["staff", "admin", "🔒"])
+        # Create channels
+        created_channels = await create_channels(guild, categories)
 
-            overwrites = None
-            if staff_only:
-                overwrites = {
-                    guild.default_role: discord.PermissionOverwrite(view_channel=False)
-                }
-                # Allow staff roles
-                staff_roles = [
-                    "🛠️〉Administrator", "⚒️〉Manager", "💼〉Community Manager", "🔨〉Moderator",
-                    "🔓〉Trial Moderator", "🕵️〉Security", "📞〉Support Team", "🛎️〉Helper",
-                    "🎉〉Event Manager", "📦〉Giveaway Manager"
-                ]
-                for role_name in staff_roles:
-                    role = discord.utils.get(guild.roles, name=role_name)
-                    if role:
-                        overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
-
-            # Create category with overwrites (hidden if staff-only)
-            category = await guild.create_category(cat_name, overwrites=overwrites)
-        except Exception:
-            continue
-
-        for chan in chans:
-            try:
-                # Create voice or text channel
-                if "voice" in cat_name.lower() or "🔊" in cat_name:
-                    ch = await guild.create_voice_channel(chan, category=category)
-                else:
-                    ch = await guild.create_text_channel(chan, category=category)
-
-                created_channels[chan] = ch
-            except Exception:
-                continue
-
-    return created_channels
-
-        # === CREATE ROLES (with permissions + hoist) ===
+        # Create roles
         new_roles = []
         if mode == "simple":
             for rname, perms in roles:
@@ -193,6 +149,7 @@ async def create_channels(guild, categories):
                     new_roles.append(role)
                 except Exception:
                     continue
+
             # Reorder roles
             try:
                 positions = {role: (len(new_roles) - i) for i, role in enumerate(new_roles)}
@@ -200,7 +157,7 @@ async def create_channels(guild, categories):
             except Exception:
                 pass
 
-            # === Set AFK & Boost Channel ===
+            # Set AFK & Boost Channel
             afk_channel = created_channels.get("「😴」Afk")
             boost_channel = created_channels.get("「🚀」boosts")
             try:
@@ -209,7 +166,7 @@ async def create_channels(guild, categories):
                     system_channel=boost_channel,
                     system_channel_flags=discord.SystemChannelFlags(
                         join_notifications=False,
-                        premium_subscriptions=True,  # only boosts
+                        premium_subscriptions=True,
                         guild_reminder_notifications=False,
                         join_notification_replies=False
                     )
@@ -219,5 +176,47 @@ async def create_channels(guild, categories):
 
         await ctx.send(f"✅ Successfully reset the server with **{mode.capitalize()}** mode!")
 
+
+# === CREATE CHANNELS FUNCTION ===
+async def create_channels(guild, categories):
+    created_channels = {}
+    for cat_name, chans in categories.items():
+        try:
+            staff_only = any(word in cat_name.lower() for word in ["staff", "admin", "🔒"])
+            overwrites = None
+
+            if staff_only:
+                overwrites = {guild.default_role: discord.PermissionOverwrite(view_channel=False)}
+                staff_roles = [
+                    "🛠️〉Administrator", "⚒️〉Manager", "💼〉Community Manager", "🔨〉Moderator",
+                    "🔓〉Trial Moderator", "🕵️〉Security", "📞〉Support Team", "🛎️〉Helper",
+                    "🎉〉Event Manager", "📦〉Giveaway Manager"
+                ]
+                for role_name in staff_roles:
+                    role = discord.utils.get(guild.roles, name=role_name)
+                    if role:
+                        overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
+
+            # Create category
+            category = await guild.create_category(cat_name, overwrites=overwrites)
+        except Exception:
+            continue
+
+        for chan in chans:
+            try:
+                # Create voice or text channel
+                if "voice" in cat_name.lower() or "🔊" in cat_name.lower():
+                    ch = await guild.create_voice_channel(chan, category=category)
+                else:
+                    ch = await guild.create_text_channel(chan, category=category)
+
+                created_channels[chan] = ch
+            except Exception:
+                continue
+
+    return created_channels
+
+
+# === COG SETUP ===
 async def setup(bot):
     await bot.add_cog(FixServer(bot))
