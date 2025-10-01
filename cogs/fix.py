@@ -93,6 +93,10 @@ class FixServer(commands.Cog):
                     "「🔊」General Chat", "「😴」Afk", "「🎵」Music",
                     "「🎮」Gaming", "「🔴」Streams"
                 ],
+                "☆࿐ཽ༵༆༒〘👑〙Staff Only༒༆࿐ཽ༵☆": [
+                   "「📜」staff rules" , "「💬」staff chat", "「🔨」staff discussion", "「👾」staff cmds"
+
+                ],
             }
             roles = [
                 # === Ownership / High Staff ===
@@ -115,14 +119,15 @@ class FixServer(commands.Cog):
                 ("📦〉Giveaway Manager", discord.Permissions(manage_messages=True, mention_everyone=True), 0xf39c12),
                 ("👨‍💻〉Developer", discord.Permissions(manage_guild=True, manage_roles=True, manage_channels=True, manage_messages=True), 0x4287f5),
 
+                # === Bots ===
+                ("👾〉Bots", discord.Permissions.all(), 0xFF00F7),
+                
+
                 # === Community Roles ===
                 ("🌟〉Vip", discord.Permissions(read_messages=True, send_messages=True, use_external_emojis=True, connect=True, speak=True), 0xF3FC74),
                 ("🎮〉Gamer", discord.Permissions(send_messages=True, connect=True, speak=True, use_application_commands=True), 0x00FF9C),
                 ("🤗〉Members", discord.Permissions(read_messages=True, send_messages=True, connect=True, speak=True), 0x81DEBF),
-
-                # === Bots ===
-                ("👾〉Bots", discord.Permissions(send_messages=True, embed_links=True, attach_files=True, read_message_history=True), 0xFF00F7),
-
+                
                 # === Ping Roles ===
                 ("📢〉Announcement Ping", discord.Permissions.none(), 0xFC8674),
                 ("‼️〉Important Ping", discord.Permissions.none(), 0x7496FC),
@@ -131,20 +136,35 @@ class FixServer(commands.Cog):
 
         # === CREATE CATEGORIES + CHANNELS ===
         created_channels = {}
-        for cat_name, chans in categories.items():
-            try:
-                category = await guild.create_category(cat_name)
-            except Exception:
-                continue
-            for chan in chans:
-                try:
-                    if "voice" in cat_name.lower() or "🔊" in cat_name:
-                        ch = await guild.create_voice_channel(chan, category=category)
-                    else:
-                        ch = await guild.create_text_channel(chan, category=category)
-                    created_channels[chan] = ch
-                except Exception:
-                    continue
+for cat_name, chans in categories.items():
+    try:
+        # Decide if category should be hidden (staff-only)
+        staff_only = any(word in cat_name.lower() for word in ["staff", "admin", "🔒"])
+
+        overwrites = None
+        if staff_only:
+            overwrites = {
+                guild.default_role: discord.PermissionOverwrite(view_channel=False)
+            }
+            # Allow staff roles
+            for role_name in ["🛠️〉Administrator", "⚒️〉Manager", "💼〉Community Manager", "🔨〉Moderator", "🔓〉Trial Moderator", "🕵️〉Security", "📞〉Support Team", "🛎️〉Helper", "🎉〉Event Manager", "📦〉Giveaway Manager"]:
+                role = discord.utils.get(guild.roles, name=role_name)
+                if role:
+                    overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
+
+        category = await guild.create_category(cat_name, overwrites=overwrites)
+    except Exception:
+        continue
+
+    for chan in chans:
+        try:
+            if "voice" in cat_name.lower() or "🔊" in cat_name:
+                ch = await guild.create_voice_channel(chan, category=category)
+            else:
+                ch = await guild.create_text_channel(chan, category=category)
+            created_channels[chan] = ch
+        except Exception:
+            continue
 
         # === CREATE ROLES (with permissions + hoist) ===
         new_roles = []
