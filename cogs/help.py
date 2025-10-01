@@ -17,7 +17,7 @@ class HelpCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         # Add cog names here to block them from showing in help
-        self.blocked_cogs = {"nuke"}  
+        self.blocked_cogs = {"WipeAndRebuild"}  
 
     # --- Help command (Prefix) ---
     @commands.command(name="help", aliases=["cmds", "cmnds", "command", "commands"])
