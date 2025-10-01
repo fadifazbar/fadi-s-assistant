@@ -135,36 +135,47 @@ class FixServer(commands.Cog):
             ]
 
         # === CREATE CATEGORIES + CHANNELS ===
-        created_channels = {}
-for cat_name, chans in categories.items():
-    try:
-        # Decide if category should be hidden (staff-only)
-        staff_only = any(word in cat_name.lower() for word in ["staff", "admin", "🔒"])
-
-        overwrites = None
-        if staff_only:
-            overwrites = {
-                guild.default_role: discord.PermissionOverwrite(view_channel=False)
-            }
-            # Allow staff roles
-            for role_name in ["🛠️〉Administrator", "⚒️〉Manager", "💼〉Community Manager", "🔨〉Moderator", "🔓〉Trial Moderator", "🕵️〉Security", "📞〉Support Team", "🛎️〉Helper", "🎉〉Event Manager", "📦〉Giveaway Manager"]:
-                role = discord.utils.get(guild.roles, name=role_name)
-                if role:
-                    overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
-
-        category = await guild.create_category(cat_name, overwrites=overwrites)
-    except Exception:
-        continue
-
-    for chan in chans:
+async def create_channels(guild, categories):
+    created_channels = {}
+    for cat_name, chans in categories.items():
         try:
-            if "voice" in cat_name.lower() or "🔊" in cat_name:
-                ch = await guild.create_voice_channel(chan, category=category)
-            else:
-                ch = await guild.create_text_channel(chan, category=category)
-            created_channels[chan] = ch
+            # Decide if category should be hidden (staff-only)
+            staff_only = any(word in cat_name.lower() for word in ["staff", "admin", "🔒"])
+
+            overwrites = None
+            if staff_only:
+                overwrites = {
+                    guild.default_role: discord.PermissionOverwrite(view_channel=False)
+                }
+                # Allow staff roles
+                staff_roles = [
+                    "🛠️〉Administrator", "⚒️〉Manager", "💼〉Community Manager", "🔨〉Moderator",
+                    "🔓〉Trial Moderator", "🕵️〉Security", "📞〉Support Team", "🛎️〉Helper",
+                    "🎉〉Event Manager", "📦〉Giveaway Manager"
+                ]
+                for role_name in staff_roles:
+                    role = discord.utils.get(guild.roles, name=role_name)
+                    if role:
+                        overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
+
+            # Create category with overwrites (hidden if staff-only)
+            category = await guild.create_category(cat_name, overwrites=overwrites)
         except Exception:
             continue
+
+        for chan in chans:
+            try:
+                # Create voice or text channel
+                if "voice" in cat_name.lower() or "🔊" in cat_name:
+                    ch = await guild.create_voice_channel(chan, category=category)
+                else:
+                    ch = await guild.create_text_channel(chan, category=category)
+
+                created_channels[chan] = ch
+            except Exception:
+                continue
+
+    return created_channels
 
         # === CREATE ROLES (with permissions + hoist) ===
         new_roles = []
