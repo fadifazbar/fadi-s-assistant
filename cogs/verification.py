@@ -150,5 +150,5 @@ class Verification(commands.Cog):
                 del verification_data[gid]
                 save_data(verification_data)
 
-def setup(bot):
-    bot.add_cog(Verification(bot))
+async def setup(bot):
+    await bot.add_cog(Verification(bot))
