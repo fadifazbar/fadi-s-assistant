@@ -519,63 +519,7 @@ async def make_vs_image(url1: str, url2: str) -> io.BytesIO:
     return output
 
 # ================= Game Logic =================
-games = {}  # channel_id -> game state
-active_emojis = {}       # emoji.id -> character_name
-character_emojis = {}    # character_name -> emoji object
-BATTLE_SERVERS = []      # list of guild IDs where emojis can be created
-
-
-# ---------------- EMOJI HANDLING ----------------
-
-async def get_or_create_character_emoji(bot, character_name, image_url, servers):
-    if character_name in character_emojis:
-        return character_emojis[character_name]
-
-    # Check existing emojis in guilds
-    for guild in bot.guilds:
-        if guild.id not in servers:
-            continue
-        for emoji in guild.emojis:
-            if emoji.name.lower() == character_name.lower():
-                character_emojis[character_name] = emoji
-                active_emojis[emoji.id] = character_name
-                return emoji
-
-    # Create emoji in available servers
-    for server_id in servers:
-        guild = bot.get_guild(server_id)
-        if guild is None:
-            continue
-        if len(guild.emojis) < guild.emoji_limit:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(image_url) as resp:
-                    img_bytes = await resp.read()
-            try:
-                emoji = await guild.create_custom_emoji(name=character_name, image=img_bytes)
-                character_emojis[character_name] = emoji
-                active_emojis[emoji.id] = character_name
-                return emoji
-            except discord.HTTPException:
-                continue
-    return None
-
-
-async def release_character_emoji(character_name):
-    # Only release if character is not in any active game
-    for game in games.values():
-        for char_data in game["characters"].values():
-            if char_data["name"] == character_name:
-                return
-
-    emoji = character_emojis.get(character_name)
-    if emoji:
-        try:
-            await emoji.delete()
-        except:
-            pass
-        character_emojis.pop(character_name, None)
-        active_emojis.pop(emoji.id, None)
-
+games = {}  # channel_id -> game 
 
 # ---------------- ACCEPT/DENY BATTLE ----------------
 
@@ -840,8 +784,8 @@ async def update_battle_embed(bot, channel, game, last_attack=None, immune_msg=N
         description=desc,
         color=discord.Color.red()
     )
-    embed.add_field(name=f"{emoji1} {c1['name']} ({p1.name})", value=f"{c1['hp']} HP", inline=True)
-    embed.add_field(name=f"{emoji2} {c2['name']} ({p2.name})", value=f"{c2['hp']} HP", inline=True)
+    embed.add_field(name=f"{c1['name']} ({p1.name})", value=f"{c1['hp']} HP", inline=True)
+    embed.add_field(name=f"{c2['name']} ({p2.name})", value=f"{c2['hp']} HP", inline=True)
 
     view = AttackView(turn_player, opponent, game)
 
