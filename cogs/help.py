@@ -63,14 +63,6 @@ class HelpCog(commands.Cog):
                     inline=False
                 )
 
-        # Show blocked cogs at the bottom
-        if blocked_list:
-            embed.add_field(
-                name="🚫 Hidden Cogs",
-                value=", ".join(blocked_list),
-                inline=False
-            )
-
         # Send safely
         await self._send_response(
             ctx_or_interaction,
