@@ -27,10 +27,21 @@ def generate_captcha():
     draw = ImageDraw.Draw(img)
     font = ImageFont.load_default()
 
+    # Draw misleading background digits
+    for _ in range(10):
+        fake_digit = str(random.randint(0, 9))
+        x = random.randint(0, 180)
+        y = random.randint(0, 60)
+        draw.text((x, y), fake_digit, font=font, fill=(100, 100, 100))
+
+    # Draw real digits
     for i, digit in enumerate(digits):
-        x = 20 + i * 30
+        x = 20 + i * 30 + random.randint(-5, 5)
         y = random.randint(10, 30)
         draw.text((x, y), digit, font=font, fill=(255, 255, 0))
+
+    # Draw red line through digits
+    draw.line((10, 40, 190, 40), fill=(255, 0, 0), width=2)
 
     buffer = BytesIO()
     img.save(buffer, format="PNG")
@@ -117,6 +128,10 @@ class Verification(commands.Cog):
     @commands.command(name="verification", aliases=["verif", "ver", "verify"])
     @commands.has_permissions(administrator=True)
     async def verification(self, ctx, channel: discord.TextChannel = None, role: discord.Role = None):
+        if not channel and not role:
+            await ctx.reply("✅ To make a verification in the server just type:\n`$verify #channel @role`", mention_author=False)
+            return
+
         if not role:
             await ctx.send("❌ You must mention a role.")
             return
@@ -147,6 +162,13 @@ class Verification(commands.Cog):
     async def on_guild_channel_delete(self, channel):
         for gid, data in list(verification_data.items()):
             if data["channel_id"] == channel.id:
+                del verification_data[gid]
+                save_data(verification_data)
+
+    @commands.Cog.listener()
+    async def on_message_delete(self, message):
+        for gid, data in list(verification_data.items()):
+            if data.get("message_id") == message.id:
                 del verification_data[gid]
                 save_data(verification_data)
 
