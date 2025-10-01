@@ -4,7 +4,8 @@ import random, json, os
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 
-DATA_FILE = "/data/verifications.json"
+DATA_FILE = "data/verifications.json"
+os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
 
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -72,8 +73,12 @@ class CaptchaInputView(discord.ui.View):
 
     @discord.ui.button(label="🟰", style=discord.ButtonStyle.success, row=3)
     async def submit(self, interaction, button):
+        role = discord.utils.get(interaction.guild.roles, id=self.role_id)
+        if not role:
+            await interaction.response.edit_message(content="⚠️ Role not found. Please contact an admin.", view=None)
+            return
+
         if self.input == self.correct_answer:
-            role = discord.utils.get(interaction.guild.roles, id=self.role_id)
             await interaction.user.add_roles(role)
             await interaction.response.edit_message(content="✅ Verified!", view=None)
         else:
@@ -86,6 +91,15 @@ class VerificationButton(discord.ui.View):
 
     @discord.ui.button(label="✅ Verify", style=discord.ButtonStyle.green)
     async def verify(self, interaction: discord.Interaction, button: discord.ui.Button):
+        role = discord.utils.get(interaction.guild.roles, id=self.role_id)
+        if not role:
+            await interaction.response.send_message("⚠️ Verification role not found. Please contact an admin.", ephemeral=True)
+            return
+
+        if role in interaction.user.roles:
+            await interaction.response.send_message("✅ You are already verified!", ephemeral=True)
+            return
+
         answer, file = generate_captcha()
         embed = discord.Embed(title="Write the number in the image")
         embed.set_image(url="attachment://captcha.png")
@@ -104,7 +118,7 @@ class Verification(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def verification(self, ctx, channel: discord.TextChannel = None, role: discord.Role = None):
         if not role:
-            await ctx.send("You must mention a role.")
+            await ctx.send("❌ You must mention a role.")
             return
 
         target_channel = channel or ctx.channel
