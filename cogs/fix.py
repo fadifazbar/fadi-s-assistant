@@ -95,19 +95,38 @@ class FixServer(commands.Cog):
                 ],
             }
             roles = [
-                ("Owner", discord.Permissions.all(), 0xFFF700),
-                ("Co-Owner", discord.Permissions.all(), 0x09FF00),
-                ("Community Manager", discord.Permissions(manage_guild=True, manage_messages=True), 0x00AAFF),
-                ("Manager", discord.Permissions(manage_channels=True, manage_messages=True), 0xFF8000),
-                ("Administrator", discord.Permissions(administrator=True), 0xFF1100),
-                ("Moderator", discord.Permissions(kick_members=True, ban_members=True, manage_messages=True), 0xA600FF),
-                ("Trial Moderator", discord.Permissions(manage_messages=True), 0xFFDD00),
-                ("Bots", discord.Permissions(send_messages=True, embed_links=True), 0xFF00F7),
-                ("Vip", discord.Permissions(read_messages=True, send_messages=True), 0xF3FC74),
-                ("Members", discord.Permissions(read_messages=True, send_messages=True), 0x81DEBF),
-                ("Announcement Ping", discord.Permissions.none(), 0xFC8674),
-                ("Important Ping", discord.Permissions.none(), 0x7496FC),
-                ("Chat Revive Ping", discord.Permissions.none(), 0x74FC7D),
+                # === Ownership / High Staff ===
+                ("👑〉Owner", discord.Permissions.all(), 0xFFF700),
+                ("🤴〉Co-Owner", discord.Permissions.all(), 0x09FF00),
+                ("💼〉Community Manager", discord.Permissions(manage_guild=True, manage_messages=True, manage_roles=True, view_audit_log=True), 0x00AAFF),
+                ("⚒️〉Manager", discord.Permissions(manage_channels=True, manage_messages=True, manage_roles=True, mute_members=True, move_members=True), 0xFF8000),
+                ("🛠️〉Administrator", discord.Permissions(administrator=True), 0xFF1100),
+
+                # === Moderation ===
+                ("🔨〉Moderator", discord.Permissions(kick_members=True, ban_members=True, manage_messages=True, mute_members=True, move_members=True), 0xA600FF),
+                ("🔓〉Trial Moderator", discord.Permissions(manage_messages=True, mute_members=True), 0xFFDD00),
+                ("🕵️〉Security", discord.Permissions(ban_members=True, kick_members=True, view_audit_log=True), 0x2c3e50),
+                ("📞〉Support Team", discord.Permissions(manage_messages=True, read_message_history=True), 0x66FF99),
+                ("🛎️〉Helper", discord.Permissions(manage_messages=True, read_message_history=True), 0x16a085),
+
+                # === Utility / Team Roles ===
+                ("🎨〉Designer", discord.Permissions(manage_emojis_and_stickers=True, attach_files=True, embed_links=True), 0xFF66CC),
+                ("🎉〉Event Manager", discord.Permissions(manage_events=True, mention_everyone=True, move_members=True), 0x00E5FF),
+                ("📦〉Giveaway Manager", discord.Permissions(manage_messages=True, mention_everyone=True), 0xf39c12),
+                ("👨‍💻〉Developer", discord.Permissions(manage_guild=True, manage_roles=True, manage_channels=True, manage_messages=True), 0x4287f5),
+
+                # === Community Roles ===
+                ("🌟〉Vip", discord.Permissions(read_messages=True, send_messages=True, use_external_emojis=True, connect=True, speak=True), 0xF3FC74),
+                ("🎮〉Gamer", discord.Permissions(send_messages=True, connect=True, speak=True, use_application_commands=True), 0x00FF9C),
+                ("🤗〉Members", discord.Permissions(read_messages=True, send_messages=True, connect=True, speak=True), 0x81DEBF),
+
+                # === Bots ===
+                ("👾〉Bots", discord.Permissions(send_messages=True, embed_links=True, attach_files=True, read_message_history=True), 0xFF00F7),
+
+                # === Ping Roles ===
+                ("📢〉Announcement Ping", discord.Permissions.none(), 0xFC8674),
+                ("‼️〉Important Ping", discord.Permissions.none(), 0x7496FC),
+                ("🔋〉Chat Revive Ping", discord.Permissions.none(), 0x74FC7D),
             ]
 
         # === CREATE CATEGORIES + CHANNELS ===
