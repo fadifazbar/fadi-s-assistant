@@ -130,10 +130,10 @@ class FixServer(commands.Cog):
                 ("🔋〉Chat Revive Ping", discord.Permissions.none(), 0x74FC7D),
             ]
 
-        # Create channels
-        created_channels = await create_channels(guild, categories)
+        # === CREATE CHANNELS ===
+        created_channels = await self.create_channels(guild, categories)
 
-        # Create roles
+        # === CREATE ROLES ===
         new_roles = []
         if mode == "simple":
             for rname, perms in roles:
@@ -157,7 +157,7 @@ class FixServer(commands.Cog):
             except Exception:
                 pass
 
-            # Set AFK & Boost Channel
+            # Set AFK & Boost Channels
             afk_channel = created_channels.get("「😴」Afk")
             boost_channel = created_channels.get("「🚀」boosts")
             try:
@@ -176,47 +176,43 @@ class FixServer(commands.Cog):
 
         await ctx.send(f"✅ Successfully reset the server with **{mode.capitalize()}** mode!")
 
-
-# === CREATE CHANNELS FUNCTION ===
-async def create_channels(guild, categories):
-    created_channels = {}
-    for cat_name, chans in categories.items():
-        try:
-            staff_only = any(word in cat_name.lower() for word in ["staff", "admin", "🔒"])
-            overwrites = None
-
-            if staff_only:
-                overwrites = {guild.default_role: discord.PermissionOverwrite(view_channel=False)}
-                staff_roles = [
-                    "🛠️〉Administrator", "⚒️〉Manager", "💼〉Community Manager", "🔨〉Moderator",
-                    "🔓〉Trial Moderator", "🕵️〉Security", "📞〉Support Team", "🛎️〉Helper",
-                    "🎉〉Event Manager", "📦〉Giveaway Manager"
-                ]
-                for role_name in staff_roles:
-                    role = discord.utils.get(guild.roles, name=role_name)
-                    if role:
-                        overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
-
-            # Create category
-            category = await guild.create_category(cat_name, overwrites=overwrites)
-        except Exception:
-            continue
-
-        for chan in chans:
+    # === CREATE CHANNELS FUNCTION ===
+    async def create_channels(self, guild, categories):
+        created_channels = {}
+        for cat_name, chans in categories.items():
             try:
-                # Create voice or text channel
-                if "voice" in cat_name.lower() or "🔊" in cat_name.lower():
-                    ch = await guild.create_voice_channel(chan, category=category)
-                else:
-                    ch = await guild.create_text_channel(chan, category=category)
+                staff_only = any(word in cat_name.lower() for word in ["staff", "admin", "🔒"])
+                overwrites = None
 
-                created_channels[chan] = ch
+                if staff_only:
+                    overwrites = {guild.default_role: discord.PermissionOverwrite(view_channel=False)}
+                    staff_roles = [
+                        "🛠️〉Administrator", "⚒️〉Manager", "💼〉Community Manager", "🔨〉Moderator",
+                        "🔓〉Trial Moderator", "🕵️〉Security", "📞〉Support Team", "🛎️〉Helper",
+                        "🎉〉Event Manager", "📦〉Giveaway Manager"
+                    ]
+                    for role_name in staff_roles:
+                        role = discord.utils.get(guild.roles, name=role_name)
+                        if role:
+                            overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
+
+                category = await guild.create_category(cat_name, overwrites=overwrites)
             except Exception:
                 continue
 
-    return created_channels
+            for chan in chans:
+                try:
+                    if "voice" in cat_name.lower() or "🔊" in cat_name:
+                        ch = await guild.create_voice_channel(chan, category=category)
+                    else:
+                        ch = await guild.create_text_channel(chan, category=category)
+
+                    created_channels[chan] = ch
+                except Exception:
+                    continue
+
+        return created_channels
 
 
-# === COG SETUP ===
 async def setup(bot):
     await bot.add_cog(FixServer(bot))
