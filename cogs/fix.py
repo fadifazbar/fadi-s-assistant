@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from discord.ext import commands
 
@@ -12,18 +13,17 @@ class FixServer(commands.Cog):
         if ctx.author.id != ctx.guild.owner_id:
             return await ctx.send("❌ Only the server owner can use this command.")
 
-        mode = mode.lower()
+        mode = mode.lower().strip()
         if mode not in ["simple", "advanced"]:
             return await ctx.send("❌ Invalid mode. Use `$fix simple` or `$fix advanced`.")
 
-        # === Confirmation Step ===
         await ctx.send(
             f"⚠️ Are you sure you want to reset the server with **{mode.capitalize()}** mode?\n"
             "This will delete channels and roles (except this channel, stickers, emojis, and protected roles).\n\n"
             "Reply with `yes` to confirm, or anything else to cancel."
         )
 
-        def check(m):
+        def check(m: discord.Message):
             return m.author == ctx.author and m.channel == ctx.channel
 
         try:
@@ -31,10 +31,10 @@ class FixServer(commands.Cog):
         except Exception:
             return await ctx.send("❌ Confirmation timed out. Cancelled.")
 
-        if reply.content.lower() != "yes":
+        if reply.content.lower().strip() != "yes":
             return await ctx.send("❌ Cancelled.")
 
-        # Try DMing the owner
+        # DM the owner (best-effort)
         try:
             await ctx.author.send(f"🔧 Fixing the server **{ctx.guild.name}** in `{mode}` mode...")
         except discord.Forbidden:
@@ -43,23 +43,26 @@ class FixServer(commands.Cog):
         guild = ctx.guild
 
         # === DELETE CHANNELS ===
+        await ctx.send("🧹 Deleting channels...")
         for channel in list(guild.channels):
             if channel.id == ctx.channel.id:
                 continue
             try:
                 await channel.delete(reason="FixServer reset")
-            except (discord.Forbidden, discord.HTTPException):
-                # Keep going even if some channels can't be deleted
-                continue
+                await asyncio.sleep(0.2)
+            except Exception as e:
+                await ctx.send(f"⚠️ Failed to delete channel {channel.name}: {e}")
 
         # === DELETE ROLES ===
+        await ctx.send("🧹 Deleting roles...")
         for role in list(guild.roles):
             if role.is_default() or role >= guild.me.top_role:
                 continue
             try:
                 await role.delete(reason="FixServer reset")
-            except (discord.Forbidden, discord.HTTPException):
-                continue
+                await asyncio.sleep(0.2)
+            except Exception as e:
+                await ctx.send(f"⚠️ Failed to delete role {role.name}: {e}")
 
         # === DEFINE CATEGORIES AND ROLES ===
         if mode == "simple":
@@ -132,39 +135,91 @@ class FixServer(commands.Cog):
             ]
 
         # === CREATE ROLES FIRST ===
-        new_roles = []
+        await ctx.send("🧱 Creating roles...")
         role_lookup = {}
+        new_roles = []
 
         if mode == "simple":
             for rname, perms in roles:
                 try:
                     role = await guild.create_role(name=rname, permissions=perms, hoist=True, reason="FixServer create roles")
-                    new_roles.append(role)
                     role_lookup[rname] = role
-                except Exception:
-                    continue
+                    new_roles.append(role)
+                    await asyncio.sleep(0.2)
+                except Exception as e:
+                    await ctx.send(f"⚠️ Failed to create role {rname}: {e}")
         else:
             for rname, perms, color in roles:
                 try:
                     role = await guild.create_role(
                         name=rname, permissions=perms, hoist=True, color=discord.Color(color), reason="FixServer create roles"
                     )
-                    new_roles.append(role)
                     role_lookup[rname] = role
-                except Exception:
-                    continue
+                    new_roles.append(role)
+                    await asyncio.sleep(0.2)
+                except Exception as e:
+                    await ctx.send(f"⚠️ Failed to create role {rname}: {e}")
 
             # Reorder roles (best-effort)
             try:
                 positions = {role: (len(new_roles) - i) for i, role in enumerate(new_roles)}
                 await guild.edit_role_positions(positions=positions)
-            except Exception:
-                pass
+            except Exception as e:
+                await ctx.send(f"⚠️ Failed to reorder roles: {e}")
 
-        # === CREATE CHANNELS AFTER ROLES ===
-        created_channels = await self.create_channels(guild, categories, role_lookup)
+        # === CREATE CATEGORIES (no overwrites yet) ===
+        await ctx.send("📁 Creating categories...")
+        category_objs = {}
+        for cat_name in categories.keys():
+            try:
+                cat = await guild.create_category(name=cat_name, reason="FixServer create category")
+                category_objs[cat_name] = cat
+                await asyncio.sleep(0.2)
+            except Exception as e:
+                await ctx.send(f"❌ Failed to create category {cat_name}: {e}")
 
-        # === Set AFK & System Channels (advanced) ===
+        # === Apply staff-only permissions after category creation ===
+        if mode == "advanced":
+            staff_cat_name = "☆࿐ཽ༵༆༒〘👑〙Staff Only༒༆࿐ཽ༵☆"
+            staff_cat = category_objs.get(staff_cat_name)
+            if staff_cat:
+                try:
+                    # Hide from @everyone
+                    await staff_cat.set_permissions(guild.default_role, view_channel=False)
+                    staff_roles_names = [
+                        "🛠️〉Administrator", "⚒️〉Manager", "💼〉Community Manager", "🔨〉Moderator",
+                        "🔓〉Trial Moderator", "🕵️〉Security", "📞〉Support Team", "🛎️〉Helper",
+                        "🎉〉Event Manager", "📦〉Giveaway Manager"
+                    ]
+                    for rname in staff_roles_names:
+                        role = role_lookup.get(rname) or discord.utils.get(guild.roles, name=rname)
+                        if role:
+                            await staff_cat.set_permissions(role, view_channel=True, send_messages=True)
+                    await asyncio.sleep(0.2)
+                except Exception as e:
+                    await ctx.send(f"⚠️ Failed to set staff category permissions: {e}")
+
+        # === CREATE CHANNELS ===
+        await ctx.send("🧩 Creating channels...")
+        created_channels = {}
+        for cat_name, chans in categories.items():
+            cat = category_objs.get(cat_name)
+            if not cat:
+                await ctx.send(f"⚠️ Skipping channels for {cat_name} (category missing).")
+                continue
+
+            for chan_name in chans:
+                try:
+                    if ("voice" in cat_name.lower()) or ("🔊" in cat_name):
+                        ch = await guild.create_voice_channel(name=chan_name, category=cat, reason="FixServer create voice channel")
+                    else:
+                        ch = await guild.create_text_channel(name=chan_name, category=cat, reason="FixServer create text channel")
+                    created_channels[chan_name] = ch
+                    await asyncio.sleep(0.2)
+                except Exception as e:
+                    await ctx.send(f"❌ Failed to create channel {chan_name} in {cat_name}: {e}")
+
+        # === Set AFK & System channels (advanced) ===
         if mode == "advanced":
             afk_channel = created_channels.get("「😴」Afk")
             boost_channel = created_channels.get("「🚀」boosts")
@@ -179,64 +234,10 @@ class FixServer(commands.Cog):
                         join_notification_replies=False
                     )
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                await ctx.send(f"⚠️ Failed to set AFK/system channels: {e}")
 
-        await ctx.send(f"✅ Successfully reset the server with **{mode.capitalize()}** mode!")
-
-    # === CREATE CHANNELS FUNCTION ===
-    async def create_channels(self, guild: discord.Guild, categories: dict, role_lookup: dict):
-        created_channels = {}
-
-        # Define staff-only detection words
-        staff_keywords = ["staff", "admin", "🔒", "👑"]
-
-        # Staff roles to grant access (advanced mode names)
-        staff_roles_names = [
-            "🛠️〉Administrator", "⚒️〉Manager", "💼〉Community Manager", "🔨〉Moderator",
-            "🔓〉Trial Moderator", "🕵️〉Security", "📞〉Support Team", "🛎️〉Helper",
-            "🎉〉Event Manager", "📦〉Giveaway Manager"
-        ]
-
-        for cat_name, chans in categories.items():
-            staff_only = any(word in cat_name.lower() for word in staff_keywords)
-
-            # Build overwrites
-            overwrites = None
-            if staff_only:
-                overwrites = {guild.default_role: discord.PermissionOverwrite(view_channel=False)}
-                for role_name in staff_roles_names:
-                    role = role_lookup.get(role_name) or discord.utils.get(guild.roles, name=role_name)
-                    if role:
-                        overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
-
-            # Create category
-            category = None
-            try:
-                category = await guild.create_category(name=cat_name, overwrites=overwrites, reason="FixServer create category")
-            except Exception:
-                # If a category fails, skip its channels
-                continue
-
-            if category is None:
-                # Safety check
-                continue
-
-            # Create channels
-            for chan_name in chans:
-                try:
-                    # Voice category heuristic: create voice channels under categories that look like voice areas
-                    if ("voice" in cat_name.lower()) or ("🔊" in cat_name):
-                        ch = await guild.create_voice_channel(name=chan_name, category=category, reason="FixServer create voice channel")
-                    else:
-                        ch = await guild.create_text_channel(name=chan_name, category=category, reason="FixServer create text channel")
-                    created_channels[chan_name] = ch
-                except Exception:
-                    # Skip failed channel and continue
-                    continue
-
-        return created_channels
-
+        await ctx.send(f"✅ Done! Server reset in **{mode.capitalize()}** mode.")
 
 async def setup(bot):
     await bot.add_cog(FixServer(bot))
