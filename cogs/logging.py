@@ -770,7 +770,7 @@ class LoggingCog(commands.Cog):
                 continue
             anim = "🌀 Animated" if a.animated else "⚪ Static"
             embed.add_field(
-                name=f"🔄 Renamed {anim}",
+                name=f"🔄 Renamed {b.name}",
                 value=f"📛 {b.name} → {a.name} ({a.id})",
                 inline=False
             )
