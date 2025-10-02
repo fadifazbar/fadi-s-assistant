@@ -1059,21 +1059,6 @@ class General(commands.Cog):
         embed.set_image(url=gif)
         await ctx.send(embed=embed)
 
-    # prefix command
-    @commands.command(name="feetslap")
-    async def feetslap_prefix(self, ctx, member: discord.Member):
-        feetslap_gifs = [
-            "https://imgur.com/a/VoA7aLB",
-        ]
-        gif = random.choice(feetslap_gifs)
-        color = discord.Color(random.randint(0, 0xFFFFFF))
-        embed = discord.Embed(
-            description=f"*{ctx.author.mention} has feetslapped {member.mention} in a freaky way 😜🥵*",
-            color=color
-        )
-        embed.set_image(url=gif)
-        await ctx.send(embed=embed)
-
     # --- Slash command ---
     @app_commands.command(name="slap", description="Slap someone")
     @app_commands.describe(member="The member you want to slap")
