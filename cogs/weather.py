@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 import aiohttp
 
-API_KEY = is.getinv("WEATHER")  # Replace with your actual key
+API_KEY = os.getenv("WEATHER")  # Replace with your actual key
 
 class Weather(commands.Cog):
     def __init__(self, bot):
