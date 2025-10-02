@@ -27,12 +27,10 @@ def generate_captcha():
     digits = [str(random.randint(0, 9)) for _ in range(5)]
     answer = ''.join(digits)
 
-    # Create image
     width, height = 220, 90
     img = Image.new("RGB", (width, height), color=(30, 30, 30))
     draw = ImageDraw.Draw(img)
 
-    # Fonts
     fonts = []
     for f in ["arial.ttf", "times.ttf", "comic.ttf", "verdana.ttf"]:
         try:
@@ -42,7 +40,7 @@ def generate_captcha():
     if not fonts:
         fonts = [ImageFont.load_default()]
 
-    # Background noise: fake chars
+    # Background noise
     for _ in range(15):
         fake_char = random.choice("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")
         fx = random.randint(0, width - 20)
@@ -50,17 +48,14 @@ def generate_captcha():
         fnt = random.choice(fonts)
         draw.text((fx, fy), fake_char, font=fnt, fill=(random.randint(50, 100),) * 3)
 
-    # Noise dots
     for _ in range(200):
         x, y = random.randint(0, width), random.randint(0, height)
         draw.point((x, y), fill=(random.randint(80, 200), random.randint(80, 200), random.randint(80, 200)))
 
-    # Noise lines
     for _ in range(5):
         x1, y1, x2, y2 = [random.randint(0, width) for _ in range(4)]
         draw.line((x1, y1, x2, y2), fill=(random.randint(150, 255), 0, random.randint(0, 255)), width=2)
 
-    # Noise arcs (fixed coordinate order)
     for _ in range(3):
         x1, y1 = random.randint(0, width - 30), random.randint(0, height - 30)
         x2, y2 = random.randint(x1 + 10, width), random.randint(y1 + 10, height)
@@ -68,12 +63,10 @@ def generate_captcha():
         draw.arc(box, start=random.randint(0, 180), end=random.randint(180, 360),
                  fill=(0, random.randint(150, 255), random.randint(150, 255)))
 
-    # Real digits with rotation + jitter
     for i, digit in enumerate(digits):
         fnt = random.choice(fonts)
         color = (random.randint(200, 255), random.randint(150, 255), random.randint(0, 255))
 
-        # Each digit drawn separately & rotated
         temp_img = Image.new("RGBA", (50, 70), (0, 0, 0, 0))
         temp_draw = ImageDraw.Draw(temp_img)
         temp_draw.text((5, 5), digit, font=fnt, fill=color)
@@ -99,7 +92,7 @@ class CaptchaInputView(discord.ui.View):
     async def handle_input(self, interaction):
         await interaction.response.edit_message(content=f"Your input: `{self.input}`", view=self)
 
-    # Digits
+    # Digit buttons...
     @discord.ui.button(label="1️⃣", style=discord.ButtonStyle.secondary, row=0)
     async def one(self, i, b): self.input += "1"; await self.handle_input(i)
     @discord.ui.button(label="2️⃣", style=discord.ButtonStyle.secondary, row=0)
@@ -119,21 +112,18 @@ class CaptchaInputView(discord.ui.View):
     @discord.ui.button(label="9️⃣", style=discord.ButtonStyle.secondary, row=2)
     async def nine(self, i, b): self.input += "9"; await self.handle_input(i)
 
-    # Backspace
     @discord.ui.button(label="➖", style=discord.ButtonStyle.danger, row=3)
     async def backspace(self, i, b): self.input = self.input[:-1]; await self.handle_input(i)
 
     @discord.ui.button(label="0️⃣", style=discord.ButtonStyle.secondary, row=3)
     async def zero(self, i, b): self.input += "0"; await self.handle_input(i)
 
-    # Submit
     @discord.ui.button(label="🟰", style=discord.ButtonStyle.success, row=3)
     async def submit(self, interaction, button):
         role = discord.utils.get(interaction.guild.roles, id=self.role_id)
         if not role:
             return await interaction.response.edit_message(content="⚠️ Role not found. Please contact an admin.", view=None)
 
-        # Role hierarchy check
         if interaction.guild.me.top_role <= role:
             return await interaction.response.edit_message(content="⚠️ I cannot assign this role due to role hierarchy.", view=None)
 
@@ -143,7 +133,6 @@ class CaptchaInputView(discord.ui.View):
 
         self.attempts -= 1
         if self.attempts > 0:
-            # New captcha retry
             answer, file = generate_captcha()
             self.correct_answer = answer
             self.input = ""
@@ -170,7 +159,6 @@ class VerificationButton(discord.ui.View):
         if role in interaction.user.roles:
             return await interaction.response.send_message("✅ You are already verified!", ephemeral=True)
 
-        # New captcha
         answer, file = generate_captcha()
         embed = discord.Embed(title="Write the number in the image")
         embed.set_image(url="attachment://captcha.png")
@@ -188,10 +176,16 @@ class Verification(commands.Cog):
     @commands.command(name="verification", aliases=["verif", "ver", "verify"])
     @commands.has_permissions(administrator=True)
     async def verification(self, ctx, channel: discord.TextChannel = None, role: discord.Role = None):
+        # Usage help
         if not role:
-            return await ctx.send("❌ You must mention a role.")
+            usage = (
+                "❌ Wrong usage.\n\n"
+                "**Correct usage:**\n"
+                "`$verification @role` → Sets up verification in this channel\n"
+                "`$verification #channel @role` → Sets it up in a specific channel"
+            )
+            return await ctx.send(usage)
 
-        # If no channel is provided, use the one where command is sent
         target_channel = channel or ctx.channel
 
         embed = discord.Embed(
