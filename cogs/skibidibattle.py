@@ -514,7 +514,6 @@ async def make_vs_image(url1: str, url2: str) -> io.BytesIO:
 # ================= Game Logic =================
 games = {}  # channel_id -> game state
 
-
 class RetreatButton(discord.ui.Button):
     def __init__(self, game):
         super().__init__(label="🏳️ Retreat", style=discord.ButtonStyle.secondary)
@@ -530,9 +529,10 @@ class RetreatButton(discord.ui.Button):
         if now - last_used < 60:
             return await interaction.response.send_message("⏳ You must wait 1 minute before trying to retreat again.", ephemeral=True)
 
-        self.cooldowns[interaction.user.id] = now
+        # Prepare retreat vote state
         self.game["retreat_votes"] = {}
 
+        # Send shared confirmation message
         embed = discord.Embed(
             title="🏳️ Do you really want to retreat?",
             description="\n".join(f"{p.mention}: ⏰ Waiting For Vote..." for p in self.game["players"]),
@@ -542,13 +542,17 @@ class RetreatButton(discord.ui.Button):
         await interaction.response.send_message(embed=embed, view=view)
         view.message = await interaction.original_response()
 
+        # ✅ Only apply cooldown if message was successfully sent
+        self.cooldowns[interaction.user.id] = now
+
+
 class RetreatVoteView(discord.ui.View):
     def __init__(self, game):
         super().__init__(timeout=60)
         self.game = game
         self.message = None
-        self.add_item(RetreatYesButton(game, self))
-        self.add_item(RetreatNoButton(game, self))
+        self.add_item(RetreatYesButton(game))
+        self.add_item(RetreatNoButton(game))
 
     async def on_timeout(self):
         for child in self.children:
@@ -560,10 +564,9 @@ class RetreatVoteView(discord.ui.View):
                 pass
 
 class RetreatYesButton(discord.ui.Button):
-    def __init__(self, game, view):
+    def __init__(self, game):
         super().__init__(label="✅ Yes", style=discord.ButtonStyle.success)
         self.game = game
-        self.view = view
 
     async def callback(self, interaction: discord.Interaction):
         if interaction.user not in self.game["players"]:
@@ -574,12 +577,12 @@ class RetreatYesButton(discord.ui.Button):
             return await interaction.response.send_message("You've already voted!", ephemeral=True)
 
         votes[interaction.user.id] = True
-        await self.update_vote_message()
+        await self.update_vote_message(interaction)
 
         if len(votes) == 2 and all(votes.values()):
             await self.end_game(interaction)
 
-    async def update_vote_message(self):
+    async def update_vote_message(self, interaction):
         embed = discord.Embed(
             title="🏳️ Do you really want to retreat?",
             description="\n".join(
@@ -588,8 +591,9 @@ class RetreatYesButton(discord.ui.Button):
             ),
             color=discord.Color.gold()
         )
-        if self.view.message:
-            await self.view.message.edit(embed=embed, view=self.view)
+        view = interaction.message.view
+        if view and isinstance(view, discord.ui.View):
+            await interaction.message.edit(embed=embed, view=view)
 
     async def end_game(self, interaction):
         channel = interaction.channel
@@ -603,10 +607,9 @@ class RetreatYesButton(discord.ui.Button):
         await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
 
 class RetreatNoButton(discord.ui.Button):
-    def __init__(self, game, view):
+    def __init__(self, game):
         super().__init__(label="❌ No", style=discord.ButtonStyle.danger)
         self.game = game
-        self.view = view
 
     async def callback(self, interaction: discord.Interaction):
         if interaction.user not in self.game["players"]:
@@ -619,8 +622,7 @@ class RetreatNoButton(discord.ui.Button):
             description=f"{interaction.user.mention} voted ❌ No.\nThe battle will continue!",
             color=discord.Color.red()
         )
-        if self.view.message:
-            await self.view.message.edit(embed=embed, view=None)
+        await interaction.message.edit(embed=embed, view=None)
         await interaction.response.send_message("You voted ❌ No. Retreat cancelled.", ephemeral=True)
 
 class AttackView(discord.ui.View):
