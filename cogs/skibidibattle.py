@@ -10,6 +10,7 @@ import io
 import difflib
 
 BATTLE_EMOJI = "<:battle:1422344657790177300>"
+TURN_EMOJI = "<:turn_emoji:1423418329334415411>"
 HP_EMOJI = "<:health:1422345046233059442>"
 
 characters = {
@@ -743,7 +744,7 @@ async def update_battle_embed(channel, game, last_attack=None, immune_msg=None):
         desc += f"{immune_msg}\n\n"
     elif last_attack:
         desc += f"{BATTLE_EMOJI} **{attacker.mention}** used **{atk_name}** and dealt **{dmg} dmg**!\n\n"
-    desc += f"➡️ It's now **{turn_player.mention}**'s turn!"
+    desc += f"{TURN_EMOJI} It's now **{turn_player.mention}**'s turn!"
 
     # Create embed
     embed = discord.Embed(
