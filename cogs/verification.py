@@ -160,7 +160,7 @@ class VerificationButton(discord.ui.View):
             return await interaction.response.send_message("✅ You are already verified!", ephemeral=True)
 
         answer, file = generate_captcha()
-        embed = discord.Embed(title="Write the number in the image")
+        embed = discord.Embed(title="Write colored the number code in the image!")
         embed.set_image(url="attachment://captcha.png")
         await interaction.response.send_message(
             embed=embed,
