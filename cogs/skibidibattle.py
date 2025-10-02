@@ -546,9 +546,8 @@ class RetreatVoteView(discord.ui.View):
         super().__init__(timeout=60)
         self.game = game
         self.message = None
-        for p in game["players"]:
-            self.add_item(RetreatYesButton(p, game))
-            self.add_item(RetreatNoButton(p, game))
+        self.add_item(RetreatYesButton(game, self))
+        self.add_item(RetreatNoButton(game, self))
 
     async def on_timeout(self):
         for child in self.children:
@@ -560,26 +559,26 @@ class RetreatVoteView(discord.ui.View):
                 pass
 
 class RetreatYesButton(discord.ui.Button):
-    def __init__(self, player, game):
-        super().__init__(label=f"{player.display_name} ✅ Yes", style=discord.ButtonStyle.success)
-        self.player = player
+    def __init__(self, game, view):
+        super().__init__(label="✅ Yes", style=discord.ButtonStyle.success)
         self.game = game
+        self.view = view
 
     async def callback(self, interaction: discord.Interaction):
-        if interaction.user != self.player:
-            return await interaction.response.send_message("❌ You can't vote for others!", ephemeral=True)
+        if interaction.user not in self.game["players"]:
+            return await interaction.response.send_message("❌ Only battle players can vote!", ephemeral=True)
 
         votes = self.game["retreat_votes"]
-        if votes.get(self.player.id) is not None:
+        if votes.get(interaction.user.id) is not None:
             return await interaction.response.send_message("You've already voted!", ephemeral=True)
 
-        votes[self.player.id] = True
-        await self.update_vote_message(interaction)
+        votes[interaction.user.id] = True
+        await self.update_vote_message()
 
         if len(votes) == 2 and all(votes.values()):
             await self.end_game(interaction)
 
-    async def update_vote_message(self, interaction):
+    async def update_vote_message(self):
         embed = discord.Embed(
             title="🏳️ Do you really want to retreat?",
             description="\n".join(
@@ -588,7 +587,8 @@ class RetreatYesButton(discord.ui.Button):
             ),
             color=discord.Color.gold()
         )
-        await interaction.message.edit(embed=embed, view=interaction.message.components[0])
+        if self.view.message:
+            await self.view.message.edit(embed=embed, view=self.view)
 
     async def end_game(self, interaction):
         channel = interaction.channel
@@ -602,25 +602,25 @@ class RetreatYesButton(discord.ui.Button):
         await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
 
 class RetreatNoButton(discord.ui.Button):
-    def __init__(self, player, game):
-        super().__init__(label=f"{player.display_name} ❌ No", style=discord.ButtonStyle.danger)
-        self.player = player
+    def __init__(self, game, view):
+        super().__init__(label="❌ No", style=discord.ButtonStyle.danger)
         self.game = game
+        self.view = view
 
     async def callback(self, interaction: discord.Interaction):
-        if interaction.user != self.player:
-            return await interaction.response.send_message("❌ You can't vote for others!", ephemeral=True)
+        if interaction.user not in self.game["players"]:
+            return await interaction.response.send_message("❌ Only battle players can vote!", ephemeral=True)
 
-        self.game["retreat_votes"][self.player.id] = False
+        self.game["retreat_votes"][interaction.user.id] = False
 
         embed = discord.Embed(
             title="🏳️ Retreat Cancelled",
-            description=f"{self.player.mention} voted ❌ No.\nThe battle will continue!",
+            description=f"{interaction.user.mention} voted ❌ No.\nThe battle will continue!",
             color=discord.Color.red()
         )
-        await interaction.message.edit(embed=embed, view=None)
+        if self.view.message:
+            await self.view.message.edit(embed=embed, view=None)
         await interaction.response.send_message("You voted ❌ No. Retreat cancelled.", ephemeral=True)
-
 
 class AttackView(discord.ui.View):
     def __init__(self, attacker, defender, game):
