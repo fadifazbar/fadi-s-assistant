@@ -179,168 +179,172 @@ class LoggingCog(commands.Cog):
     # Moderation Event
     # ----------------------
     @commands.Cog.listener()
-    async def on_member_remove(self, member: discord.Member):
-        if member.bot:
-            return
+async def on_member_remove(self, member: discord.Member):
+    if member.bot:
+        return
 
-        await asyncio.sleep(1)  # wait for audit log to register
+    await asyncio.sleep(1)  # Give audit log time to register
 
-        action = None
-        moderator = "Unknown"
+    action = None
+    moderator = None
+    reason = None
+
+    try:
+        async for entry in member.guild.audit_logs(limit=10):
+            if entry.target.id != member.id:
+                continue
+
+            if entry.action == discord.AuditLogAction.kick:
+                action = "Kicked"
+                moderator = entry.user
+                reason = entry.reason
+                break
+            elif entry.action == discord.AuditLogAction.ban:
+                action = "Banned"
+                moderator = entry.user
+                reason = entry.reason
+                break
+    except discord.Forbidden:
+        pass
+
+    if action:
+        embed = discord.Embed(
+            title=f"⚠️ Member {action}",
+            description=f"{member.mention} ({member.name} / {member.id})",
+            color=Embed_Colors["red"],
+            timestamp=datetime.utcnow()
+        )
+        embed.add_field(name="🆔 User ID", value=str(member.id), inline=True)
+        embed.add_field(
+            name="🥀 Responsible Moderator",
+            value=moderator.mention if isinstance(moderator, discord.Member) else "Unknown",
+            inline=True
+        )
+        if reason:
+            embed.add_field(name="📝 Reason", value=reason, inline=False)
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Guild ID: {member.guild.id}")
+
+        await self.send_log(member.guild, "moderation", embed)
+
+@commands.Cog.listener()
+async def on_member_update(self, before: discord.Member, after: discord.Member):
+    if before.timed_out_until != after.timed_out_until:
+        await asyncio.sleep(1)  # Give audit log time to register
+
+        moderator = None
         reason = None
 
-        # Check audit logs for kick or ban
         try:
-            async for entry in member.guild.audit_logs(limit=10):
-                if entry.target.id != member.id:
-                    continue
-
-                if entry.action == discord.AuditLogAction.kick:
-                    action = "Kick"
-                    moderator = entry.user
-                    reason = entry.reason
-                    break
-                elif entry.action == discord.AuditLogAction.ban:
-                    action = "Ban"
-                    moderator = entry.user
-                    reason = entry.reason
-                    break
+            async for entry in after.guild.audit_logs(limit=10, action=discord.AuditLogAction.member_update):
+                if entry.target.id == after.id and entry.changes:
+                    for change in entry.changes:
+                        if change.attribute == "communication_disabled_until":
+                            moderator = entry.user
+                            reason = entry.reason
+                            break
+                    if moderator:
+                        break
         except discord.Forbidden:
             pass
 
-        if action:
-            embed = discord.Embed(
-                title=f"⚠️ Member {action}ed",
-                description=f"{member.mention} ({member.name} / {member.id})",
-                color=Embed_Colors["red"],
-                timestamp=datetime.utcnow()
-            )
-            embed.add_field(name="🆔 User ID", value=member.id, inline=True)
-            embed.add_field(
-                name="🥀 Responsible Moderator",
-                value=moderator.mention if moderator != "Unknown" else moderator,
-                inline=True
-            )
-            if reason:
-                embed.add_field(name="📝 Reason", value=reason, inline=False)
-            embed.set_thumbnail(url=member.display_avatar.url)
-            embed.set_footer(text=f"Guild ID: {member.guild.id}")
+        embed = discord.Embed(
+            title="🤐 Member Timed Out",
+            description=f"{after.mention} ({after.name} / {after.id})",
+            color=Embed_Colors["orange"],
+            timestamp=datetime.utcnow()
+        )
+        embed.add_field(name="🆔 User ID", value=str(after.id), inline=True)
+        embed.add_field(
+            name="🥀 Responsible Moderator",
+            value=moderator.mention if isinstance(moderator, discord.Member) else "Unknown",
+            inline=True
+        )
+        if reason:
+            embed.add_field(name="📝 Reason", value=reason, inline=False)
+        embed.set_thumbnail(url=after.display_avatar.url)
+        embed.set_footer(text=f"Guild ID: {after.guild.id}")
 
-            await self.send_log(member.guild, "moderation", embed)
-
-    @commands.Cog.listener()
-    async def on_member_update(self, before: discord.Member, after: discord.Member):
-        # Detect timeouts (mutes)
-        if before.timed_out_until != after.timed_out_until:
-            await asyncio.sleep(1)  # wait for audit log to register
-
-            moderator = "Unknown"
-            reason = None
-            try:
-                async for entry in after.guild.audit_logs(limit=10, action=discord.AuditLogAction.member_update):
-                    if entry.target.id == after.id:
-                        moderator = entry.user
-                        reason = entry.reason
-                        break
-            except discord.Forbidden:
-                pass
-
-            embed = discord.Embed(
-                title="🤐 Member Timed Out",
-                description=f"{after.mention} ({after.name} / {after.id})",
-                color=Embed_Colors["orange"],
-                timestamp=datetime.utcnow()
-            )
-            embed.add_field(name="🆔 User ID", value=after.id, inline=True)
-            embed.add_field(
-                name="🥀 Responsible Moderator",
-                value=moderator.mention if moderator != "Unknown" else moderator,
-                inline=True
-            )
-            if reason:
-                embed.add_field(name="📝 Reason", value=reason, inline=False)
-            embed.set_thumbnail(url=after.display_avatar.url)
-            embed.set_footer(text=f"Guild ID: {after.guild.id}")
-
-            await self.send_log(after.guild, "moderation", embed)
+        await self.send_log(after.guild, "moderation", embed)
 
     # ---------------------
     # Join And Leave Log
-    # ----------------------
-    
-
+    # ----------------------    
     @commands.Cog.listener()
-    async def on_ready(self):
-        # Initialize tracked_members for all guilds the bot is in
-        for guild in self.bot.guilds:
-            self.tracked_members[guild.id] = set(member.id for member in guild.members)
-        print("✅ Member tracking initialized.")
+async def on_ready(self):
+    if hasattr(self, "initialized") and self.initialized:
+        return
+    self.initialized = True
+    self.tracked_members = {}
 
-    @commands.Cog.listener()
-    async def on_member_join(self, member: discord.Member):
-        if member.bot:
-            return
+    for guild in self.bot.guilds:
+        self.tracked_members[guild.id] = {member.id for member in guild.members}
+    print("✅ Member tracking initialized.")
 
-        # Initialize tracking set if not exists
-        if member.guild.id not in self.tracked_members:
-            self.tracked_members[member.guild.id] = set()
+@commands.Cog.listener()
+async def on_member_join(self, member: discord.Member):
+    if member.bot:
+        return
 
-        # Check if the member was previously in the set
-        returning = member.id in self.tracked_members[member.guild.id]
+    guild_id = member.guild.id
+    member_id = member.id
 
-        # Update tracking
-        self.tracked_members[member.guild.id].add(member.id)
+    if guild_id not in self.tracked_members:
+        self.tracked_members[guild_id] = set()
 
-        now = datetime.utcnow()
-        account_age_str = self.format_duration(now - member.created_at)
+    returning = member_id in self.tracked_members[guild_id]
+    self.tracked_members[guild_id].add(member_id)
 
-        title = "👤 Member Rejoined" if returning else "👤 Member Joined"
+    now = datetime.utcnow()
+    account_age_str = self.format_duration(now - member.created_at)
 
-        embed = discord.Embed(
-            title=title,
-            description=f"{member.mention} ({member.name} / {member.id})",
-            color=Embed_Colors["green"],
-            timestamp=now
-        )
-        embed.add_field(
-            name="📆 Account Age",
-            value=f"Created {account_age_str}\n"
-                  f"({discord.utils.format_dt(member.created_at, style='F')})",
-            inline=False
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"User ID: {member.id} | Guild ID: {member.guild.id}")
+    embed = discord.Embed(
+        title="👤 Member Rejoined" if returning else "👤 Member Joined",
+        description=f"{member.mention} ({member.name} / {member_id})",
+        color=Embed_Colors["green"],
+        timestamp=now
+    )
+    embed.add_field(
+        name="📆 Account Age",
+        value=f"Created {account_age_str}\n"
+              f"({discord.utils.format_dt(member.created_at, style='F')})",
+        inline=False
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"User ID: {member_id} | Guild ID: {guild_id}")
 
-        await self.send_log(member.guild, "joinleave", embed)
+    await self.send_log(member.guild, "joinleave", embed)
 
-    @commands.Cog.listener()
-    async def on_member_remove(self, member: discord.Member):
-        if member.bot:
-            return
+@commands.Cog.listener()
+async def on_member_remove(self, member: discord.Member):
+    if member.bot:
+        return
 
-        # Remove from tracking
-        if member.guild.id in self.tracked_members:
-            self.tracked_members[member.guild.id].discard(member.id)
+    guild_id = member.guild.id
+    member_id = member.id
 
-        now = datetime.utcnow()
-        account_age_str = self.format_duration(now - member.created_at)
+    if guild_id in self.tracked_members:
+        self.tracked_members[guild_id].discard(member_id)
 
-        embed = discord.Embed(
-            title="👤 Member Left",
-            description=f"{member.mention} ({member.name} / {member.id})",
-            color=Embed_Colors["red"],
-            timestamp=now
-        )
-        embed.add_field(
-            name="📆 Account Age",
-            value=f"Created {account_age_str}\n"
-                  f"({discord.utils.format_dt(member.created_at, style='F')})",
-            inline=False
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"User ID: {member.id} | Guild ID: {member.guild.id}")
+    now = datetime.utcnow()
+    account_age_str = self.format_duration(now - member.created_at)
 
-        await self.send_log(member.guild, "joinleave", embed)
+    embed = discord.Embed(
+        title="👤 Member Left",
+        description=f"{member.mention} ({member.name} / {member_id})",
+        color=Embed_Colors["red"],
+        timestamp=now
+    )
+    embed.add_field(
+        name="📆 Account Age",
+        value=f"Created {account_age_str}\n"
+              f"({discord.utils.format_dt(member.created_at, style='F')})",
+        inline=False
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"User ID: {member_id} | Guild ID: {guild_id}")
+
+    await self.send_log(member.guild, "joinleave", embed)
 
     # ----------------------
     # Message Events
@@ -1196,83 +1200,85 @@ class LoggingCog(commands.Cog):
     # Bot Events
     # ----------------------
     @commands.Cog.listener()
-    async def on_member_join(self, member: discord.Member):
-        if member.bot:
-            guild = member.guild
-            moderator = "Unknown"
+async def on_member_join(self, member: discord.Member):
+    if not member.bot:
+        return
 
-            try:
-                async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.bot_add):
-                    if entry.target.id == member.id:
-                        moderator = entry.user.mention
-                        break
-            except discord.Forbidden:
-                pass
+    guild = member.guild
+    moderator = "Unknown"
 
-            # Check if the bot is Discord-verified
-            verified_status = "✅ Verified Bot" if getattr(member, "public_flags", None) and member.public_flags.verified_bot else "❌ Not Verified"
+    try:
+        async for entry in guild.audit_logs(limit=5, action=discord.AuditLogAction.bot_add):
+            if entry.target.id == member.id:
+                moderator = entry.user
+                break
+    except discord.Forbidden:
+        pass
 
-            embed = discord.Embed(
-                title="🤖 Bot Added",
-                description=f"{member.mention} ({member.name}#{member.discriminator} / {member.id})",
-                color=discord.Color.green(),
-                timestamp=datetime.utcnow()
-            )
-            embed.add_field(name="🥀 Added By", value=moderator, inline=True)
-            embed.add_field(name="🚩 Verification", value=verified_status, inline=True)
+    verified_status = (
+        "✅ Verified Bot"
+        if getattr(member, "public_flags", None) and member.public_flags.verified_bot
+        else "❌ Not Verified"
+    )
 
-            embed.set_thumbnail(url=member.display_avatar.url)
-            embed.set_footer(text=f"Guild ID: {guild.id}")
+    embed = discord.Embed(
+        title="🤖 Bot Added",
+        description=f"{member.mention} ({member.name}#{member.discriminator} / {member.id})",
+        color=discord.Color.green(),
+        timestamp=datetime.utcnow()
+    )
+    embed.add_field(
+        name="🥀 Added By",
+        value=moderator.mention if isinstance(moderator, discord.Member) else "Unknown",
+        inline=True
+    )
+    embed.add_field(name="🚩 Verification", value=verified_status, inline=True)
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Guild ID: {guild.id}")
 
-            await self.send_log(guild, "bots", embed)
+    await self.send_log(guild, "bots", embed)
 
+@commands.Cog.listener()
+async def on_member_remove(self, member: discord.Member):
+    if not member.bot:
+        return
 
+    guild = member.guild
+    moderator = None
 
-    @commands.Cog.listener()
-    async def on_member_remove(self, member: discord.Member):
-        if member.bot:
-            guild = member.guild
-            moderator = "Unknown"
+    try:
+        async for entry in guild.audit_logs(limit=10):
+            if entry.target.id != member.id:
+                continue
 
-            try:
-                # Try to find if the bot was kicked
-                async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.kick):
-                    if entry.target.id == member.id:
-                        moderator = entry.user
-                        break
+            if entry.action in (discord.AuditLogAction.kick, discord.AuditLogAction.ban):
+                moderator = entry.user
+                break
+    except discord.Forbidden:
+        pass
 
-                # Try to find if the bot was banned
-                if moderator == "Unknown":
-                    async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.ban):
-                        if entry.target.id == member.id:
-                            moderator = entry.user
-                            break
+    verified_status = (
+        "✅ Verified Bot"
+        if getattr(member, "public_flags", None) and member.public_flags.verified_bot
+        else "❌ Not Verified"
+    )
 
-            except discord.Forbidden:
-                pass
+    embed = discord.Embed(
+        title="🤖 Bot Removed",
+        description=f"{member.mention} ({member.name}#{member.discriminator} / {member.id})",
+        color=discord.Color.red(),
+        timestamp=datetime.utcnow()
+    )
+    embed.add_field(
+        name="🥀 Removed By",
+        value=moderator.mention if isinstance(moderator, discord.Member) else "Unknown",
+        inline=True
+    )
+    embed.add_field(name="🚩 Verification", value=verified_status, inline=True)
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Guild ID: {guild.id}")
 
-            embed = discord.Embed(
-                title="🤖 Bot Removed",
-                description=f"{member.mention} ({member.name}#{member.discriminator} / {member.id})",
-                color=discord.Color.red(),
-                timestamp=datetime.utcnow()
-            )
-
-            embed.add_field(
-                name="🥀 Removed By",
-                value=moderator.mention if moderator != "Unknown" and hasattr(moderator, "mention") else moderator,
-                inline=True
-            )
-            embed.add_field(
-                name="🚩 Verification",
-                value="✅" if member.public_flags.verified_bot else "❌",
-                inline=True
-            )
-
-            embed.set_thumbnail(url=member.display_avatar.url)
-            embed.set_footer(text=f"Guild ID: {guild.id}")
-
-            await self.send_log(guild, "bots", embed)
+    await self.send_log(guild, "bots", embed)
 
 
     # ----------------------
@@ -1438,63 +1444,69 @@ class LoggingCog(commands.Cog):
     # Scheduled Events
     # ----------------------
     @commands.Cog.listener()
-    async def on_scheduled_event_create(self, event: discord.ScheduledEvent):
-        moderator = "Unknown"
-        moderator_avatar = discord.Embed.Empty
-        try:
-            async for entry in event.guild.audit_logs(limit=1, action=discord.AuditLogAction.event_create):
-                if entry.target.id == event.id:
-                    moderator = entry.user.mention
-                    moderator_avatar = entry.user.display_avatar.url
-                    break
-        except discord.Forbidden:
-            pass
+async def on_scheduled_event_create(self, event: discord.ScheduledEvent):
+    moderator = None
 
-        embed = discord.Embed(
-            title="📅 Scheduled Event Created",
-            description=f"📛 **{event.name}** ({event.id})",
-            color=Embed_Colors["green"],
-            timestamp=datetime.utcnow()
-        )
-        embed.add_field(name="🟢 Starts", value=event.start_time.strftime('%Y-%m-%d %H:%M UTC'))
-        if event.end_time:
-            embed.add_field(name="🔴 Ends", value=event.end_time.strftime('%Y-%m-%d %H:%M UTC'))
-        if event.location:
-            embed.add_field(name="🚀 Location", value=event.location, inline=False)
-        embed.add_field(name="🥀 Responsible Moderator", value=moderator, inline=True)
+    try:
+        async for entry in event.guild.audit_logs(limit=5, action=discord.AuditLogAction.event_create):
+            if entry.target.id == event.id:
+                moderator = entry.user
+                break
+    except discord.Forbidden:
+        pass
 
-        embed.set_thumbnail(url=moderator_avatar)
-        embed.set_footer(text=f"Guild ID: {event.guild.id}")
-        if event.cover_image:
-            embed.set_image(url=event.cover_image.url)
+    embed = discord.Embed(
+        title="📅 Scheduled Event Created",
+        description=f"📛 **{event.name}** ({event.id})",
+        color=Embed_Colors["green"],
+        timestamp=datetime.utcnow()
+    )
+    embed.add_field(name="🟢 Starts", value=event.start_time.strftime('%Y-%m-%d %H:%M UTC'))
+    if event.end_time:
+        embed.add_field(name="🔴 Ends", value=event.end_time.strftime('%Y-%m-%d %H:%M UTC'))
+    if event.location:
+        embed.add_field(name="🚀 Location", value=event.location, inline=False)
+    embed.add_field(
+        name="🥀 Responsible Moderator",
+        value=moderator.mention if isinstance(moderator, discord.Member) else "Unknown",
+        inline=True
+    )
+    if isinstance(moderator, discord.Member):
+        embed.set_thumbnail(url=moderator.display_avatar.url)
+    embed.set_footer(text=f"Guild ID: {event.guild.id}")
+    if event.cover_image:
+        embed.set_image(url=event.cover_image.url)
 
-        await self.send_log(event.guild, "events", embed)
+    await self.send_log(event.guild, "events", embed)
 
+@commands.Cog.listener()
+async def on_scheduled_event_delete(self, event: discord.ScheduledEvent):
+    moderator = None
 
-    @commands.Cog.listener()
-    async def on_scheduled_event_delete(self, event: discord.ScheduledEvent):
-        moderator = "Unknown"
-        moderator_avatar = discord.Embed.Empty
-        try:
-            async for entry in event.guild.audit_logs(limit=1, action=discord.AuditLogAction.event_delete):
-                if entry.target.id == event.id:
-                    moderator = entry.user.mention
-                    moderator_avatar = entry.user.display_avatar.url
-                    break
-        except discord.Forbidden:
-            pass
+    try:
+        async for entry in event.guild.audit_logs(limit=5, action=discord.AuditLogAction.event_delete):
+            if entry.target.id == event.id:
+                moderator = entry.user
+                break
+    except discord.Forbidden:
+        pass
 
-        embed = discord.Embed(
-            title="❌ Scheduled Event Deleted",
-            description=f"📛 **{event.name}** ({event.id})",
-            color=Embed_Colors["red"],
-            timestamp=datetime.utcnow()
-        )
-        embed.add_field(name="🥀 Responsible Moderator", value=moderator, inline=True)
-        embed.set_thumbnail(url=moderator_avatar)
-        embed.set_footer(text=f"Guild ID: {event.guild.id}")
+    embed = discord.Embed(
+        title="❌ Scheduled Event Deleted",
+        description=f"📛 **{event.name}** ({event.id})",
+        color=Embed_Colors["red"],
+        timestamp=datetime.utcnow()
+    )
+    embed.add_field(
+        name="🥀 Responsible Moderator",
+        value=moderator.mention if isinstance(moderator, discord.Member) else "Unknown",
+        inline=True
+    )
+    if isinstance(moderator, discord.Member):
+        embed.set_thumbnail(url=moderator.display_avatar.url)
+    embed.set_footer(text=f"Guild ID: {event.guild.id}")
 
-        await self.send_log(event.guild, "events", embed)
+    await self.send_log(event.guild, "events", embed)
 
 
     @commands.Cog.listener()
