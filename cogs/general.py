@@ -1063,7 +1063,7 @@ class General(commands.Cog):
     @commands.command(name="feetslap")
     async def feetslap_prefix(self, ctx, member: discord.Member):
         feetslap_gifs = [
-            "https://drive.google.com/file/d/18lvykiat7LOEB6JALKUftY0WE0Olg9yd/view?usp=drivesdk",
+            "https://imgur.com/a/VoA7aLB",
         ]
         gif = random.choice(feetslap_gifs)
         color = discord.Color(random.randint(0, 0xFFFFFF))
