@@ -32,7 +32,7 @@ def generate_captcha():
     img = Image.new("RGB", (width, height), color=(30, 30, 30))
     draw = ImageDraw.Draw(img)
 
-    # Try multiple fonts
+    # Fonts
     fonts = []
     for f in ["arial.ttf", "times.ttf", "comic.ttf", "verdana.ttf"]:
         try:
@@ -42,9 +42,9 @@ def generate_captcha():
     if not fonts:
         fonts = [ImageFont.load_default()]
 
-    # Background noise: random digits/letters
+    # Background noise: fake chars
     for _ in range(15):
-        fake_char = str(random.choice("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"))
+        fake_char = random.choice("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")
         fx = random.randint(0, width - 20)
         fy = random.randint(0, height - 20)
         fnt = random.choice(fonts)
@@ -55,13 +55,16 @@ def generate_captcha():
         x, y = random.randint(0, width), random.randint(0, height)
         draw.point((x, y), fill=(random.randint(80, 200), random.randint(80, 200), random.randint(80, 200)))
 
-    # Noise lines and arcs
+    # Noise lines
     for _ in range(5):
         x1, y1, x2, y2 = [random.randint(0, width) for _ in range(4)]
         draw.line((x1, y1, x2, y2), fill=(random.randint(150, 255), 0, random.randint(0, 255)), width=2)
+
+    # Noise arcs (fixed coordinate order)
     for _ in range(3):
-        box = [random.randint(0, width-30), random.randint(0, height-30),
-               random.randint(30, width), random.randint(30, height)]
+        x1, y1 = random.randint(0, width - 30), random.randint(0, height - 30)
+        x2, y2 = random.randint(x1 + 10, width), random.randint(y1 + 10, height)
+        box = [x1, y1, x2, y2]
         draw.arc(box, start=random.randint(0, 180), end=random.randint(180, 360),
                  fill=(0, random.randint(150, 255), random.randint(150, 255)))
 
@@ -70,7 +73,7 @@ def generate_captcha():
         fnt = random.choice(fonts)
         color = (random.randint(200, 255), random.randint(150, 255), random.randint(0, 255))
 
-        # Draw each digit on its own image so we can rotate
+        # Each digit drawn separately & rotated
         temp_img = Image.new("RGBA", (50, 70), (0, 0, 0, 0))
         temp_draw = ImageDraw.Draw(temp_img)
         temp_draw.text((5, 5), digit, font=fnt, fill=color)
@@ -96,6 +99,7 @@ class CaptchaInputView(discord.ui.View):
     async def handle_input(self, interaction):
         await interaction.response.edit_message(content=f"Your input: `{self.input}`", view=self)
 
+    # Digits
     @discord.ui.button(label="1️⃣", style=discord.ButtonStyle.secondary, row=0)
     async def one(self, i, b): self.input += "1"; await self.handle_input(i)
     @discord.ui.button(label="2️⃣", style=discord.ButtonStyle.secondary, row=0)
@@ -115,12 +119,14 @@ class CaptchaInputView(discord.ui.View):
     @discord.ui.button(label="9️⃣", style=discord.ButtonStyle.secondary, row=2)
     async def nine(self, i, b): self.input += "9"; await self.handle_input(i)
 
+    # Backspace
     @discord.ui.button(label="➖", style=discord.ButtonStyle.danger, row=3)
     async def backspace(self, i, b): self.input = self.input[:-1]; await self.handle_input(i)
 
     @discord.ui.button(label="0️⃣", style=discord.ButtonStyle.secondary, row=3)
     async def zero(self, i, b): self.input += "0"; await self.handle_input(i)
 
+    # Submit
     @discord.ui.button(label="🟰", style=discord.ButtonStyle.success, row=3)
     async def submit(self, interaction, button):
         role = discord.utils.get(interaction.guild.roles, id=self.role_id)
@@ -206,7 +212,6 @@ class Verification(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        # Restore persistent buttons
         for guild_id, data in verification_data.items():
             self.bot.add_view(VerificationButton(data["role_id"]))
         print("[Verification] Persistent views restored.")
