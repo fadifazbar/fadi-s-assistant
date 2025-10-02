@@ -905,6 +905,8 @@ class General(commands.Cog):
         embed.set_image(url=gif)
         await interaction.response.send_message(embed=embed)
 
+
+
     # --- Prefix command ---
     @commands.command(name="makeout")
     async def makeout_prefix(self, ctx, member: discord.Member):
@@ -1052,6 +1054,21 @@ class General(commands.Cog):
         color = discord.Color(random.randint(0, 0xFFFFFF))
         embed = discord.Embed(
             description=f"*{ctx.author.mention} slapped {member.mention}*",
+            color=color
+        )
+        embed.set_image(url=gif)
+        await ctx.send(embed=embed)
+
+    # prefix command
+    @commands.command(name="feetslap")
+    async def feetslap_prefix(self, ctx, member: discord.Member):
+        feetslap_gifs = [
+            "https://drive.google.com/file/d/18lvykiat7LOEB6JALKUftY0WE0Olg9yd/view?usp=drivesdk",
+        ]
+        gif = random.choice(feetslap_gifs)
+        color = discord.Color(random.randint(0, 0xFFFFFF))
+        embed = discord.Embed(
+            description=f"*{ctx.author.mention} has feetslapped {member.mention} in a freaky way 😜🥵*",
             color=color
         )
         embed.set_image(url=gif)
