@@ -118,7 +118,7 @@ class CaptchaInputView(discord.ui.View):
     @discord.ui.button(emoji="<:NM0:1423624444949303358>", style=discord.ButtonStyle.secondary, row=3)
     async def zero(self, i, b): self.input += "0"; await self.handle_input(i)
 
-    @discord.ui.button(label="<:CHECK_CHECK_1:1277607864860545094>", style=discord.ButtonStyle.success, row=3)
+    @discord.ui.button(emoji="<:CHECK_CHECK_1:1277607864860545094>", style=discord.ButtonStyle.success, row=3)
     async def submit(self, interaction, button):
         role = discord.utils.get(interaction.guild.roles, id=self.role_id)
         if not role:
