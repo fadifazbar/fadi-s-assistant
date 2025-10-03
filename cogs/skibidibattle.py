@@ -529,20 +529,24 @@ class RetreatButton(discord.ui.Button):
         if now - last_used < 60:
             return await interaction.response.send_message("⏳ You must wait 1 minute before trying to retreat again.", ephemeral=True)
 
-        # Prepare retreat vote state
+        # Prevent multiple retreat prompts
+        if "retreat_votes" in self.game and self.game["retreat_votes"]:
+            return await interaction.response.send_message("⚠️ A retreat vote is already in progress!", ephemeral=True)
+
+        # Initialize retreat vote state
         self.game["retreat_votes"] = {}
 
-        # Send shared confirmation message
         embed = discord.Embed(
             title="🏳️ Do you really want to retreat?",
             description="\n".join(f"{p.mention}: ⏰ Waiting For Vote..." for p in self.game["players"]),
             color=discord.Color.gold()
         )
+
         view = RetreatVoteView(self.game)
         await interaction.response.send_message(embed=embed, view=view)
         view.message = await interaction.original_response()
 
-        # ✅ Only apply cooldown if message was successfully sent
+        # Apply cooldown AFTER successful setup
         self.cooldowns[interaction.user.id] = now
 
 
@@ -563,6 +567,7 @@ class RetreatVoteView(discord.ui.View):
             except:
                 pass
 
+
 class RetreatYesButton(discord.ui.Button):
     def __init__(self, game):
         super().__init__(label="✅ Yes", style=discord.ButtonStyle.success)
@@ -573,16 +578,13 @@ class RetreatYesButton(discord.ui.Button):
             return await interaction.response.send_message("❌ Only battle players can vote!", ephemeral=True)
 
         votes = self.game["retreat_votes"]
-        if votes.get(interaction.user.id) is not None:
-            return await interaction.response.send_message("You've already voted!", ephemeral=True)
+        if interaction.user.id in votes:
+            return await interaction.response.send_message("⚠️ You've already voted!", ephemeral=True)
 
-        # Register vote
         votes[interaction.user.id] = True
-
-        # Respond to interaction first
         await interaction.response.send_message("You voted ✅ Yes to retreat.", ephemeral=True)
 
-        # Update shared message embed
+        # Update shared embed
         embed = discord.Embed(
             title="🏳️ Do you really want to retreat?",
             description="\n".join(
@@ -592,30 +594,23 @@ class RetreatYesButton(discord.ui.Button):
             color=discord.Color.gold()
         )
 
-        # Try to edit the shared message directly
-        for child in interaction.message.view.children:
-            if isinstance(child, RetreatVoteView):
-                view = child
-                break
-        else:
-            view = interaction.message.view
-
         try:
-            await interaction.message.edit(embed=embed, view=view)
+            await interaction.message.edit(embed=embed, view=interaction.message.view)
         except Exception as e:
             print(f"[RetreatYesButton] Failed to update vote message: {e}")
 
-        # Check if both players voted yes
-        if len(votes) == 2 and all(votes.get(p.id) for p in self.game["players"]):
+        # ✅ Check if all players voted YES
+        if all(votes.get(p.id) for p in self.game["players"] if p.id in votes):
             channel = interaction.channel
             final_embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
-                description="💨 Both characters have retreated.\n\n# 🏆 Winner: TIE.",
+                description="💨 All players have retreated.\n\n# 🏆 Winner: TIE.",
                 color=discord.Color.gold()
             )
             await self.game["message"].edit(embed=final_embed, view=None)
             games.pop(channel.id, None)
             await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
+
 
 class RetreatNoButton(discord.ui.Button):
     def __init__(self, game):
