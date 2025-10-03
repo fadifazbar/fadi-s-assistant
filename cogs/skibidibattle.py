@@ -579,10 +579,10 @@ class RetreatYesButton(discord.ui.Button):
         # Register vote
         votes[interaction.user.id] = True
 
-        # Respond to interaction to prevent failure
+        # Respond to interaction first
         await interaction.response.send_message("You voted ✅ Yes to retreat.", ephemeral=True)
 
-        # Update shared message with vote status
+        # Update shared message embed
         embed = discord.Embed(
             title="🏳️ Do you really want to retreat?",
             description="\n".join(
@@ -591,12 +591,22 @@ class RetreatYesButton(discord.ui.Button):
             ),
             color=discord.Color.gold()
         )
-        view = interaction.message.view
-        if view and isinstance(view, discord.ui.View):
-            await interaction.message.edit(embed=embed, view=view)
 
-        # End game if both voted yes
-        if len(votes) == 2 and all(votes.values()):
+        # Try to edit the shared message directly
+        for child in interaction.message.view.children:
+            if isinstance(child, RetreatVoteView):
+                view = child
+                break
+        else:
+            view = interaction.message.view
+
+        try:
+            await interaction.message.edit(embed=embed, view=view)
+        except Exception as e:
+            print(f"[RetreatYesButton] Failed to update vote message: {e}")
+
+        # Check if both players voted yes
+        if len(votes) == 2 and all(votes.get(p.id) for p in self.game["players"]):
             channel = interaction.channel
             final_embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
