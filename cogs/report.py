@@ -4,7 +4,7 @@ from discord.ui import View, Button
 import json, os, asyncio
 from datetime import datetime, timedelta
 
-DATA_FILE = "reports.json"
+DATA_FILE = "/data/reports.json"
 os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True) if "/" in DATA_FILE else None
 save_lock = asyncio.Lock()
 
