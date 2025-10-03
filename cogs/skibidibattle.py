@@ -530,11 +530,13 @@ class RetreatButton(discord.ui.Button):
             return await interaction.response.send_message("⏳ You must wait 1 minute before trying to retreat again.", ephemeral=True)
 
         # Prevent multiple retreat prompts
-        if "retreat_votes" in self.game and self.game["retreat_votes"]:
+        if self.game.get("retreat_vote_view"):
             return await interaction.response.send_message("⚠️ A retreat vote is already in progress!", ephemeral=True)
 
-        # Initialize retreat vote state
+        # Initialize retreat vote state and view
         self.game["retreat_votes"] = {}
+        view = RetreatVoteView(self.game)
+        self.game["retreat_vote_view"] = view
 
         embed = discord.Embed(
             title="🏳️ Do you really want to retreat?",
@@ -542,9 +544,10 @@ class RetreatButton(discord.ui.Button):
             color=discord.Color.gold()
         )
 
-        view = RetreatVoteView(self.game)
         await interaction.response.send_message(embed=embed, view=view)
+        # store the message reference so buttons can edit it
         view.message = await interaction.original_response()
+        self.game["retreat_message"] = view.message
 
         # Apply cooldown AFTER successful setup
         self.cooldowns[interaction.user.id] = now
@@ -559,13 +562,31 @@ class RetreatVoteView(discord.ui.View):
         self.add_item(RetreatNoButton(game))
 
     async def on_timeout(self):
+        # disable buttons and mark vote expired
         for child in self.children:
             child.disabled = True
+
+        votes = self.game.get("retreat_votes", {})
+        players = self.game["players"]
+
+        description = "\n".join(
+            f"{p.mention}: {'✅ Voted Yes' if votes.get(p.id) is True else '❌ Voted No' if votes.get(p.id) is False else '⏰ Waiting For Vote...'}"
+            for p in players
+        )
+        description += "\n\n⏰ Retreat vote expired. The battle continues!"
+
+        embed = discord.Embed(title="🏳️ Retreat Vote Expired", description=description, color=discord.Color.red())
+
         if self.message:
             try:
-                await self.message.edit(view=self)
-            except:
+                await self.message.edit(embed=embed, view=self)
+            except Exception:
                 pass
+
+        # cleanup
+        self.game.pop("retreat_votes", None)
+        self.game.pop("retreat_vote_view", None)
+        self.game.pop("retreat_message", None)
 
 
 class RetreatYesButton(discord.ui.Button):
@@ -574,46 +595,79 @@ class RetreatYesButton(discord.ui.Button):
         self.game = game
 
     async def callback(self, interaction: discord.Interaction):
-        # ✅ Only players in the battle can vote
+        # only players can vote
         if interaction.user not in self.game["players"]:
             return await interaction.response.send_message("❌ Only battle players can vote!", ephemeral=True)
 
-        votes = self.game["retreat_votes"]
+        votes = self.game.setdefault("retreat_votes", {})
 
-        # ✅ Prevent double voting
+        # prevent double voting
         if interaction.user.id in votes:
             return await interaction.response.send_message("⚠️ You've already voted!", ephemeral=True)
 
-        # Register Yes vote
+        # register yes vote
         votes[interaction.user.id] = True
         await interaction.response.send_message("You voted ✅ Yes to retreat.", ephemeral=True)
 
-        # Build updated embed showing live votes
-        embed = discord.Embed(
-            title="🏳️ Do you really want to retreat?",
-            description="\n".join(
-                f"{p.mention}: {'✅ Voted Yes' if votes.get(p.id) is True else '❌ Voted No' if votes.get(p.id) is False else '⏰ Waiting For Vote...'}"
-                for p in self.game["players"]
-            ),
-            color=discord.Color.gold()
+        # update the shared vote embed
+        view = self.view  # bound view instance
+        players = self.game["players"]
+        description = "\n".join(
+            f"{p.mention}: {'✅ Voted Yes' if votes.get(p.id) is True else '❌ Voted No' if votes.get(p.id) is False else '⏰ Waiting For Vote...'}"
+            for p in players
         )
+        embed = discord.Embed(title="🏳️ Do you really want to retreat?", description=description, color=discord.Color.gold())
 
-        # Update the original shared retreat message
-        view = interaction.message.view
-        if hasattr(view, "message") and view.message:
-            await view.message.edit(embed=embed, view=view)
+        if getattr(view, "message", None):
+            try:
+                await view.message.edit(embed=embed, view=view)
+            except Exception as e:
+                print(f"[RetreatYesButton] Failed to update vote message: {e}")
 
-        # ✅ End battle only if EVERY player voted AND all said Yes
-        if len(votes) == len(self.game["players"]) and all(votes.get(p.id) for p in self.game["players"]):
-            channel = interaction.channel
+        # Only end battle if EVERY player voted AND all said Yes
+        if len(votes) == len(players) and all(votes.get(p.id) for p in players):
+            # disable buttons
+            for child in view.children:
+                child.disabled = True
+
             final_embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
                 description="💨 All players have retreated.\n\n# 🏆 Winner: TIE.",
                 color=discord.Color.gold()
             )
-            await self.game["message"].edit(embed=final_embed, view=None)
+
+            # update the vote message to final embed and remove buttons
+            if getattr(view, "message", None):
+                try:
+                    await view.message.edit(embed=final_embed, view=None)
+                except Exception as e:
+                    print(f"[RetreatYesButton] Failed to edit final vote message: {e}")
+
+            # also update the main game message (if you store it)
+            if self.game.get("message"):
+                try:
+                    await self.game["message"].edit(embed=final_embed, view=None)
+                except Exception:
+                    pass
+
+            # cleanup game state and games mapping
+            channel = interaction.channel
             games.pop(channel.id, None)
-            await interaction.followup.send("The battle has ended due to retreat.")
+            self.game.pop("retreat_votes", None)
+            self.game.pop("retreat_vote_view", None)
+            self.game.pop("retreat_message", None)
+
+            # inform the voters (ephemeral followup)
+            try:
+                await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
+            except Exception:
+                pass
+
+            # stop the view to cancel the timeout
+            try:
+                view.stop()
+            except Exception:
+                pass
 
 
 class RetreatNoButton(discord.ui.Button):
@@ -622,28 +676,50 @@ class RetreatNoButton(discord.ui.Button):
         self.game = game
 
     async def callback(self, interaction: discord.Interaction):
+        # only players can vote
         if interaction.user not in self.game["players"]:
             return await interaction.response.send_message("❌ Only battle players can vote!", ephemeral=True)
 
-        self.game["retreat_votes"][interaction.user.id] = False
+        votes = self.game.setdefault("retreat_votes", {})
+
+        # prevent double voting
+        if interaction.user.id in votes:
+            return await interaction.response.send_message("⚠️ You've already voted!", ephemeral=True)
+
+        # register no vote
+        votes[interaction.user.id] = False
         await interaction.response.send_message("You voted ❌ No. Retreat cancelled.", ephemeral=True)
 
-        # Build cancelled embed showing live votes
-        embed = discord.Embed(
-            title="🏳️ Retreat Cancelled",
-            description="\n".join(
-                f"{p.mention}: {'✅ Voted Yes' if self.game['retreat_votes'].get(p.id) is True else '❌ Voted No' if self.game['retreat_votes'].get(p.id) is False else '⏰ Waiting For Vote...'}"
-                for p in self.game["players"]
-            ) + f"\n\n❌ Retreat cancelled by {interaction.user.mention}. The battle continues!",
-            color=discord.Color.red()
+        # update embed and disable buttons
+        view = self.view
+        players = self.game["players"]
+        description = "\n".join(
+            f"{p.mention}: {'✅ Voted Yes' if votes.get(p.id) is True else '❌ Voted No' if votes.get(p.id) is False else '⏰ Waiting For Vote...'}"
+            for p in players
         )
+        description += f"\n\n❌ Retreat cancelled by {interaction.user.mention}. The battle continues!"
 
-        # Update the original shared retreat message and disable buttons
-        view = interaction.message.view
-        if hasattr(view, "message") and view.message:
-            for child in view.children:
-                child.disabled = True
-            await view.message.edit(embed=embed, view=view)
+        embed = discord.Embed(title="🏳️ Retreat Cancelled", description=description, color=discord.Color.red())
+
+        for child in view.children:
+            child.disabled = True
+
+        if getattr(view, "message", None):
+            try:
+                await view.message.edit(embed=embed, view=view)
+            except Exception as e:
+                print(f"[RetreatNoButton] Failed to update vote message: {e}")
+
+        # cleanup
+        self.game.pop("retreat_votes", None)
+        self.game.pop("retreat_vote_view", None)
+        self.game.pop("retreat_message", None)
+
+        # stop the view to cancel the timeout
+        try:
+            view.stop()
+        except Exception:
+            pass
 
 class AttackView(discord.ui.View):
     def __init__(self, attacker, defender, game):
