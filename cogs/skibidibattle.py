@@ -576,17 +576,17 @@ class RetreatYesButton(discord.ui.Button):
         if votes.get(interaction.user.id) is not None:
             return await interaction.response.send_message("You've already voted!", ephemeral=True)
 
+        # Register vote
         votes[interaction.user.id] = True
-        await self.update_vote_message(interaction)
 
-        if len(votes) == 2 and all(votes.values()):
-            await self.end_game(interaction)
+        # Respond to interaction to prevent failure
+        await interaction.response.send_message("You voted ✅ Yes to retreat.", ephemeral=True)
 
-    async def update_vote_message(self, interaction):
+        # Update shared message with vote status
         embed = discord.Embed(
             title="🏳️ Do you really want to retreat?",
             description="\n".join(
-                f"{p.mention}: {'✅ Voted Yes' if self.game['retreat_votes'].get(p.id) else '⏰ Waiting For Vote...'}"
+                f"{p.mention}: {'✅ Voted Yes' if votes.get(p.id) else '⏰ Waiting For Vote...'}"
                 for p in self.game["players"]
             ),
             color=discord.Color.gold()
@@ -595,16 +595,17 @@ class RetreatYesButton(discord.ui.Button):
         if view and isinstance(view, discord.ui.View):
             await interaction.message.edit(embed=embed, view=view)
 
-    async def end_game(self, interaction):
-        channel = interaction.channel
-        embed = discord.Embed(
-            title="Skibidi Battle! 🚽⚔️",
-            description="💨 Both characters have retreated.\n\n# 🏆 Winner: TIE.",
-            color=discord.Color.gold()
-        )
-        await self.game["message"].edit(embed=embed, view=None)
-        games.pop(channel.id, None)
-        await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
+        # End game if both voted yes
+        if len(votes) == 2 and all(votes.values()):
+            channel = interaction.channel
+            final_embed = discord.Embed(
+                title="Skibidi Battle! 🚽⚔️",
+                description="💨 Both characters have retreated.\n\n# 🏆 Winner: TIE.",
+                color=discord.Color.gold()
+            )
+            await self.game["message"].edit(embed=final_embed, view=None)
+            games.pop(channel.id, None)
+            await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
 
 class RetreatNoButton(discord.ui.Button):
     def __init__(self, game):
