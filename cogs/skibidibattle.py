@@ -632,7 +632,7 @@ class RetreatYesButton(discord.ui.Button):
 
             final_embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
-                description="💨 All players have retreated.\n\n# 🏆 Winner: TIE.",
+                description="💨 All players have retreated.\n\n# 🏆 Winner: None",
                 color=discord.Color.gold()
             )
 
@@ -659,7 +659,7 @@ class RetreatYesButton(discord.ui.Button):
 
             # inform the voters (ephemeral followup)
             try:
-                await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
+                await interaction.followup.send("The battle has ended due to retreat.")
             except Exception:
                 pass
 
