@@ -73,7 +73,7 @@ class ReportView(View):
 # -------- Buttons --------
 class ReportSolveButton(BaseReportButton):
     def __init__(self, bot, report_id):
-        super().__init__(bot, report_id, "Solve", discord.ButtonStyle.success, "✅", row=0)
+        super().__init__(bot, report_id, "Solve", discord.ButtonStyle.success, "✅")
 
     async def callback(self, interaction):
         if not interaction.user.guild_permissions.manage_messages:
@@ -99,7 +99,7 @@ class ReportSolveButton(BaseReportButton):
 
 class ReportAskDMButton(BaseReportButton):
     def __init__(self, bot, report_id):
-        super().__init__(bot, report_id, "Ask DM", discord.ButtonStyle.primary, "💬", row=0)
+        super().__init__(bot, report_id, "Ask DM", discord.ButtonStyle.primary, "💬")
 
     async def callback(self, interaction):
         if not interaction.user.guild_permissions.manage_messages:
@@ -120,7 +120,7 @@ class ReportAskDMButton(BaseReportButton):
 
 class ReportDismissButton(BaseReportButton):
     def __init__(self, bot, report_id):
-        super().__init__(bot, report_id, "Dismiss", discord.ButtonStyle.secondary, "❌", row=0)
+        super().__init__(bot, report_id, "Dismiss", discord.ButtonStyle.secondary, "❌")
 
     async def callback(self, interaction):
         if not interaction.user.guild_permissions.manage_messages:
@@ -144,7 +144,7 @@ class ReportDismissButton(BaseReportButton):
 
 class ReportDeleteButton(BaseReportButton):
     def __init__(self, bot, report_id):
-        super().__init__(bot, report_id, "Delete", discord.ButtonStyle.danger, "🗑️", row=0)
+        super().__init__(bot, report_id, "Delete", discord.ButtonStyle.danger, "🗑️")
 
     async def callback(self, interaction):
         if not interaction.user.guild_permissions.manage_messages:
@@ -167,7 +167,7 @@ class ReportDeleteButton(BaseReportButton):
 
 class ReportKickButton(BaseReportButton):
     def __init__(self, bot, report_id):
-        super().__init__(bot, report_id, "Kick", discord.ButtonStyle.danger, "⚒️", row=1)
+        super().__init__(bot, report_id, "Kick", discord.ButtonStyle.danger, "⚒️")
 
     async def callback(self, interaction):
         if not interaction.user.guild_permissions.kick_members:
@@ -193,7 +193,7 @@ class ReportKickButton(BaseReportButton):
 
 class ReportBanButton(BaseReportButton):
     def __init__(self, bot, report_id):
-        super().__init__(bot, report_id, "Ban", discord.ButtonStyle.danger, "🔨", row=1)
+        super().__init__(bot, report_id, "Ban", discord.ButtonStyle.danger, "🔨")
 
     async def callback(self, interaction):
         if not interaction.user.guild_permissions.ban_members:
@@ -219,7 +219,7 @@ class ReportBanButton(BaseReportButton):
 
 class ReportMuteButton(BaseReportButton):
     def __init__(self, bot, report_id):
-        super().__init__(bot, report_id, "Mute", discord.ButtonStyle.secondary, "🔇", row=1)
+        super().__init__(bot, report_id, "Mute", discord.ButtonStyle.secondary, "🔇")
 
     async def callback(self, interaction):
         if not interaction.user.guild_permissions.moderate_members:
