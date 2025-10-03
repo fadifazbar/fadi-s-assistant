@@ -51,7 +51,7 @@ class ModBot(commands.Bot):
         await self.load_extension("cogs.family")
         await self.load_extension("cogs.remindme")
         await self.load_extension("cogs.welcome")
-        await self.load_extension("cogs.nuke")
+        await self.load_extension("cogs.report")
         await self.load_extension("cogs.help")
         await self.load_extension("cogs.calculator")
 
