@@ -93,32 +93,32 @@ class CaptchaInputView(discord.ui.View):
         await interaction.response.edit_message(content=f"Your input: `{self.input}`", view=self)
 
     # Digit buttons...
-    @discord.ui.button(label="1️⃣", style=discord.ButtonStyle.secondary, row=0)
+    @discord.ui.button(emoji="<:NM1:1423623575729995786>", style=discord.ButtonStyle.secondary, row=0)
     async def one(self, i, b): self.input += "1"; await self.handle_input(i)
-    @discord.ui.button(label="2️⃣", style=discord.ButtonStyle.secondary, row=0)
+    @discord.ui.button(emoji="<:NM2:1423623999509893192>", style=discord.ButtonStyle.secondary, row=0)
     async def two(self, i, b): self.input += "2"; await self.handle_input(i)
-    @discord.ui.button(label="3️⃣", style=discord.ButtonStyle.secondary, row=0)
+    @discord.ui.button(emoji="<:NM3:1423624284961509438>", style=discord.ButtonStyle.secondary, row=0)
     async def three(self, i, b): self.input += "3"; await self.handle_input(i)
-    @discord.ui.button(label="4️⃣", style=discord.ButtonStyle.secondary, row=1)
+    @discord.ui.button(emoji="<:NM4:1423624302795816970>", style=discord.ButtonStyle.secondary, row=1)
     async def four(self, i, b): self.input += "4"; await self.handle_input(i)
-    @discord.ui.button(label="5️⃣", style=discord.ButtonStyle.secondary, row=1)
+    @discord.ui.button(emoji="<:NM5:1423624318541234291>", style=discord.ButtonStyle.secondary, row=1)
     async def five(self, i, b): self.input += "5"; await self.handle_input(i)
-    @discord.ui.button(label="6️⃣", style=discord.ButtonStyle.secondary, row=1)
+    @discord.ui.button(emoji="<:NM6:1423624335947468874>", style=discord.ButtonStyle.secondary, row=1)
     async def six(self, i, b): self.input += "6"; await self.handle_input(i)
-    @discord.ui.button(label="7️⃣", style=discord.ButtonStyle.secondary, row=2)
+    @discord.ui.button(emoji="<:NM7:1423624353005834290>", style=discord.ButtonStyle.secondary, row=2)
     async def seven(self, i, b): self.input += "7"; await self.handle_input(i)
-    @discord.ui.button(label="8️⃣", style=discord.ButtonStyle.secondary, row=2)
+    @discord.ui.button(emoji="<:NM8:1423624404239253605>", style=discord.ButtonStyle.secondary, row=2)
     async def eight(self, i, b): self.input += "8"; await self.handle_input(i)
-    @discord.ui.button(label="9️⃣", style=discord.ButtonStyle.secondary, row=2)
+    @discord.ui.button(emoji="<:NM9:1423624427731419146>", style=discord.ButtonStyle.secondary, row=2)
     async def nine(self, i, b): self.input += "9"; await self.handle_input(i)
 
-    @discord.ui.button(label="➖", style=discord.ButtonStyle.danger, row=3)
+    @discord.ui.button(emoji="<:Cross6:1277608359868235827>", style=discord.ButtonStyle.danger, row=3)
     async def backspace(self, i, b): self.input = self.input[:-1]; await self.handle_input(i)
 
-    @discord.ui.button(label="0️⃣", style=discord.ButtonStyle.secondary, row=3)
+    @discord.ui.button(emoji="<:NM0:1423624444949303358>", style=discord.ButtonStyle.secondary, row=3)
     async def zero(self, i, b): self.input += "0"; await self.handle_input(i)
 
-    @discord.ui.button(label="🟰", style=discord.ButtonStyle.success, row=3)
+    @discord.ui.button(label="<:CHECK_CHECK_1:1277607864860545094>", style=discord.ButtonStyle.success, row=3)
     async def submit(self, interaction, button):
         role = discord.utils.get(interaction.guild.roles, id=self.role_id)
         if not role:
@@ -150,7 +150,7 @@ class VerificationButton(discord.ui.View):
         super().__init__(timeout=None)
         self.role_id = role_id
 
-    @discord.ui.button(label="✅ Verify", style=discord.ButtonStyle.green, custom_id="persistent_verify_button")
+    @discord.ui.button(label="Verify", emoji=":CHECK_CHECK_1:1277607864860545094>", style=discord.ButtonStyle.green, custom_id="persistent_verify_button")
     async def verify(self, interaction: discord.Interaction, button: discord.ui.Button):
         role = discord.utils.get(interaction.guild.roles, id=self.role_id)
         if not role:
