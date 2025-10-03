@@ -574,33 +574,38 @@ class RetreatYesButton(discord.ui.Button):
         self.game = game
 
     async def callback(self, interaction: discord.Interaction):
+        # ✅ Only players in the battle can vote
         if interaction.user not in self.game["players"]:
             return await interaction.response.send_message("❌ Only battle players can vote!", ephemeral=True)
 
         votes = self.game["retreat_votes"]
+
+        # ✅ Prevent double voting
         if interaction.user.id in votes:
             return await interaction.response.send_message("⚠️ You've already voted!", ephemeral=True)
 
+        # Register Yes vote
         votes[interaction.user.id] = True
         await interaction.response.send_message("You voted ✅ Yes to retreat.", ephemeral=True)
 
-        # Update shared embed
+        # Build updated embed showing vote status
         embed = discord.Embed(
             title="🏳️ Do you really want to retreat?",
             description="\n".join(
-                f"{p.mention}: {'✅ Voted Yes' if votes.get(p.id) else '⏰ Waiting For Vote...'}"
+                f"{p.mention}: {'✅ Voted Yes' if votes.get(p.id) is True else '❌ Voted No' if votes.get(p.id) is False else '⏰ Waiting For Vote...'}"
                 for p in self.game["players"]
             ),
             color=discord.Color.gold()
         )
 
+        # Try to update the shared vote message
         try:
             await interaction.message.edit(embed=embed, view=interaction.message.view)
         except Exception as e:
             print(f"[RetreatYesButton] Failed to update vote message: {e}")
 
-        # ✅ Check if all players voted YES
-        if all(votes.get(p.id) for p in self.game["players"] if p.id in votes):
+        # ✅ Only end battle if EVERY player has voted AND all are Yes
+        if len(votes) == len(self.game["players"]) and all(votes.get(p.id) for p in self.game["players"]):
             channel = interaction.channel
             final_embed = discord.Embed(
                 title="Skibidi Battle! 🚽⚔️",
@@ -609,7 +614,7 @@ class RetreatYesButton(discord.ui.Button):
             )
             await self.game["message"].edit(embed=final_embed, view=None)
             games.pop(channel.id, None)
-            await interaction.followup.send("The battle has ended due to retreat.", ephemeral=True)
+            await interaction.followup.send("The battle has ended due to retreat.")
 
 
 class RetreatNoButton(discord.ui.Button):
