@@ -219,7 +219,7 @@ class ReportBanButton(BaseReportButton):
 
 class ReportMuteButton(BaseReportButton):
     def __init__(self, bot, report_id):
-        super().__init__(bot, report_id, "Mute", discord.ButtonStyle.secondary, "🔇"* row=1)
+        super().__init__(bot, report_id, "Mute", discord.ButtonStyle.secondary, "🔇", row=1)
 
     async def callback(self, interaction):
         if not interaction.user.guild_permissions.moderate_members:
