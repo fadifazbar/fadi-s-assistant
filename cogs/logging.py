@@ -1289,7 +1289,7 @@ class LoggingCog(commands.Cog):
 
         # Track the requested changes
         if before.name != after.name:
-            changes.append(f"🏷️ **Server Name:** {before.name} → {after.name}")
+            changes.append(f"🏷️ **Server Name:**\n**Before:**\n{before.name}\n**After:**\n{after.name}")
         if before.icon != after.icon:
             changes.append("🖼️ **Server Icon Changed**")
         if before.banner != after.banner:
@@ -1297,13 +1297,13 @@ class LoggingCog(commands.Cog):
         if before.splash != after.splash:
             changes.append("🖼️ **Server Splash Changed**")
         if before.verification_level != after.verification_level:
-            changes.append(f"🔒 **Verification Level:** {before.verification_level} → {after.verification_level}")
+            changes.append(f"🔒 **Verification Level:**\n**Before:**\n{before.verification_level}\n**After:**\n{after.verification_level}")
         if before.afk_channel != after.afk_channel:
-            changes.append(f"🛌 **AFK Channel:** {before.afk_channel} → {after.afk_channel}")
+            changes.append(f"🛌 **AFK Channel:**\n**Before:**\n{before.afk_channel}\n**After:**\n{after.afk_channel}")
         if before.afk_timeout != after.afk_timeout:
-            changes.append(f"⏱️ **AFK Timeout:** {before.afk_timeout}s → {after.afk_timeout}s")
+            changes.append(f"⏱️ **AFK Timeout:**\n**Before:**\n{before.afk_timeout}\n**After:**\n{after.afk_timeout}s")
         if before.vanity_url_code != after.vanity_url_code:
-            changes.append(f"🌐 **Vanity URL:** {before.vanity_url_code} → {after.vanity_url_code}")
+            changes.append(f"🌐 **Vanity URL:**\n**Before:**\n{before.vanity_url_code}\n**After:**\n{after.vanity_url_code}")
 
         if changes:
             # Responsible moderator from audit logs
